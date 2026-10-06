@@ -1,0 +1,3 @@
+[submodule "Projects/modding/FromSoftware/Elden Ring/LootForge"]
+	path = Projects/modding/FromSoftware/Elden Ring/LootForge
+	url = https://github.com/SamaelTheKingOfHell/EldenRing-LootForge.git
