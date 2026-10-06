@@ -1,0 +1,349 @@
+{
+  "version": "1.0.0",
+  "bossRemembrances": [
+    {
+      "id": "remembrance_grafted",
+      "name": "Remembrance of the Grafted (Godrick the Grafted)",
+      "boss": "Godrick the Grafted",
+      "location": "Stormveil Castle",
+      "remembranceItemId": 10100,
+      "defaultCost": 20000
+    },
+    {
+      "id": "remembrance_full_moon",
+      "name": "Remembrance of the Full Moon Queen (Rennala)",
+      "boss": "Rennala, Queen of the Full Moon",
+      "location": "Raya Lucaria Academy",
+      "remembranceItemId": 10101,
+      "defaultCost": 20000
+    },
+    {
+      "id": "remembrance_starscourge",
+      "name": "Remembrance of the Starscourge (General Radahn)",
+      "boss": "Starscourge Radahn",
+      "location": "Redmane Castle (Caelid)",
+      "remembranceItemId": 10102,
+      "defaultCost": 40000
+    },
+    {
+      "id": "remembrance_rot_goddess",
+      "name": "Remembrance of the Rot Goddess (Malenia)",
+      "boss": "Malenia, Blade of Miquella",
+      "location": "Elphael, Brace of the Haligtree",
+      "remembranceItemId": 10103,
+      "defaultCost": 50000
+    },
+    {
+      "id": "remembrance_blood_lord",
+      "name": "Remembrance of the Blood Lord (Mohg)",
+      "boss": "Mohg, Lord of Blood",
+      "location": "Mohgwyn Palace",
+      "remembranceItemId": 10104,
+      "defaultCost": 30000
+    },
+    {
+      "id": "remembrance_blasphemous",
+      "name": "Remembrance of the Blasphemous (Rykard)",
+      "boss": "Rykard, Lord of Blasphemy",
+      "location": "Volcano Manor",
+      "remembranceItemId": 10105,
+      "defaultCost": 50000
+    },
+    {
+      "id": "remembrance_black_blade",
+      "name": "Remembrance of the Black Blade (Maliketh)",
+      "boss": "Maliketh, the Black Blade",
+      "location": "Crumbling Farum Azula",
+      "remembranceItemId": 10106,
+      "defaultCost": 50000
+    },
+    {
+      "id": "remembrance_hoarah_loux",
+      "name": "Remembrance of Hoarah Loux (Godfrey)",
+      "boss": "Godfrey, First Elden Lord",
+      "location": "Leyndell, Ashen Capital",
+      "remembranceItemId": 10107,
+      "defaultCost": 50000
+    },
+    {
+      "id": "remembrance_dragonlord",
+      "name": "Remembrance of the Dragonlord (Placidusax)",
+      "boss": "Dragonlord Placidusax",
+      "location": "Crumbling Farum Azula",
+      "remembranceItemId": 10108,
+      "defaultCost": 30000
+    },
+    {
+      "id": "remembrance_elden_remembrance",
+      "name": "Elden Remembrance (Radagon / Elden Beast)",
+      "boss": "Elden Beast",
+      "location": "Elden Throne",
+      "remembranceItemId": 10109,
+      "defaultCost": 50000
+    }
+  ],
+  "eliteEnemies": [
+    {
+      "id": "moongrum_carian_knight",
+      "name": "Moongrum, Carian Knight (Raya Lucaria Academy)",
+      "lotParamId": 100200,
+      "defaultDropChance": 25.0
+    },
+    {
+      "id": "crucible_knight_ordovis",
+      "name": "Crucible Knight Ordovis (Auriza Hero's Grave)",
+      "lotParamId": 100310,
+      "defaultDropChance": 20.0
+    },
+    {
+      "id": "crucible_knight_siluria",
+      "name": "Crucible Knight Siluria (Deeproot Depths)",
+      "lotParamId": 100320,
+      "defaultDropChance": 20.0
+    },
+    {
+      "id": "cleanrot_knight",
+      "name": "Cleanrot Knight (Caelid Swamp / Elphael)",
+      "lotParamId": 100400,
+      "defaultDropChance": 15.0
+    },
+    {
+      "id": "banished_knight",
+      "name": "Banished Knight (Stormveil Castle / Castle Sol)",
+      "lotParamId": 100500,
+      "defaultDropChance": 15.0
+    },
+    {
+      "id": "black_knife_assassin",
+      "name": "Black Knife Assassin (Sage's Cave / Black Knife Catacombs)",
+      "lotParamId": 100600,
+      "defaultDropChance": 20.0
+    },
+    {
+      "id": "bloodhound_knight_darriwil",
+      "name": "Bloodhound Knight Darriwil (Forlorn Hound Evergaol)",
+      "lotParamId": 100700,
+      "defaultDropChance": 25.0
+    },
+    {
+      "id": "tree_sentinel_auriza",
+      "name": "Tree Sentinel Duo (Altus Plateau)",
+      "lotParamId": 100800,
+      "defaultDropChance": 25.0
+    },
+    {
+      "id": "nights_cavalry_duo",
+      "name": "Night's Cavalry (Consecrated Snowfield)",
+      "lotParamId": 100900,
+      "defaultDropChance": 25.0
+    },
+    {
+      "id": "vargram_raging_wolf",
+      "name": "Vargram the Raging Wolf (Leyndell)",
+      "lotParamId": 101100,
+      "defaultDropChance": 30.0
+    },
+    {
+      "id": "roundtable_knight_vyke",
+      "name": "Roundtable Knight Vyke (Contender's Evergaol)",
+      "lotParamId": 101200,
+      "defaultDropChance": 30.0
+    },
+    {
+      "id": "blaidd_shadow",
+      "name": "Blaidd the Half-Wolf (Ranni's Rise)",
+      "lotParamId": 101300,
+      "defaultDropChance": 30.0
+    },
+    {
+      "id": "magma_wyrm_makar",
+      "name": "Magma Wyrm Makar (Ruin-Strewn Precipice)",
+      "lotParamId": 101400,
+      "defaultDropChance": 30.0
+    },
+    {
+      "id": "bloody_finger_okina",
+      "name": "Bloody Finger Okina (Church of Repose)",
+      "lotParamId": 101500,
+      "defaultDropChance": 30.0
+    }
+  ],
+  "merchants": [
+    {
+      "id": "kale_church_of_elleh",
+      "name": "Merchant Kal\u00e9 (Church of Elleh)",
+      "shopId": 100010,
+      "defaultRuneCost": 5000
+    },
+    {
+      "id": "twin_maiden_husks",
+      "name": "Twin Maiden Husks (Roundtable Hold)",
+      "shopId": 100020,
+      "defaultRuneCost": 12000
+    },
+    {
+      "id": "nomadic_merchant_liurnia",
+      "name": "Nomadic Merchant (Liurnia Lake Shore)",
+      "shopId": 100030,
+      "defaultRuneCost": 8000
+    }
+  ],
+  "enemies": [
+    {
+      "id": "godrick_soldier",
+      "name": "Godrick Soldier",
+      "lotParamId": 100000,
+      "defaultDropChance": 25.0
+    },
+    {
+      "id": "nomadic_merchant",
+      "name": "Nomadic Merchant",
+      "lotParamId": 100001,
+      "defaultDropChance": 100.0
+    },
+    {
+      "id": "page_enemy",
+      "name": "Page",
+      "lotParamId": 100002,
+      "defaultDropChance": 25.0
+    },
+    {
+      "id": "fias_champions",
+      "name": "Fia's Champions",
+      "lotParamId": 100003,
+      "defaultDropChance": 100.0
+    },
+    {
+      "id": "goldmask_quest",
+      "name": "Goldmask",
+      "lotParamId": 100004,
+      "defaultDropChance": 100.0
+    },
+    {
+      "id": "ranni_quest",
+      "name": "Ranni",
+      "lotParamId": 100005,
+      "defaultDropChance": 100.0
+    },
+    {
+      "id": "sellen_quest",
+      "name": "Sellen",
+      "lotParamId": 100006,
+      "defaultDropChance": 100.0
+    },
+    {
+      "id": "bernahl",
+      "name": "Bernahl",
+      "lotParamId": 100007,
+      "defaultDropChance": 100.0
+    },
+    {
+      "id": "juno_hoslow",
+      "name": "Juno Hoslow",
+      "lotParamId": 100008,
+      "defaultDropChance": 100.0
+    },
+    {
+      "id": "black_knife_assassin_alt",
+      "name": "Black Knife Assassin",
+      "lotParamId": 100009,
+      "defaultDropChance": 100.0
+    },
+    {
+      "id": "nomadic_merchant_altus",
+      "name": "Nomadic Merchant (Altus)",
+      "lotParamId": 100010,
+      "defaultDropChance": 100.0
+    },
+    {
+      "id": "fire_prelate",
+      "name": "Fire Prelate",
+      "lotParamId": 100011,
+      "defaultDropChance": 25.0
+    },
+    {
+      "id": "erdtree_guardian",
+      "name": "Erdtree Guardian",
+      "lotParamId": 100012,
+      "defaultDropChance": 25.0
+    },
+    {
+      "id": "dlc_enemy_armor",
+      "name": "DLC Enemy",
+      "lotParamId": 100013,
+      "defaultDropChance": 25.0
+    },
+    {
+      "id": "castle_morne_chest",
+      "name": "Castle Morne Chest",
+      "lotParamId": 100014,
+      "defaultDropChance": 100.0
+    },
+    {
+      "id": "yura",
+      "name": "Bloody Finger Hunter Yura",
+      "lotParamId": 100015,
+      "defaultDropChance": 100.0
+    },
+    {
+      "id": "dragon_burnt_ruins_chest",
+      "name": "Dragon-Burnt Ruins Chest",
+      "lotParamId": 100016,
+      "defaultDropChance": 100.0
+    },
+    {
+      "id": "godskin_apostle_windmill",
+      "name": "Godskin Apostle (Windmill Village)",
+      "lotParamId": 100017,
+      "defaultDropChance": 100.0
+    },
+    {
+      "id": "eleonora_violet_bloody_finger",
+      "name": "Eleonora, Violet Bloody Finger",
+      "lotParamId": 100018,
+      "defaultDropChance": 100.0
+    },
+    {
+      "id": "banished_knight_sol",
+      "name": "Banished Knight (Castle Sol)",
+      "lotParamId": 100019,
+      "defaultDropChance": 25.0
+    },
+    {
+      "id": "roundtable_hold_chest",
+      "name": "Roundtable Hold Chest",
+      "lotParamId": 100020,
+      "defaultDropChance": 100.0
+    },
+    {
+      "id": "caria_manor_chest",
+      "name": "Caria Manor Chest",
+      "lotParamId": 100021,
+      "defaultDropChance": 100.0
+    },
+    {
+      "id": "commander_oneil",
+      "name": "Commander O'Neil",
+      "lotParamId": 100022,
+      "defaultDropChance": 100.0
+    },
+    {
+      "id": "cleanrot_knight_halo",
+      "name": "Cleanrot Knight",
+      "lotParamId": 100023,
+      "defaultDropChance": 25.0
+    },
+    {
+      "id": "chief_guardian_arghanthy",
+      "name": "Chief Guardian Arghanthy",
+      "lotParamId": 100024,
+      "defaultDropChance": 100.0
+    },
+    {
+      "id": "dlc_enemy_weapon",
+      "name": "DLC Enemy",
+      "lotParamId": 100025,
+      "defaultDropChance": 25.0
+    }
+  ]
+}

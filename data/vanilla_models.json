@@ -1,0 +1,709 @@
+{
+  "version": "1.0.0",
+  "protectors": {
+    "4000": {
+      "name": "Carian Knight Set",
+      "setName": "Carian Knight",
+      "baseParamId": 400000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "moongrum_carian_knight",
+      "defaultEnemyName": "Moongrum, Carian Knight (Raya Lucaria)",
+      "description": "Armor of the enchanted knights who served the Carian royal family."
+    },
+    "4010": {
+      "name": "Raging Wolf Set",
+      "setName": "Raging Wolf",
+      "baseParamId": 401000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "vargram_raging_wolf",
+      "defaultEnemyName": "Vargram the Raging Wolf (Leyndell)",
+      "description": "Armor worn by Vargram the Raging Wolf, one of the first Tarnished to visit the Roundtable Hold."
+    },
+    "4020": {
+      "name": "Fingerprint Set",
+      "setName": "Fingerprint (Vyke)",
+      "baseParamId": 402000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "roundtable_knight_vyke",
+      "defaultEnemyName": "Roundtable Knight Vyke (Contender's Evergaol)",
+      "description": "Iron armor singed and blistered by fingers."
+    },
+    "4030": {
+      "name": "Knight Set",
+      "setName": "Knight",
+      "baseParamId": 403000,
+      "defaultRoute": "merchant_shop",
+      "targetSourceId": "twin_maiden_husks",
+      "defaultEnemyName": "Twin Maiden Husks (Roundtable Hold)",
+      "description": "Armor of an anonymous knight of the Lands Between."
+    },
+    "4040": {
+      "name": "Banished Knight Set",
+      "setName": "Banished Knight",
+      "baseParamId": 404000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "banished_knight",
+      "defaultEnemyName": "Banished Knight (Stormveil / Castle Sol)",
+      "description": "Thick, full set of armor covering the entire body. Once worn by knights exiled from their homeland."
+    },
+    "4050": {
+      "name": "Vagabond Knight Set",
+      "setName": "Vagabond Knight",
+      "baseParamId": 405000,
+      "defaultRoute": "merchant_shop",
+      "targetSourceId": "nomadic_merchant_liurnia",
+      "defaultEnemyName": "Nomadic Merchant (Liurnia of the Lakes)",
+      "description": "Armor of a knight expelled from their realm."
+    },
+    "4090": {
+      "name": "Night's Cavalry Set",
+      "setName": "Night's Cavalry",
+      "baseParamId": 409000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "nights_cavalry_duo",
+      "defaultEnemyName": "Night's Cavalry Duo (Consecrated Snowfield)",
+      "description": "Pitch-black armor worn by the Night's Cavalry."
+    },
+    "4110": {
+      "name": "Cleanrot Knight Set",
+      "setName": "Cleanrot Knight",
+      "baseParamId": 411000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "cleanrot_knight",
+      "defaultEnemyName": "Cleanrot Knight (Caelid Swamp / Elphael)",
+      "description": "Armor worn by the Cleanrot Knights who fought alongside Malenia."
+    },
+    "4130": {
+      "name": "Crucible Tree Set",
+      "setName": "Crucible Knight (Tree)",
+      "baseParamId": 413000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "crucible_knight_siluria",
+      "defaultEnemyName": "Crucible Knight Siluria (Deeproot Depths)",
+      "description": "Armor of the Crucible Knights who served Godfrey, the first Elden Lord."
+    },
+    "4140": {
+      "name": "Crucible Axe Set",
+      "setName": "Crucible Knight (Axe)",
+      "baseParamId": 414000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "crucible_knight_ordovis",
+      "defaultEnemyName": "Crucible Knight Ordovis (Auriza Hero's Grave)",
+      "description": "Armor of the Crucible Knights, holding primordial gold."
+    },
+    "4150": {
+      "name": "Tree Sentinel Set",
+      "setName": "Tree Sentinel",
+      "baseParamId": 415000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "tree_sentinel_auriza",
+      "defaultEnemyName": "Tree Sentinel Duo (Altus / Auriza Grave)",
+      "description": "Armor crafted from gleaming gold, worn by the heavy cavalry serving the Erdtree."
+    },
+    "4160": {
+      "name": "Bloodhound Knight Set",
+      "setName": "Bloodhound Knight",
+      "baseParamId": 416000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "bloodhound_knight_darriwil",
+      "defaultEnemyName": "Bloodhound Knight Darriwil (Forlorn Hound Evergaol)",
+      "description": "Armor worn by the Bloodhound Knights, fierce trackers without masters."
+    },
+    "4170": {
+      "name": "Black Knife Set",
+      "setName": "Black Knife Assassin",
+      "baseParamId": 417000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "black_knife_assassin",
+      "defaultEnemyName": "Black Knife Assassin (Ordina / Sage's Cave)",
+      "description": "Armor worn by the Black Knife Assassins, cloaked in silence."
+    },
+    "4180": {
+      "name": "Blaidd's Set",
+      "setName": "Blaidd the Half-Wolf",
+      "baseParamId": 418000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "blaidd_shadow",
+      "defaultEnemyName": "Blaidd the Half-Wolf (Ranni's Rise)",
+      "description": "Armor of Blaidd the Half-Wolf, sworn shadow of Lunar Princess Ranni."
+    },
+    "4200": {
+      "name": "Radahn's Lion Set",
+      "setName": "General Radahn",
+      "baseParamId": 420000,
+      "defaultRoute": "boss_remembrance",
+      "targetSourceId": "remembrance_starscourge",
+      "defaultEnemyName": "Remembrance of the Starscourge (General Radahn)",
+      "description": "Armor of General Radahn, adorned with golden lion motifs and mane."
+    },
+    "4230": {
+      "name": "Malenia's Set",
+      "setName": "Malenia, Blade of Miquella",
+      "baseParamId": 423000,
+      "defaultRoute": "boss_remembrance",
+      "targetSourceId": "remembrance_rot_goddess",
+      "defaultEnemyName": "Remembrance of the Rot Goddess (Malenia)",
+      "description": "Armor made of unalloyed gold, worn by Malenia, Blade of Miquella."
+    },
+    "4240": {
+      "name": "Lord of Blood's Robe",
+      "setName": "Mohg, Lord of Blood",
+      "baseParamId": 424000,
+      "defaultRoute": "boss_remembrance",
+      "targetSourceId": "remembrance_blood_lord",
+      "defaultEnemyName": "Remembrance of the Blood Lord (Mohg)",
+      "description": "Robe of Mohg, Lord of Blood, soaked in the accursed blood of the Formless Mother."
+    },
+    "4250": {
+      "name": "Maliketh's Set",
+      "setName": "Maliketh, the Black Blade",
+      "baseParamId": 425000,
+      "defaultRoute": "boss_remembrance",
+      "targetSourceId": "remembrance_black_blade",
+      "defaultEnemyName": "Remembrance of the Black Blade (Maliketh)",
+      "description": "Beast armor forged from black iron and gold, bearing the power of Destined Death."
+    },
+    "4260": {
+      "name": "Elden Lord Set",
+      "setName": "Godfrey, First Elden Lord",
+      "baseParamId": 426000,
+      "defaultRoute": "boss_remembrance",
+      "targetSourceId": "remembrance_hoarah_loux",
+      "defaultEnemyName": "Remembrance of Hoarah Loux (Godfrey)",
+      "description": "Armor of Godfrey, the first Elden Lord and chieftain of the badlands."
+    },
+    "1120": {
+      "name": "Vagabond Knight (Starting)",
+      "setName": "Vagabond Knight (Starting)",
+      "baseParamId": 112000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "godrick_soldier",
+      "defaultEnemyName": "Godrick Soldier",
+      "description": "Starting class variant."
+    },
+    "1160": {
+      "name": "Aristocrat Garb",
+      "setName": "Aristocrat",
+      "baseParamId": 116000,
+      "defaultRoute": "merchant_shop",
+      "targetSourceId": "nomadic_merchant",
+      "defaultEnemyName": "Nomadic Merchant",
+      "description": "Aristocrat Garb"
+    },
+    "1161": {
+      "name": "Aristocrat Garb (Altered)",
+      "setName": "Aristocrat",
+      "baseParamId": 116100,
+      "defaultRoute": "merchant_shop",
+      "targetSourceId": "nomadic_merchant",
+      "defaultEnemyName": "Nomadic Merchant",
+      "description": "Aristocrat Garb (Altered)"
+    },
+    "1200": {
+      "name": "Commoner's Garb",
+      "setName": "Commoner",
+      "baseParamId": 120000,
+      "defaultRoute": "merchant_shop",
+      "targetSourceId": "nomadic_merchant",
+      "defaultEnemyName": "Nomadic Merchant",
+      "description": "Commoner's Garb"
+    },
+    "1220": {
+      "name": "Page Set",
+      "setName": "Page",
+      "baseParamId": 122000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "page_enemy",
+      "defaultEnemyName": "Page",
+      "description": "Page Set"
+    },
+    "1240": {
+      "name": "Noble's Set",
+      "setName": "Noble",
+      "baseParamId": 124000,
+      "defaultRoute": "merchant_shop",
+      "targetSourceId": "nomadic_merchant",
+      "defaultEnemyName": "Nomadic Merchant",
+      "description": "Noble's Set"
+    },
+    "1241": {
+      "name": "Noble's Set (Altered)",
+      "setName": "Noble",
+      "baseParamId": 124100,
+      "defaultRoute": "merchant_shop",
+      "targetSourceId": "nomadic_merchant",
+      "defaultEnemyName": "Nomadic Merchant",
+      "description": "Noble's Set (Altered)"
+    },
+    "1245": {
+      "name": "Noble's Set variant",
+      "setName": "Noble",
+      "baseParamId": 124500,
+      "defaultRoute": "merchant_shop",
+      "targetSourceId": "nomadic_merchant",
+      "defaultEnemyName": "Nomadic Merchant",
+      "description": "Noble's Set variant"
+    },
+    "1250": {
+      "name": "Traveler's Set",
+      "setName": "Traveler",
+      "baseParamId": 125000,
+      "defaultRoute": "merchant_shop",
+      "targetSourceId": "nomadic_merchant",
+      "defaultEnemyName": "Nomadic Merchant",
+      "description": "Traveler's Set"
+    },
+    "1251": {
+      "name": "Traveler's Set (Altered)",
+      "setName": "Traveler",
+      "baseParamId": 125100,
+      "defaultRoute": "merchant_shop",
+      "targetSourceId": "nomadic_merchant",
+      "defaultEnemyName": "Nomadic Merchant",
+      "description": "Traveler's Set (Altered)"
+    },
+    "1380": {
+      "name": "Deathbed Dress",
+      "setName": "Deathbed",
+      "baseParamId": 138000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "fias_champions",
+      "defaultEnemyName": "Fia's Champions",
+      "description": "Deathbed Dress"
+    },
+    "1390": {
+      "name": "Goldmask's Set",
+      "setName": "Goldmask",
+      "baseParamId": 139000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "goldmask_quest",
+      "defaultEnemyName": "Goldmask",
+      "description": "Goldmask's Set"
+    },
+    "1410": {
+      "name": "Ranni's Set (Snow Witch)",
+      "setName": "Snow Witch",
+      "baseParamId": 141000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "ranni_quest",
+      "defaultEnemyName": "Ranni",
+      "description": "Ranni's Set"
+    },
+    "1420": {
+      "name": "Sellen's Set",
+      "setName": "Sellen",
+      "baseParamId": 142000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "sellen_quest",
+      "defaultEnemyName": "Sellen",
+      "description": "Sellen's Set"
+    },
+    "1421": {
+      "name": "Sellen's Set variant",
+      "setName": "Sellen",
+      "baseParamId": 142100,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "sellen_quest",
+      "defaultEnemyName": "Sellen",
+      "description": "Sellen's Set variant"
+    },
+    "1422": {
+      "name": "Sellen's Set variant",
+      "setName": "Sellen",
+      "baseParamId": 142200,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "sellen_quest",
+      "defaultEnemyName": "Sellen",
+      "description": "Sellen's Set variant"
+    },
+    "1560": {
+      "name": "Beast Champion Set",
+      "setName": "Beast Champion",
+      "baseParamId": 156000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "bernahl",
+      "defaultEnemyName": "Bernahl",
+      "description": "Beast Champion Set"
+    },
+    "1570": {
+      "name": "Hoslow's Set",
+      "setName": "Hoslow",
+      "baseParamId": 157000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "juno_hoslow",
+      "defaultEnemyName": "Juno Hoslow",
+      "description": "Hoslow's Set"
+    },
+    "1600": {
+      "name": "Blaidd's Set",
+      "setName": "Blaidd the Half-Wolf",
+      "baseParamId": 160000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "blaidd_shadow",
+      "defaultEnemyName": "Blaidd the Half-Wolf (Ranni's Rise)",
+      "description": "Armor of Blaidd the Half-Wolf."
+    },
+    "1610": {
+      "name": "Black Knife Set",
+      "setName": "Black Knife Assassin",
+      "baseParamId": 161000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "black_knife_assassin_alt",
+      "defaultEnemyName": "Black Knife Assassin",
+      "description": "Black Knife Set"
+    },
+    "1650": {
+      "name": "Ronin's Set",
+      "setName": "Ronin",
+      "baseParamId": 165000,
+      "defaultRoute": "merchant_shop",
+      "targetSourceId": "nomadic_merchant_altus",
+      "defaultEnemyName": "Nomadic Merchant (Altus)",
+      "description": "Ronin's Set"
+    },
+    "1850": {
+      "name": "Fire Prelate Set",
+      "setName": "Fire Prelate",
+      "baseParamId": 185000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "fire_prelate",
+      "defaultEnemyName": "Fire Prelate",
+      "description": "Fire Prelate Set"
+    },
+    "1870": {
+      "name": "Guardian Set",
+      "setName": "Guardian",
+      "baseParamId": 187000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "erdtree_guardian",
+      "defaultEnemyName": "Erdtree Guardian",
+      "description": "Guardian Set"
+    },
+    "22400": {
+      "name": "Shadow of the Erdtree Armor (Model 22400)",
+      "setName": "DLC Armor",
+      "baseParamId": 2240000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "dlc_enemy_armor",
+      "defaultEnemyName": "DLC Enemy",
+      "description": "DLC Armor"
+    },
+    "22900": {
+      "name": "Shadow of the Erdtree Armor (Model 22900)",
+      "setName": "DLC Armor",
+      "baseParamId": 2290000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "dlc_enemy_armor",
+      "defaultEnemyName": "DLC Enemy",
+      "description": "DLC Armor"
+    },
+    "25300": {
+      "name": "Shadow of the Erdtree Armor (Model 25300)",
+      "setName": "DLC Armor",
+      "baseParamId": 2530000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "dlc_enemy_armor",
+      "defaultEnemyName": "DLC Enemy",
+      "description": "DLC Armor"
+    },
+    "26100": {
+      "name": "Shadow of the Erdtree Armor (Model 26100)",
+      "setName": "DLC Armor",
+      "baseParamId": 2610000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "dlc_enemy_armor",
+      "defaultEnemyName": "DLC Enemy",
+      "description": "DLC Armor"
+    }
+  },
+  "weapons": {
+    "0206": {
+      "name": "Greatsword",
+      "baseParamId": 2060000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "caelid_caravan_troll",
+      "defaultEnemyName": "Dragonbarrow Caravan Giant (Caelid)",
+      "description": "A coarse iron lump of an ultra greatsword, mowing down foes with sheer weight."
+    },
+    "0211": {
+      "name": "Dark Moon Greatsword",
+      "baseParamId": 2110000,
+      "defaultRoute": "boss_remembrance",
+      "targetSourceId": "remembrance_full_moon",
+      "defaultEnemyName": "Remembrance of the Full Moon Queen (Rennala)",
+      "description": "A Moon Greatsword, bestowed by a Carian queen upon her spouse to honor long tradition."
+    },
+    "0415": {
+      "name": "Moonveil",
+      "baseParamId": 4150000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "magma_wyrm_makar",
+      "defaultEnemyName": "Magma Wyrm Makar (Gael Tunnel / Ruin-Strewn)",
+      "description": "Katana forged of glintstone, drawing a blade of light with silent speed."
+    },
+    "0416": {
+      "name": "Rivers of Blood",
+      "baseParamId": 4160000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "bloody_finger_okina",
+      "defaultEnemyName": "Bloody Finger Okina (Church of Repose)",
+      "description": "Weapon of Okina, swordsman from the Land of Reeds, cursed with an unquenchable thirst for blood."
+    },
+    "0213": {
+      "name": "Bastard Sword",
+      "baseParamId": 2130000,
+      "defaultRoute": "merchant_shop",
+      "targetSourceId": "twin_maiden_husks",
+      "defaultEnemyName": "Twin Maiden Husks",
+      "description": "Bastard Sword"
+    },
+    "0303": {
+      "name": "Claymore",
+      "baseParamId": 3030000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "castle_morne_chest",
+      "defaultEnemyName": "Castle Morne Chest",
+      "description": "Claymore"
+    },
+    "0453": {
+      "name": "Nagakiba",
+      "baseParamId": 4530000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "yura",
+      "defaultEnemyName": "Bloody Finger Hunter Yura",
+      "description": "Nagakiba"
+    },
+    "0550": {
+      "name": "Twinblade",
+      "baseParamId": 5500000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "dragon_burnt_ruins_chest",
+      "defaultEnemyName": "Dragon-Burnt Ruins Chest",
+      "description": "Twinblade"
+    },
+    "0554": {
+      "name": "Godskin Peeler",
+      "baseParamId": 5540000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "godskin_apostle_windmill",
+      "defaultEnemyName": "Godskin Apostle (Windmill Village)",
+      "description": "Godskin Peeler"
+    },
+    "0556": {
+      "name": "Eleonora's Poleblade",
+      "baseParamId": 5560000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "eleonora_violet_bloody_finger",
+      "defaultEnemyName": "Eleonora, Violet Bloody Finger",
+      "description": "Eleonora's Poleblade"
+    },
+    "0606": {
+      "name": "Banished Knight's Greatsword",
+      "baseParamId": 6060000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "banished_knight_sol",
+      "defaultEnemyName": "Banished Knight (Castle Sol)",
+      "description": "Banished Knight's Greatsword"
+    },
+    "0617": {
+      "name": "Carian Knight's Sword",
+      "baseParamId": 6170000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "moongrum_carian_knight",
+      "defaultEnemyName": "Moongrum",
+      "description": "Carian Knight's Sword"
+    },
+    "0622": {
+      "name": "Coded Sword",
+      "baseParamId": 6220000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "roundtable_hold_chest",
+      "defaultEnemyName": "Roundtable Hold Chest",
+      "description": "Coded Sword"
+    },
+    "0626": {
+      "name": "Sword of Night and Flame",
+      "baseParamId": 6260000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "caria_manor_chest",
+      "defaultEnemyName": "Caria Manor Chest",
+      "description": "Sword of Night and Flame"
+    },
+    "0716": {
+      "name": "Commander's Standard",
+      "baseParamId": 7160000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "commander_oneil",
+      "defaultEnemyName": "Commander O'Neil",
+      "description": "Commander's Standard"
+    },
+    "1105": {
+      "name": "Halo Scythe",
+      "baseParamId": 11050000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "cleanrot_knight_halo",
+      "defaultEnemyName": "Cleanrot Knight",
+      "description": "Halo Scythe"
+    },
+    "2045": {
+      "name": "One-Eyed Shield",
+      "baseParamId": 20450000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "chief_guardian_arghanthy",
+      "defaultEnemyName": "Chief Guardian Arghanthy",
+      "description": "One-Eyed Shield"
+    },
+    "2222": {
+      "name": "DLC Weapon (Model 2222)",
+      "baseParamId": 22220000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "dlc_enemy_weapon",
+      "defaultEnemyName": "DLC Enemy",
+      "description": "DLC Weapon"
+    },
+    "22410": {
+      "name": "DLC Weapon (Model 22410)",
+      "baseParamId": 2241000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "dlc_enemy_weapon",
+      "defaultEnemyName": "DLC Enemy",
+      "description": "DLC Weapon"
+    },
+    "22420": {
+      "name": "DLC Weapon (Model 22420)",
+      "baseParamId": 2242000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "dlc_enemy_weapon",
+      "defaultEnemyName": "DLC Enemy",
+      "description": "DLC Weapon"
+    },
+    "22550": {
+      "name": "DLC Weapon (Model 22550)",
+      "baseParamId": 2255000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "dlc_enemy_weapon",
+      "defaultEnemyName": "DLC Enemy",
+      "description": "DLC Weapon"
+    },
+    "22560": {
+      "name": "DLC Weapon (Model 22560)",
+      "baseParamId": 2256000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "dlc_enemy_weapon",
+      "defaultEnemyName": "DLC Enemy",
+      "description": "DLC Weapon"
+    },
+    "22570": {
+      "name": "DLC Weapon (Model 22570)",
+      "baseParamId": 2257000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "dlc_enemy_weapon",
+      "defaultEnemyName": "DLC Enemy",
+      "description": "DLC Weapon"
+    },
+    "23080": {
+      "name": "DLC Weapon (Model 23080)",
+      "baseParamId": 2308000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "dlc_enemy_weapon",
+      "defaultEnemyName": "DLC Enemy",
+      "description": "DLC Weapon"
+    },
+    "23100": {
+      "name": "DLC Weapon (Model 23100)",
+      "baseParamId": 2310000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "dlc_enemy_weapon",
+      "defaultEnemyName": "DLC Enemy",
+      "description": "DLC Weapon"
+    },
+    "23130": {
+      "name": "DLC Weapon (Model 23130)",
+      "baseParamId": 2313000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "dlc_enemy_weapon",
+      "defaultEnemyName": "DLC Enemy",
+      "description": "DLC Weapon"
+    },
+    "23310": {
+      "name": "DLC Weapon (Model 23310)",
+      "baseParamId": 2331000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "dlc_enemy_weapon",
+      "defaultEnemyName": "DLC Enemy",
+      "description": "DLC Weapon"
+    },
+    "23330": {
+      "name": "DLC Weapon (Model 23330)",
+      "baseParamId": 2333000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "dlc_enemy_weapon",
+      "defaultEnemyName": "DLC Enemy",
+      "description": "DLC Weapon"
+    },
+    "23370": {
+      "name": "DLC Weapon (Model 23370)",
+      "baseParamId": 2337000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "dlc_enemy_weapon",
+      "defaultEnemyName": "DLC Enemy",
+      "description": "DLC Weapon"
+    },
+    "23510": {
+      "name": "DLC Weapon (Model 23510)",
+      "baseParamId": 2351000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "dlc_enemy_weapon",
+      "defaultEnemyName": "DLC Enemy",
+      "description": "DLC Weapon"
+    },
+    "23560": {
+      "name": "DLC Weapon (Model 23560)",
+      "baseParamId": 2356000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "dlc_enemy_weapon",
+      "defaultEnemyName": "DLC Enemy",
+      "description": "DLC Weapon"
+    },
+    "23570": {
+      "name": "DLC Weapon (Model 23570)",
+      "baseParamId": 2357000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "dlc_enemy_weapon",
+      "defaultEnemyName": "DLC Enemy",
+      "description": "DLC Weapon"
+    },
+    "23590": {
+      "name": "DLC Weapon (Model 23590)",
+      "baseParamId": 2359000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "dlc_enemy_weapon",
+      "defaultEnemyName": "DLC Enemy",
+      "description": "DLC Weapon"
+    },
+    "23610": {
+      "name": "DLC Weapon (Model 23610)",
+      "baseParamId": 2361000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "dlc_enemy_weapon",
+      "defaultEnemyName": "DLC Enemy",
+      "description": "DLC Weapon"
+    },
+    "23670": {
+      "name": "DLC Weapon (Model 23670)",
+      "baseParamId": 2367000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "dlc_enemy_weapon",
+      "defaultEnemyName": "DLC Enemy",
+      "description": "DLC Weapon"
+    },
+    "23700": {
+      "name": "DLC Weapon (Model 23700)",
+      "baseParamId": 2370000,
+      "defaultRoute": "enemy_drop",
+      "targetSourceId": "dlc_enemy_weapon",
+      "defaultEnemyName": "DLC Enemy",
+      "description": "DLC Weapon"
+    }
+  }
+}

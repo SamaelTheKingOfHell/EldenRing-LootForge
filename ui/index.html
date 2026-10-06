@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LootForge: Elden Ring Relic & Loot Injector</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="title-badge">ELDEN RING MOD TOOL</div>
+      <h1 class="app-title">LOOT<span>FORGE</span></h1>
+      <p class="app-subtitle" data-i18n="app_subtitle">Convert Replacer Mods to Standalone Gear & Organic In-Game Drops</p>
+      
+      <div class="header-actions">
+        <span id="backupStatusBadge" class="badge badge-gold" data-i18n="badge_backup_status">Regulation Status</span>
+        <select id="langSelect" class="lang-select">
+          <option value="en">English (US)</option>
+          <option value="pt_br">Português (BR)</option>
+        </select>
+      </div>
+    </header>
+
+    <!-- Configuration & Game Paths -->
+    <div class="card">
+      <h2 class="card-title">
+        <span>⚔</span> <span data-i18n="section_game_paths">Target Configuration & Game Paths</span>
+      </h2>
+      
+      <!-- Prominent Mod Manager Banner -->
+      <div class="mod-manager-banner" style="margin-bottom: 20px; padding: 16px 20px; border-radius: var(--radius-md); background: linear-gradient(135deg, rgba(197, 160, 89, 0.12) 0%, rgba(18, 20, 28, 0.9) 100%); border: 1px solid var(--border-gold-bright); border-left: 5px solid var(--gold-bright); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);">
+        <h3 style="font-family: var(--font-serif); color: var(--gold-bright); font-size: 16px; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 18px;">⚠️</span> <span data-i18n="mod_manager_banner_title">Using Mod Engine 2 or a Mod Manager? Read This First:</span>
+        </h3>
+        <p style="font-size: 13px; color: var(--text-primary); line-height: 1.6; margin-bottom: 8px;" data-i18n="mod_manager_banner_body">
+          Always point to your CURRENT ACTIVE regulation.bin (such as mod\regulation.bin or your Mod Manager's active profile). LootForge will inject the new standalone relics and loot drops directly into your existing modded file so all your current mods, movesets, and balance changes stay 100% intact!
+        </p>
+        <p style="font-size: 12px; color: #ffd166; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+          <span>⚡</span> <span data-i18n="mod_manager_banner_warning">Do NOT select a vanilla regulation.bin if you already have active gameplay mods—keep your current active file selected below.</span>
+        </p>
+      </div>
+
+      <div class="grid-2" style="margin-bottom: 14px;">
+        <div class="form-group">
+          <label class="form-label" data-i18n="label_active_regulation">Active regulation.bin File (Mod Manager / Engine)</label>
+          <input type="text" id="activeRegInput" class="form-input" data-i18n-placeholder="placeholder_active_regulation" placeholder="e.g. mod\regulation.bin or Game\regulation.bin">
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="label_game_dir">Elden Ring Game Directory</label>
+          <input type="text" id="gameDirInput" class="form-input" data-i18n-placeholder="placeholder_game_dir" placeholder="e.g. C:\Games\ELDEN RING\Game">
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label" data-i18n="label_mod_input_dir">Mod Drop / Input Directory</label>
+          <input type="text" id="inputDirInput" class="form-input" value="input_mods">
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="label_mod_output_dir">Output Mod Staging Directory</label>
+          <input type="text" id="outputDirInput" class="form-input" value="mod">
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 12px; margin-top: 10px; flex-wrap: wrap;">
+        <button id="useModRegBtn" class="btn btn-secondary" style="font-size: 12px;" data-i18n="btn_use_mod_regulation">Use Mod Engine Regulation</button>
+        <button id="useVanillaRegBtn" class="btn btn-secondary" style="font-size: 12px;" data-i18n="btn_use_vanilla_regulation">Use Vanilla Game Regulation</button>
+        <button id="createBackupBtn" class="btn btn-secondary" data-i18n="btn_create_backup">Create Regulation Backup</button>
+        <button id="restoreBackupBtn" class="btn btn-secondary" data-i18n="btn_restore_backup">Restore Pristine Regulation</button>
+      </div>
+    </div>
+
+    <!-- Intake Dropzone -->
+    <div class="card">
+      <h2 class="card-title">
+        <span>📥</span> <span data-i18n="section_dropzone">Mod Ingestion Dropzone</span>
+      </h2>
+      <div id="dropzone" class="dropzone">
+        <div class="dropzone-icon">✦</div>
+        <div class="dropzone-prompt" data-i18n="dropzone_prompt">Drop replacement mod files or folders here (.partsbnd.dcx, zip)</div>
+        <div class="dropzone-subprompt" data-i18n="dropzone_subprompt">Files placed in input_mods are scanned automatically</div>
+      </div>
+      <div style="margin-top: 16px; text-align: right;">
+        <button id="scanModsBtn" class="btn btn-secondary" data-i18n="btn_scan_mods">Scan & Analyze Mods</button>
+      </div>
+    </div>
+
+    <!-- Review & Routing Table -->
+    <div class="card">
+      <h2 class="card-title">
+        <span>🛡</span> <span data-i18n="section_review_table">Staged Relics & Loot Routing Review</span>
+      </h2>
+      <div class="table-responsive">
+        <table class="mod-table">
+          <thead>
+            <tr>
+              <th data-i18n="th_mod_name">Mod / File</th>
+              <th data-i18n="th_target_vanilla">Detected Vanilla Set</th>
+              <th data-i18n="th_standalone_ids">Allocated Standalone IDs</th>
+              <th data-i18n="th_loot_route">Loot Distribution Route</th>
+              <th data-i18n="th_chance_cost">Drop Rate / Cost</th>
+              <th data-i18n="th_status">Status</th>
+              <th data-i18n="th_actions" style="text-align: center;">Include</th>
+            </tr>
+          </thead>
+          <tbody id="modTableBody">
+            <!-- Dynamically populated by app.js -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Action Footer -->
+      <div class="action-bar">
+        <div>
+          <button id="uninstallBtn" class="btn btn-danger" data-i18n="btn_clean_uninstall">Rollback / Uninstall Injected Mods</button>
+          <span style="font-size: 13px; color: var(--text-secondary); margin-left: 14px;">
+            <span data-i18n="label_injected_count">Total Standalone Relics Injected</span>: <strong id="injectedCountLabel" style="color: var(--gold-bright);">0</strong>
+          </span>
+        </div>
+        <button id="forgeAllBtn" class="btn btn-primary" data-i18n="btn_forge_all">Forge Standalone Gear & Inject Loot</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FLOATING DEVELOPER CONSOLE BUTTON [CS-DEBUG] -->
+  <button id="floatingDevBtn" class="floating-dev-btn" title="Developer Console">
+    ⚙
+  </button>
+
+  <!-- DEVELOPER CONSOLE DRAWER [CS-DEBUG] -->
+  <div id="devConsoleDrawer" class="dev-console-drawer">
+    <div class="console-header">
+      <div class="console-title">
+        <span>⚡</span> <span data-i18n="label_developer_console">Developer Console</span>
+      </div>
+      <div class="console-actions">
+        <label style="font-size: 11px; color: var(--text-secondary); display: flex; align-items: center; gap: 4px; margin-right: 8px;">
+          <input type="checkbox" id="debugModeToggle" checked style="accent-color: var(--gold-primary);">
+          <span data-i18n="toggle_debug_mode">Debug Mode</span>
+        </label>
+        <button id="consoleCopyBtn" class="console-btn" data-i18n="btn_copy_logs">Copy Logs</button>
+        <button id="consoleClearBtn" class="console-btn" data-i18n="btn_clear_logs">Clear Logs</button>
+      </div>
+    </div>
+    <div id="consoleBody" class="console-body">
+      <!-- Real-time logs stream here -->
+    </div>
+  </div>
+
+  <script src="js/console.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
