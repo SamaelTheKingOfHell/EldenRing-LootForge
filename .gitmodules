@@ -1,3 +1,6 @@
-[submodule "Projects/modding/FromSoftware/Elden Ring/LootForge"]
-	path = Projects/modding/FromSoftware/Elden Ring/LootForge
-	url = https://github.com/SamaelTheKingOfHell/EldenRing-LootForge.git
+[submodule "tools/vendor/Paramdex"]
+	path = tools/vendor/Paramdex
+	url = https://github.com/SamaelTheKingOfHell/Paramdex.git
+[submodule "tools/vendor/SoulsFormatsNEXT"]
+	path = tools/vendor/SoulsFormatsNEXT
+	url = https://github.com/SamaelTheKingOfHell/SoulsFormatsNEXT.git
