@@ -216,6 +216,7 @@ class LootForgeRequestHandler(SimpleHTTPRequestHandler):
 
                 injected_records = []
                 all_specs = []
+                forged_mod_sets = []
                 for entry in sets_data:
                     set_id = entry.get("set_id")
                     if set_id not in detected_map:
@@ -251,6 +252,7 @@ class LootForgeRequestHandler(SimpleHTTPRequestHandler):
                     # 3. Record into manifest
                     record = self.manifest_store.record_set(mod_set, staged_files)
                     injected_records.append(record)
+                    forged_mod_sets.append(mod_set)
 
                 # Execute regulation creation & injection
                 active_reg = body.get("path") or self.config.active_regulation_path or ""
@@ -274,35 +276,37 @@ class LootForgeRequestHandler(SimpleHTTPRequestHandler):
                         except Exception as be:
                             system_logger.warning(f"Auto-backup notice: {be}", source="Forge")
 
-                    reg_result = self.regulation_manager.execute_patch(all_specs, source_reg, target_reg)
+                    reg_result = self.regulation_manager.execute_patch(
+                        all_specs, source_reg, target_reg, game_dir=self.config.game_directory
+                    )
                     self.config.active_regulation_path = str(target_reg)
                     self.config.save()
 
-<<<<<<< master
-=======
                     # Deploy custom parts files (renamed models) to target regulation directory
-                    input_dir = Path(self.config.input_directory)
-                    if not input_dir.is_absolute():
-                        input_dir = self.base_dir / input_dir
-                    parts_deployed = self.regulation_manager.deploy_parts(
-                        mod_sets=scanned_sets,
-                        input_base_dir=input_dir,
-                        output_dir=target_reg.parent
-                    )
-                    system_logger.info(f"Deployed {parts_deployed} parts files to {target_reg.parent / 'parts'}", source="Forge")
+                    try:
+                        input_dir = Path(self.config.input_directory)
+                        if not input_dir.is_absolute():
+                            input_dir = self.base_dir / input_dir
+                        parts_deployed = self.regulation_manager.deploy_parts(
+                            mod_sets=forged_mod_sets,
+                            input_base_dir=input_dir,
+                            output_dir=target_reg.parent
+                        )
+                        system_logger.info(f"Deployed {parts_deployed} parts files to {target_reg.parent / 'parts'}", source="Forge")
+                    except Exception as pe:
+                        system_logger.warning(f"Parts deployment notice: {pe}", source="Forge")
 
                 # Include FMG verification in response
-                fmg_verification = reg_result.get("fmg_verification", {})
-                if fmg_verification:
-                    if fmg_verification.get("verified"):
-                        system_logger.info(f"FMG verification PASSED: {len(fmg_verification.get('regulation_items', []))} items verified", source="Forge")
-                    else:
-                        missing = fmg_verification.get("missing_in_fmg", [])
-                        system_logger.warning(f"FMG verification FAILED: {len(missing)} items missing from FMG: {missing}", source="Forge")
-                        for err in fmg_verification.get("errors", []):
-                            system_logger.error(f"FMG verification error: {err}", source="Forge")
-
->>>>>>> local
+                if reg_result:
+                    fmg_verification = reg_result.get("fmg_verification", {})
+                    if fmg_verification:
+                        if fmg_verification.get("verified"):
+                            system_logger.info(f"FMG verification PASSED: {len(fmg_verification.get('regulation_items', []))} items verified", source="Forge")
+                        else:
+                            missing = fmg_verification.get("missing_in_fmg", [])
+                            system_logger.warning(f"FMG verification FAILED: {len(missing)} items missing from FMG: {missing}", source="Forge")
+                            for err in fmg_verification.get("errors", []):
+                                system_logger.error(f"FMG verification error: {err}", source="Forge")
                 system_logger.info(
                     f"Forge successfully completed! {len(injected_records)} set(s) injected.",
                     source="Forge"

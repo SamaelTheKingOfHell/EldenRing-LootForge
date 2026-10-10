@@ -325,21 +325,15 @@ class RegulationManager:
 
         # Fall back to game directory
         elif game_dir:
-<<<<<<< master
-            game_msg = Path(game_dir) / "msg" / "engUS" / "item.msgbnd.dcx"
-            if game_msg.exists():
-                vanilla_source = game_msg
-                system_logger.info(f"Copying vanilla item.msgbnd.dcx from game directory to mod...", source="RegulationManager")
-=======
             for lang in ["engUS", "engus"]:
                 candidate = Path(game_dir) / "msg" / lang / "item.msgbnd.dcx"
                 if candidate.exists():
                     vanilla_source = candidate
+                    system_logger.info(f"Copying vanilla item.msgbnd.dcx from game directory ({lang}) to mod...", source="RegulationManager")
                     dlc_cand = Path(game_dir) / "msg" / lang / "item_dlc02.msgbnd.dcx"
                     if dlc_cand.exists():
                         dlc_source = dlc_cand
                     break
->>>>>>> local
 
         if vanilla_source:
             mod_msg.mkdir(parents=True, exist_ok=True)
@@ -363,50 +357,10 @@ class RegulationManager:
         output_dir: Path
     ) -> int:
         """
-        Copies and renames standalone model parts files to the output directory.
-
-        For each mod set, copies the mod's .partsbnd.dcx files from the input directory
-        to output/parts/, renaming them from the vanilla model ID to the standalone
-        allocated model ID so the game loads the correct custom visuals.
-
-        Example:
-            input:  input_mods/BerserkArmor/parts/bd_m_4200.partsbnd.dcx
-            output: mod/parts/bd_m_9001.partsbnd.dcx
+        Delegates parts deployment and renaming to PartsDeployer service.
+        Preserves backwards compatibility for existing callers.
         """
-        parts_output = Path(output_dir) / "parts"
-        parts_output.mkdir(parents=True, exist_ok=True)
-
-        deployed = 0
-        for ms in mod_sets:
-            if not ms.allocation or not ms.is_enabled:
-                continue
-            for part in ms.parts:
-                source = input_base_dir / ms.folder_or_archive_name / part.relative_path
-                if not source.exists():
-                    # Also try without the folder name (flat input layout)
-                    source = input_base_dir / part.relative_path
-                if not source.exists():
-                    system_logger.warning(
-                        f"Parts file not found: {source} (set: {ms.set_id})",
-                        source="RegulationManager"
-                    )
-                    continue
-
-                # Rename with standalone model ID
-                target_name = part.file_name.replace(
-                    part.target_model_id, ms.allocation.new_model_id, 1
-                )
-                target = parts_output / target_name
-                shutil.copy2(str(source), str(target))
-                deployed += 1
-                system_logger.debug(
-                    f"Deployed: {part.file_name} -> {target_name}",
-                    source="RegulationManager"
-                )
-
-        system_logger.info(
-            f"Deployed {deployed} parts file(s) to {parts_output}",
-            source="RegulationManager"
-        )
-        return deployed
+        from src.parts_deployer import PartsDeployer
+        deployer = PartsDeployer()
+        return deployer.deploy_parts(mod_sets, input_base_dir, output_dir)
 

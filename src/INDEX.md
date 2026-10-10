@@ -19,5 +19,7 @@ This directory contains the core Python engine implementation for LootForge, org
 | `manifest_store.py` | `ManifestStore` | Ledger tracking injected items for auditability and clean 1-click rollbacks. |
 | `loot_distributor.py` | `LootDistributor` | Calculates drop rates, set invariance, boss rotation, and color statuses. |
 | `regulation_manager.py` | `RegulationManager` | Non-destructive regulation.bin decryptor, param patcher, and AES-256 encryptor. |
+| `parts_deployer.py` | `PartsDeployer` | Standalone .partsbnd.dcx model deployment and renaming service. |
+| `ui/` | UI Components | Themed styles (`theme.py`), widgets, and components. |
 | `qt_app.py` | `LootForgeMainWindow` | Full Qt desktop GUI with folder pickers, Dark Souls theme, and developer drawer. |
 | `server.py` | `LootForgeServer` | Lightweight cross-platform local HTTP server serving UI and REST APIs. |
