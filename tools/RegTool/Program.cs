@@ -38,6 +38,8 @@ namespace LootForge.RegTool
                         return DiagnosticService.ExecuteDumpReg(options);
                     case "dump-tpf":
                         return TpfService.ExecuteDumpTpf(options);
+                    case "add-shop-item":
+                        return ShopService.ExecuteAddShopItem(options);
                     default:
                         Console.Error.WriteLine($"Unknown command: '{command}'");
                         PrintUsage();
