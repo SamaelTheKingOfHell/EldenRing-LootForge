@@ -301,6 +301,11 @@ class RegulationManager:
         This makes the mod self-contained and portable.
         """
         mod_msg = target_reg.parent / "msg" / "engUS"
+        if not (mod_msg / "item.msgbnd.dcx").exists():
+            mod_msg_lower = target_reg.parent / "msg" / "engus"
+            if (mod_msg_lower / "item.msgbnd.dcx").exists():
+                mod_msg = mod_msg_lower
+
         mod_item_msgbnd = mod_msg / "item.msgbnd.dcx"
 
         # If mod already has item.msgbnd.dcx, use it (preserves existing modifications)
@@ -310,24 +315,42 @@ class RegulationManager:
 
         # Otherwise, copy vanilla item.msgbnd.dcx to mod directory
         vanilla_source = None
+        dlc_source = None
 
         # Try backups first (allows working without game installation)
         backup_msg = self.base_dir / "backups" / "msg" / "engUS" / "item.msgbnd.dcx"
         if backup_msg.exists():
             vanilla_source = backup_msg
-            system_logger.info(f"Copying vanilla item.msgbnd.dcx from backups to mod directory...", source="RegulationManager")
+            system_logger.info("Copying vanilla item.msgbnd.dcx from backups to mod directory...", source="RegulationManager")
 
         # Fall back to game directory
         elif game_dir:
+<<<<<<< master
             game_msg = Path(game_dir) / "msg" / "engUS" / "item.msgbnd.dcx"
             if game_msg.exists():
                 vanilla_source = game_msg
                 system_logger.info(f"Copying vanilla item.msgbnd.dcx from game directory to mod...", source="RegulationManager")
+=======
+            for lang in ["engUS", "engus"]:
+                candidate = Path(game_dir) / "msg" / lang / "item.msgbnd.dcx"
+                if candidate.exists():
+                    vanilla_source = candidate
+                    dlc_cand = Path(game_dir) / "msg" / lang / "item_dlc02.msgbnd.dcx"
+                    if dlc_cand.exists():
+                        dlc_source = dlc_cand
+                    break
+>>>>>>> local
 
         if vanilla_source:
             mod_msg.mkdir(parents=True, exist_ok=True)
             shutil.copy2(vanilla_source, mod_item_msgbnd)
             system_logger.info(f"Vanilla item.msgbnd.dcx copied to: {mod_item_msgbnd}", source="RegulationManager")
+
+            # Also copy DLC msgbnd if present
+            if dlc_source and not (mod_msg / "item_dlc02.msgbnd.dcx").exists():
+                shutil.copy2(dlc_source, mod_msg / "item_dlc02.msgbnd.dcx")
+                system_logger.info(f"DLC item_dlc02.msgbnd.dcx copied to: {mod_msg / 'item_dlc02.msgbnd.dcx'}", source="RegulationManager")
+
             return mod_msg
 
         system_logger.warning("No vanilla item.msgbnd.dcx found to copy. FMG text injection will be skipped.", source="RegulationManager")

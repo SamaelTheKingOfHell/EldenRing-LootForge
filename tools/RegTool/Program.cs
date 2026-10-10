@@ -31,6 +31,10 @@ namespace LootForge.RegTool
                         return ExecuteVerify(options);
                     case "extract-msg":
                         return ExtractMsgFiles(options);
+                    case "dump-fmg":
+                        return ExecuteDumpFmg(options);
+                    case "dump-reg":
+                        return ExecuteDumpReg(options);
                     default:
                         Console.Error.WriteLine($"Unknown command: '{command}'");
                         PrintUsage();
@@ -86,6 +90,162 @@ namespace LootForge.RegTool
             Console.WriteLine($"Decrypting: {inputPath}");
             BND4 bnd = RegulationDecryptor.DecryptERRegulation(inputPath);
             Console.WriteLine($"Decryption successful. BND contains {bnd.Files.Count} param files.");
+            return 0;
+        }
+
+        static int ExecuteDumpFmg(Dictionary<string, string> options)
+        {
+            if (!options.TryGetValue("input", out string? inputPath) || string.IsNullOrEmpty(inputPath))
+            {
+                Console.Error.WriteLine("Missing required --input path to item.msgbnd.dcx.");
+                return 1;
+            }
+
+            if (!File.Exists(inputPath))
+            {
+                Console.Error.WriteLine($"File not found: {inputPath}");
+                return 1;
+            }
+
+            Console.WriteLine($"[RegTool] Loading BND4: {inputPath} (size: {new FileInfo(inputPath).Length} bytes)...");
+            BND4 bnd = BND4.Read(inputPath);
+            Console.WriteLine($"[RegTool] BND4 contains {bnd.Files.Count} files.");
+
+            string searchQuery = options.TryGetValue("search", out string? sq) ? sq : "";
+
+            foreach (var file in bnd.Files)
+            {
+                string fname = Path.GetFileName(file.Name ?? "???");
+                if (!fname.EndsWith(".fmg", StringComparison.OrdinalIgnoreCase)) continue;
+
+                FMG fmg = FMG.Read(file.Bytes);
+                List<FMG.Entry> matches;
+                if (!string.IsNullOrEmpty(searchQuery))
+                {
+                    matches = fmg.Entries.Where(e => e.Text != null && e.Text.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)).ToList();
+                    if (int.TryParse(searchQuery, out int sId))
+                    {
+                        var idMatch = fmg.Entries.FirstOrDefault(e => e.ID == sId);
+                        if (idMatch != null && !matches.Contains(idMatch)) matches.Add(idMatch);
+                    }
+                    if (matches.Count > 0)
+                    {
+                        Console.WriteLine($"  {fname,-30} Search='{searchQuery}' Matches: {matches.Count}");
+                        foreach (var entry in matches.Take(15))
+                        {
+                            string text = entry.Text ?? "<null>";
+                            if (text.Length > 80) text = text.Substring(0, 80) + "...";
+                            Console.WriteLine($"    [{entry.ID}] {text}");
+                        }
+                    }
+                }
+                else
+                {
+                    var highEntries = fmg.Entries.Where(e => e.ID >= 9000000).ToList();
+                    Console.WriteLine($"  {fname,-30} Version={fmg.Version,-12} Total={fmg.Entries.Count,6}  ID>=9M: {highEntries.Count}");
+                    foreach (var entry in highEntries)
+                    {
+                        string text = entry.Text ?? "<null>";
+                        if (text.Length > 80) text = text.Substring(0, 80) + "...";
+                        Console.WriteLine($"    [{entry.ID}] {text}");
+                    }
+                }
+            }
+            return 0;
+        }
+
+        static int ExecuteDumpReg(Dictionary<string, string> options)
+        {
+            if (!options.TryGetValue("input", out string? inputPath) || string.IsNullOrEmpty(inputPath))
+            {
+                Console.Error.WriteLine("Missing required --input path to regulation.bin.");
+                return 1;
+            }
+            if (!options.TryGetValue("defs", out string? defsDir) || string.IsNullOrEmpty(defsDir))
+            {
+                defsDir = @"tools\vendor\Paramdex\ER\Defs";
+            }
+
+            Console.WriteLine($"[RegTool] Decrypting regulation: {inputPath}...");
+            BND4 bnd = RegulationDecryptor.DecryptERRegulation(inputPath);
+
+            void InspectTable(string tableName)
+            {
+                var file = bnd.Files.FirstOrDefault(f => f.Name.EndsWith($"{tableName}.param", StringComparison.OrdinalIgnoreCase));
+                if (file == null) return;
+                var param = PARAM.Read(file.Bytes);
+                string xmlFile = Path.Combine(defsDir, $"{tableName}.xml");
+                if (File.Exists(xmlFile))
+                {
+                    var def = PARAMDEF.XmlDeserialize(xmlFile, false, false);
+                    param.ApplyParamdefSomewhatCarefully(def);
+                }
+
+                Console.WriteLine($"\n=== {tableName} (total rows: {param.Rows.Count}) ===");
+                if (tableName == "ShopLineupParam")
+                {
+                    // Check Kalé's range (100500..100524) and high IDs
+                    var interesting = param.Rows.Where(r => (r.ID >= 100500 && r.ID <= 100524) || r.ID >= 9000000 || (r.Name != null && r.Name.Contains("LootForge"))).ToList();
+                    Console.WriteLine($"Found {interesting.Count} matching rows:");
+                    foreach (var r in interesting)
+                    {
+                        int eqId = GetCellInt(r, "equipId");
+                        int eqType = GetCellInt(r, "equipType");
+                        int val = GetCellInt(r, "value");
+                        int icon = GetCellInt(r, "iconId");
+                        int nameMsg = GetCellInt(r, "nameMsgId");
+                        Console.WriteLine($"  ID={r.ID} Name='{r.Name}' equipId={eqId} equipType={eqType} value={val} iconId={icon} nameMsgId={nameMsg}");
+                    }
+                }
+                else if (tableName.StartsWith("EquipParam"))
+                {
+                    int[] sampleIds = new int[] { 180000, 180100, 470000, 470100, 980000, 980100, 2180000, 9020000, 9362000 };
+                    Console.WriteLine($"Sample row lookups in {tableName}:");
+                    foreach (int sid in sampleIds)
+                    {
+                        var row = param.Rows.FirstOrDefault(r => r.ID == sid);
+                        if (row != null)
+                        {
+                            int iconM = GetCellInt(row, "iconIdM");
+                            int iconF = GetCellInt(row, "iconIdF");
+                            int icon = GetCellInt(row, "iconId");
+                            int model = GetCellInt(row, "equipModelId");
+                            Console.WriteLine($"  Found ID={row.ID} Name='{row.Name}' model={model} iconIdM={iconM} iconIdF={iconF} iconId={icon}");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"  NOT FOUND: ID={sid}");
+                        }
+                    }
+
+                    int[] testModels = new int[] { 4000, 4200, 1610, 550, 617 };
+                    Console.WriteLine($"\nModel lookups in {tableName}:");
+                    foreach (int tm in testModels)
+                    {
+                        var row = param.Rows.FirstOrDefault(r =>
+                            GetCellInt(r, "headEquipModelId") == tm ||
+                            GetCellInt(r, "bodyEquipModelId") == tm ||
+                            GetCellInt(r, "armEquipModelId") == tm ||
+                            GetCellInt(r, "legEquipModelId") == tm ||
+                            GetCellInt(r, "equipModelId") == tm);
+                        if (row != null)
+                        {
+                            int iconM = GetCellInt(row, "iconIdM");
+                            int iconF = GetCellInt(row, "iconIdF");
+                            int icon = GetCellInt(row, "iconId");
+                            Console.WriteLine($"  Model {tm,5} -> Row ID={row.ID,8} Name='{row.Name}' iconIdM={iconM} iconIdF={iconF} iconId={icon}");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"  Model {tm,5} -> NOT FOUND in {tableName}");
+                        }
+                    }
+                }
+            }
+
+            InspectTable("ShopLineupParam");
+            InspectTable("EquipParamProtector");
+            InspectTable("EquipParamWeapon");
             return 0;
         }
 
@@ -286,6 +446,11 @@ namespace LootForge.RegTool
             // Collect FMG text entries from all specs for batch injection
             var allFmgTexts = new List<(int ItemId, int VanillaSourceId, bool IsWeapon, string Name, string Caption, string Info)>();
 
+            // Global tracking across all specs: itemId -> type and authentic vanilla row ID
+            var itemIdToIsWeapon = new Dictionary<int, bool>();
+            var itemIdToIsProtector = new Dictionary<int, bool>();
+            var itemIdToVanillaSourceId = new Dictionary<int, int>();
+
             List<JsonElement> specs = new List<JsonElement>();
             if (root.ValueKind == JsonValueKind.Array)
             {
@@ -309,8 +474,17 @@ namespace LootForge.RegTool
                         string tableName = ep.GetProperty("param_table").GetString()!;
                         int newParamId = ep.GetProperty("new_param_id").GetInt32();
                         int baseCloneId = ep.TryGetProperty("base_clone_id", out var bc) ? bc.GetInt32() : 0;
+                        int targetModelId = ep.TryGetProperty("target_model_id", out var tmEl) ? tmEl.GetInt32() : 0;
+                        int slotOffset = ep.TryGetProperty("slot_offset", out var soEl) ? soEl.GetInt32() : 0;
                         string rowName = ep.TryGetProperty("row_name", out var rn) ? rn.GetString() ?? "" : "";
 
+<<<<<<< master
+=======
+                        bool isProtector = tableName == "EquipParamProtector";
+                        itemIdToIsProtector[newParamId] = isProtector;
+                        itemIdToIsWeapon[newParamId] = !isProtector;
+
+>>>>>>> local
                         string defName = tableName;
                         var (param, _) = GetOrLoadParam(tableName, defName);
 
@@ -321,15 +495,43 @@ namespace LootForge.RegTool
                             param.Rows.RemoveAt(existingIndex);
                         }
 
-                        // Locate clone source row
+                        // Locate authentic vanilla clone source row
                         PARAM.Row? baseRow = null;
+
+                        // 1. Try by direct baseCloneId
                         if (baseCloneId > 0)
                         {
                             baseRow = param.Rows.FirstOrDefault(r => r.ID == baseCloneId);
                         }
+
+                        // 2. Try by authentic equipModelId (matching targetModelId)
+                        if (baseRow == null && targetModelId > 0)
+                        {
+                            if (isProtector)
+                            {
+                                baseRow = param.Rows.FirstOrDefault(r => r.ID < 9000000 && r.ID % 1000 == slotOffset && GetCellInt(r, "equipModelId") == targetModelId)
+                                       ?? param.Rows.FirstOrDefault(r => r.ID < 9000000 && GetCellInt(r, "equipModelId") == targetModelId);
+                            }
+                            else
+                            {
+                                baseRow = param.Rows.FirstOrDefault(r => r.ID < 9000000 && GetCellInt(r, "equipModelId") == targetModelId);
+                            }
+                        }
+
+                        // 3. Fallback: ANY authentic vanilla row (NEVER row 0 which is empty/naked with icon=0)
                         if (baseRow == null)
                         {
-                            baseRow = param.Rows.FirstOrDefault();
+                            if (isProtector)
+                            {
+                                baseRow = param.Rows.FirstOrDefault(r => r.ID > 0 && r.ID < 9000000 && r.ID % 1000 == slotOffset && GetCellInt(r, "iconIdM") > 0)
+                                       ?? param.Rows.FirstOrDefault(r => r.ID > 0 && r.ID < 9000000 && GetCellInt(r, "iconIdM") > 0)
+                                       ?? param.Rows.FirstOrDefault(r => r.ID > 0 && r.ID < 9000000);
+                            }
+                            else
+                            {
+                                baseRow = param.Rows.FirstOrDefault(r => r.ID > 0 && r.ID < 9000000 && GetCellInt(r, "iconId") > 0)
+                                       ?? param.Rows.FirstOrDefault(r => r.ID > 0 && r.ID < 9000000);
+                            }
                         }
 
                         if (baseRow == null)
@@ -337,6 +539,9 @@ namespace LootForge.RegTool
                             Console.WriteLine($"[RegTool WARN] Cannot find base row to clone for {tableName} ID {newParamId}");
                             continue;
                         }
+
+                        // Save the real authentic vanilla row ID for FMG text injection
+                        itemIdToVanillaSourceId[newParamId] = baseRow.ID;
 
                         var newRow = new PARAM.Row(baseRow)
                         {
@@ -359,6 +564,28 @@ namespace LootForge.RegTool
                                 {
                                     SetCellValue(cell, prop.Value);
                                 }
+                            }
+                        }
+
+                        // Ensure icon is never 0 (inherit authentic icons from baseRow)
+                        if (isProtector)
+                        {
+                            int iconM = GetCellInt(newRow, "iconIdM");
+                            int baseIconM = GetCellInt(baseRow, "iconIdM");
+                            int baseIconF = GetCellInt(baseRow, "iconIdF");
+                            if (iconM == 0 && baseIconM > 0)
+                            {
+                                SetCellIfExists(newRow, "iconIdM", (ushort)baseIconM);
+                                SetCellIfExists(newRow, "iconIdF", (ushort)baseIconF);
+                            }
+                        }
+                        else
+                        {
+                            int icon = GetCellInt(newRow, "iconId");
+                            int baseIcon = GetCellInt(baseRow, "iconId");
+                            if (icon == 0 && baseIcon > 0)
+                            {
+                                SetCellIfExists(newRow, "iconId", (ushort)baseIcon);
                             }
                         }
 
@@ -432,7 +659,11 @@ namespace LootForge.RegTool
                                 while (itemIndex < awardedItems.Count)
                                 {
                                     int itemId = awardedItems[itemIndex];
+<<<<<<< master
                                     bool isWeapon = itemId < 5000000;
+=======
+                                    bool isArmor = itemIdToIsProtector.TryGetValue(itemId, out var ip) ? ip : !itemIdToIsWeapon.GetValueOrDefault(itemId, false);
+>>>>>>> local
 
                                     int existingSlot = -1;
                                     int firstEmptySlot = -1;
@@ -455,7 +686,7 @@ namespace LootForge.RegTool
                                     if (slotToUse != -1)
                                     {
                                         SetCellIfExists(targetLotRow, $"lotItemId0{slotToUse}", itemId);
-                                        SetCellIfExists(targetLotRow, $"lotItemCategory0{slotToUse}", isWeapon ? 0x20000000 : 0x10000000);
+                                        SetCellIfExists(targetLotRow, $"lotItemCategory0{slotToUse}", isArmor ? 0x10000000 : 0x20000000);
                                         SetCellIfExists(targetLotRow, $"lotItemBasePoint0{slotToUse}", ratePoints);
                                         SetCellIfExists(targetLotRow, $"lotItemNum0{slotToUse}", (byte)1);
                                     }
@@ -488,7 +719,7 @@ namespace LootForge.RegTool
                                         if (overflowRow != null)
                                         {
                                             SetCellIfExists(overflowRow, "lotItemId01", itemId);
-                                            SetCellIfExists(overflowRow, "lotItemCategory01", isWeapon ? 0x20000000 : 0x10000000);
+                                            SetCellIfExists(overflowRow, "lotItemCategory01", isArmor ? 0x10000000 : 0x20000000);
                                             SetCellIfExists(overflowRow, "lotItemBasePoint01", ratePoints);
                                             SetCellIfExists(overflowRow, "lotItemNum01", (byte)1);
                                         }
@@ -616,9 +847,14 @@ namespace LootForge.RegTool
                                 shopParam.Rows.Add(targetShopRow);
                             }
 
+<<<<<<< master
                             bool isWeapon = itemId < 5000000;
+=======
+                            // Determine if weapon or protector based on registered types
+                            bool isArmor = itemIdToIsProtector.TryGetValue(itemId, out var ip) ? ip : !itemIdToIsWeapon.GetValueOrDefault(itemId, false);
+>>>>>>> local
                             SetCellIfExists(targetShopRow, "equipId", itemId);
-                            SetCellIfExists(targetShopRow, "equipType", (byte)(isWeapon ? 0 : 1)); // 0 = Weapon, 1 = Protector/Armor
+                            SetCellIfExists(targetShopRow, "equipType", (byte)(isArmor ? 1 : 0)); // 0 = Weapon, 1 = Protector/Armor
                             SetCellIfExists(targetShopRow, "value", cost);
                             SetCellIfExists(targetShopRow, "mtrlId", -1);
                             SetCellIfExists(targetShopRow, "eventFlag_forRelease", 0u);
@@ -645,7 +881,11 @@ namespace LootForge.RegTool
                     {
                         int ftItemId = ft.GetProperty("item_id").GetInt32();
                         int ftVanillaId = ft.TryGetProperty("vanilla_source_id", out var vs) ? vs.GetInt32() : 0;
-                        bool ftIsWeapon = ft.TryGetProperty("is_weapon", out var iw) && iw.GetBoolean();
+                        if (itemIdToVanillaSourceId.TryGetValue(ftItemId, out int realVanillaId) && realVanillaId > 0)
+                        {
+                            ftVanillaId = realVanillaId;
+                        }
+                        bool ftIsWeapon = itemIdToIsWeapon.TryGetValue(ftItemId, out var iw) ? iw : (ft.TryGetProperty("is_weapon", out var iwProp) && iwProp.GetBoolean());
                         string ftName = ft.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
                         string ftCaption = ft.TryGetProperty("caption", out var c) ? c.GetString() ?? "" : "";
                         string ftInfo = ft.TryGetProperty("info", out var inf) ? inf.GetString() ?? "" : "";
@@ -694,30 +934,10 @@ namespace LootForge.RegTool
         /// Copies authentic vanilla text from the source item being replaced and annotates
         /// with the LootForge marker. Falls back to provided strings if vanilla lookup fails.
         /// </summary>
-        static int InjectFmgTexts(
-            string msgDir,
-            string regulationOutputPath,
+        static int InjectFmgEntriesIntoBnd(
+            BND4 msgBnd,
             List<(int ItemId, int VanillaSourceId, bool IsWeapon, string Name, string Caption, string Info)> fmgTexts)
         {
-            string itemMsgBndPath = Path.Combine(msgDir, "item.msgbnd.dcx");
-            if (!File.Exists(itemMsgBndPath))
-            {
-                Console.WriteLine($"[RegTool WARN] item.msgbnd.dcx not found at: {itemMsgBndPath}. Skipping FMG injection.");
-                return 0;
-            }
-
-            // Create .bak file before modifying
-            string bakPath = itemMsgBndPath + ".bak";
-            if (!File.Exists(bakPath))
-            {
-                File.Copy(itemMsgBndPath, bakPath, false);
-                Console.WriteLine($"[RegTool] Created backup: {bakPath}");
-            }
-
-            Console.WriteLine($"[RegTool] Loading item.msgbnd.dcx from: {itemMsgBndPath}...");
-            BND4 msgBnd = BND4.Read(itemMsgBndPath);
-
-            // Locate FMG files by their internal path name (exclude _dlc variants)
             var fmgFileCache = new Dictionary<string, (FMG Fmg, BinderFile File)>(StringComparer.OrdinalIgnoreCase);
 
             FMG? FindAndLoadFmg(string categoryName)
@@ -725,23 +945,17 @@ namespace LootForge.RegTool
                 if (fmgFileCache.TryGetValue(categoryName, out var cached))
                     return cached.Fmg;
 
-                // Match exact file name e.g. "ProtectorName.fmg" at end of the internal path
                 var binderFile = msgBnd.Files.FirstOrDefault(f =>
                     f.Name != null &&
                     Path.GetFileName(f.Name).Equals($"{categoryName}.fmg", StringComparison.OrdinalIgnoreCase));
 
-                if (binderFile == null)
-                {
-                    Console.WriteLine($"[RegTool WARN] FMG file '{categoryName}.fmg' not found in item.msgbnd.dcx");
-                    return null;
-                }
+                if (binderFile == null) return null;
 
                 var fmg = FMG.Read(binderFile.Bytes);
                 fmgFileCache[categoryName] = (fmg, binderFile);
                 return fmg;
             }
 
-            // Pre-load all relevant FMG categories
             var protectorName    = FindAndLoadFmg("ProtectorName");
             var protectorInfo    = FindAndLoadFmg("ProtectorInfo");
             var protectorCaption = FindAndLoadFmg("ProtectorCaption");
@@ -759,17 +973,45 @@ namespace LootForge.RegTool
 
                 if (nameFmg == null) continue;
 
-                // Look up vanilla source text for authentic names/descriptions
                 string nameText = fallbackName;
                 string infoText = fallbackInfo;
                 string captionText = fallbackCaption;
 
                 if (vanillaSourceId > 0)
                 {
+<<<<<<< master
                     var vanillaNameEntry = nameFmg.Entries.FirstOrDefault(e => e.ID == vanillaSourceId);
                     if (vanillaNameEntry?.Text != null && vanillaNameEntry.Text.Length > 0)
                     {
                         nameText = $"\u2726 [LootForge] {vanillaNameEntry.Text}";
+=======
+                    int[] fmgIdsToTry = new int[] { vanillaSourceId, vanillaSourceId / 1000, vanillaSourceId / 100, vanillaSourceId / 10, vanillaSourceId * 10, vanillaSourceId / 10000 };
+
+                    foreach (int fmgId in fmgIdsToTry)
+                    {
+                        var vanillaNameEntry = nameFmg.Entries.FirstOrDefault(e => e.ID == fmgId);
+                        if (vanillaNameEntry?.Text != null && vanillaNameEntry.Text.Length > 0)
+                        {
+                            nameText = $"\u2726 [LootForge] {vanillaNameEntry.Text}";
+                            break;
+                        }
+                    }
+
+                    if (nameText == fallbackName && !string.IsNullOrEmpty(fallbackName))
+                    {
+                        string vanillaName = fallbackName;
+                        int markerIndex = vanillaName.IndexOf("] ");
+                        if (markerIndex >= 0) vanillaName = vanillaName.Substring(markerIndex + 2);
+                        int parenIndex = vanillaName.LastIndexOf(" (");
+                        if (parenIndex >= 0) vanillaName = vanillaName.Substring(0, parenIndex);
+
+                        var nameEntryByText = nameFmg.Entries.FirstOrDefault(e =>
+                            e.Text != null && e.Text.Contains(vanillaName, StringComparison.OrdinalIgnoreCase));
+                        if (nameEntryByText != null)
+                        {
+                            nameText = $"\u2726 [LootForge] {nameEntryByText.Text}";
+                        }
+>>>>>>> local
                     }
 
                     if (infoFmg != null)
@@ -787,7 +1029,6 @@ namespace LootForge.RegTool
                     }
                 }
 
-                // Remove existing entries if re-forging (idempotent)
                 nameFmg.Entries.RemoveAll(e => e.ID == itemId);
                 nameFmg.Entries.Add(new FMG.Entry(itemId, nameText));
 
@@ -806,19 +1047,88 @@ namespace LootForge.RegTool
                 count++;
             }
 
-            // Write modified FMGs back into the BND
             foreach (var kvp in fmgFileCache)
             {
                 kvp.Value.File.Bytes = kvp.Value.Fmg.Write();
             }
 
-            // Save to mod output directory alongside regulation.bin
-            string outputMsgDir = Path.Combine(Path.GetDirectoryName(regulationOutputPath)!, "msg", "engUS");
+            return count;
+        }
+
+        static int InjectFmgTexts(
+            string msgDir,
+            string regulationOutputPath,
+            List<(int ItemId, int VanillaSourceId, bool IsWeapon, string Name, string Caption, string Info)> fmgTexts)
+        {
+            string itemMsgBndPath = Path.Combine(msgDir, "item.msgbnd.dcx");
+            if (!File.Exists(itemMsgBndPath))
+            {
+                string altMsgDir = msgDir.EndsWith("engUS", StringComparison.OrdinalIgnoreCase)
+                    ? msgDir.Substring(0, msgDir.Length - 5) + "engus"
+                    : msgDir.Substring(0, msgDir.Length - 5) + "engUS";
+                string altPath = Path.Combine(altMsgDir, "item.msgbnd.dcx");
+                if (File.Exists(altPath))
+                {
+                    msgDir = altMsgDir;
+                    itemMsgBndPath = altPath;
+                }
+            }
+
+            if (!File.Exists(itemMsgBndPath))
+            {
+                Console.WriteLine($"[RegTool WARN] item.msgbnd.dcx not found at: {itemMsgBndPath}. Skipping FMG injection.");
+                return 0;
+            }
+
+            // Create .bak file before modifying
+            string bakPath = itemMsgBndPath + ".bak";
+            if (!File.Exists(bakPath))
+            {
+                File.Copy(itemMsgBndPath, bakPath, false);
+                Console.WriteLine($"[RegTool] Created backup: {bakPath}");
+            }
+
+            Console.WriteLine($"[RegTool] Loading item.msgbnd.dcx from: {itemMsgBndPath}...");
+            BND4 msgBnd = BND4.Read(itemMsgBndPath);
+
+            int count = InjectFmgEntriesIntoBnd(msgBnd, fmgTexts);
+
+            // Determine output directory alongside regulation.bin
+            string baseOutDir = Path.GetDirectoryName(regulationOutputPath)!;
+            string outputMsgDir = Path.Combine(baseOutDir, "msg", "engUS");
+            if (!Directory.Exists(outputMsgDir))
+            {
+                string outputMsgDirLower = Path.Combine(baseOutDir, "msg", "engus");
+                if (Directory.Exists(outputMsgDirLower)) outputMsgDir = outputMsgDirLower;
+            }
             Directory.CreateDirectory(outputMsgDir);
             string outputMsgBndPath = Path.Combine(outputMsgDir, "item.msgbnd.dcx");
             msgBnd.Write(outputMsgBndPath);
 
             Console.WriteLine($"[RegTool] Injected {count} FMG text entries. Saved to: {outputMsgBndPath}");
+
+            // Also mirror to DLC msg archives if available
+            foreach (string dlcFile in new[] { "item_dlc02.msgbnd.dcx", "item_dlc01.msgbnd.dcx" })
+            {
+                string srcDlc = Path.Combine(msgDir, dlcFile);
+                if (File.Exists(srcDlc))
+                {
+                    try
+                    {
+                        Console.WriteLine($"[RegTool] Mirroring {count} FMG entries to DLC archive: {dlcFile}...");
+                        BND4 dlcBnd = BND4.Read(srcDlc);
+                        InjectFmgEntriesIntoBnd(dlcBnd, fmgTexts);
+                        string outDlc = Path.Combine(outputMsgDir, dlcFile);
+                        dlcBnd.Write(outDlc);
+                        Console.WriteLine($"[RegTool] Successfully mirrored into DLC archive: {outDlc}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[RegTool WARN] Could not mirror FMG to {dlcFile}: {ex.Message}");
+                    }
+                }
+            }
+
             return count;
         }
 

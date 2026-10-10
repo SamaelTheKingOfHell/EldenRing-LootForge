@@ -278,6 +278,31 @@ class LootForgeRequestHandler(SimpleHTTPRequestHandler):
                     self.config.active_regulation_path = str(target_reg)
                     self.config.save()
 
+<<<<<<< master
+=======
+                    # Deploy custom parts files (renamed models) to target regulation directory
+                    input_dir = Path(self.config.input_directory)
+                    if not input_dir.is_absolute():
+                        input_dir = self.base_dir / input_dir
+                    parts_deployed = self.regulation_manager.deploy_parts(
+                        mod_sets=scanned_sets,
+                        input_base_dir=input_dir,
+                        output_dir=target_reg.parent
+                    )
+                    system_logger.info(f"Deployed {parts_deployed} parts files to {target_reg.parent / 'parts'}", source="Forge")
+
+                # Include FMG verification in response
+                fmg_verification = reg_result.get("fmg_verification", {})
+                if fmg_verification:
+                    if fmg_verification.get("verified"):
+                        system_logger.info(f"FMG verification PASSED: {len(fmg_verification.get('regulation_items', []))} items verified", source="Forge")
+                    else:
+                        missing = fmg_verification.get("missing_in_fmg", [])
+                        system_logger.warning(f"FMG verification FAILED: {len(missing)} items missing from FMG: {missing}", source="Forge")
+                        for err in fmg_verification.get("errors", []):
+                            system_logger.error(f"FMG verification error: {err}", source="Forge")
+
+>>>>>>> local
                 system_logger.info(
                     f"Forge successfully completed! {len(injected_records)} set(s) injected.",
                     source="Forge"

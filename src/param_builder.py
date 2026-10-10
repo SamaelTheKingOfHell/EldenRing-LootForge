@@ -106,6 +106,9 @@ class ParamBuilder:
                 "param_table": "EquipParamWeapon" if mod_set.is_weapon else "EquipParamProtector",
                 "new_param_id": item_id,
                 "base_clone_id": base_clone_id,
+                "target_model_id": int(mod_set.target_model_id) if mod_set.target_model_id.isdigit() else 0,
+                "slot": slot.value,
+                "slot_offset": vanilla_offset,
                 "row_name": f"[LootForge] {mod_set.set_id} ({slot_name})",
                 "field_updates": field_updates
             })
@@ -115,6 +118,9 @@ class ParamBuilder:
             fmg_texts.append({
                 "item_id": item_id,
                 "vanilla_source_id": base_clone_id,
+                "target_model_id": int(mod_set.target_model_id) if mod_set.target_model_id.isdigit() else 0,
+                "slot": slot.value,
+                "slot_offset": vanilla_offset,
                 "is_weapon": mod_set.is_weapon,
                 "name": item_display_name,
                 "caption": "Standalone relic forged by LootForge. Preserves authentic vanilla gear while offering unique drops.",
