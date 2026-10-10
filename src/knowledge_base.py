@@ -77,7 +77,13 @@ class VanillaKnowledgeBase:
         """
         info = self.lookup_weapon(model_id) if is_weapon else self.lookup_protector(model_id)
         if not info:
-            # Fallback for unrecognized items: place at Merchant Kalé for safe access
+            if is_weapon:
+                return LootTarget(
+                    route_type=LootDistributionType.MERCHANT_SHOP,
+                    target_id="twin_maiden_husks",
+                    display_name="Twin Maiden Husks (Roundtable Hold)",
+                    chance_or_cost=5000
+                )
             return LootTarget(
                 route_type=LootDistributionType.MERCHANT_SHOP,
                 target_id="kale_church_of_elleh",

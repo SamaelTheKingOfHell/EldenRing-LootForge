@@ -11,7 +11,10 @@ Adheres to `[CS-MODULAR]`, `[CS-GRANULARITY]`, and `[CS-DECOUPLE]` by decomposin
 | `INDEX.md` | - | Index and architectural documentation for RegTool. |
 | `Program.cs` | `Program` | Entry point, CLI argument parsing, and command routing. |
 | `PatchService.cs` | `PatchService` | Regulation decryption, loading paramdefs, orchestrating patch pipeline, and re-encryption. |
-| `ParamInjector.cs` | `ParamInjector` | Safe injection into `EquipParamProtector`, `EquipParamWeapon`, `ItemLotParam_enemy`, and `ShopLineupParam`. |
+| `EquipInjector.cs` | `EquipInjector` | Equipment row cloning (`EquipParamProtector`, `EquipParamWeapon`), icon inheritance, and validity checks. |
+| `LootInjector.cs` | `LootInjector` | Safe distribution injection (`ItemLotParam_enemy`, `ShopLineupParam`) with merchant capacity spillover. |
+| `ParamInjector.cs` | `ParamInjector` | Backward-compatible facade delegating to EquipInjector and LootInjector. |
 | `FmgInjector.cs` | `FmgInjector` | FMG loading, vanilla name/description lookup, item text injection, and DLC archive mirroring. |
+| `DiagnosticService.cs` | `DiagnosticService` | Regulation verification, FMG text searching, regulation dumping, and Data0 archive extraction. |
 | `ParamHelper.cs` | `ParamHelper` | Utility methods for safely reading, writing, and type-converting PARAM cell values. |
 | `RegTool.csproj` | - | .NET 9.0 project definition linking `SoulsFormatsNEXT`. |

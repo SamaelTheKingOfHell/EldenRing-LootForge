@@ -29,13 +29,13 @@ namespace LootForge.RegTool
                     case "patch":
                         return PatchService.ExecutePatch(options);
                     case "verify":
-                        return PatchService.ExecuteVerify(options);
+                        return DiagnosticService.ExecuteVerify(options);
                     case "extract-msg":
-                        return PatchService.ExtractMsgFiles(options);
+                        return DiagnosticService.ExtractMsgFiles(options);
                     case "dump-fmg":
-                        return PatchService.ExecuteDumpFmg(options);
+                        return DiagnosticService.ExecuteDumpFmg(options);
                     case "dump-reg":
-                        return PatchService.ExecuteDumpReg(options);
+                        return DiagnosticService.ExecuteDumpReg(options);
                     default:
                         Console.Error.WriteLine($"Unknown command: '{command}'");
                         PrintUsage();

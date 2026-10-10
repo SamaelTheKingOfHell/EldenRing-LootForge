@@ -22,6 +22,17 @@ namespace LootForge.RegTool
             string Info
         );
 
+        public static bool IsValidFmgText(string? text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return false;
+            string trimmed = text.Trim();
+            if (trimmed.Equals("[ERROR]", StringComparison.OrdinalIgnoreCase)) return false;
+            if (trimmed.StartsWith("[ERROR]", StringComparison.OrdinalIgnoreCase)) return false;
+            if (trimmed.StartsWith("?")) return false;
+            if (trimmed.Equals("Dummy", StringComparison.OrdinalIgnoreCase)) return false;
+            return true;
+        }
+
         public static int InjectFmgEntriesIntoBnd(
             BND4 msgBnd,
             List<FmgTextSpec> fmgTexts)
@@ -79,9 +90,9 @@ namespace LootForge.RegTool
                     foreach (int fmgId in fmgIdsToTry)
                     {
                         var vanillaNameEntry = nameFmg.Entries.FirstOrDefault(e => e.ID == fmgId);
-                        if (vanillaNameEntry?.Text != null && vanillaNameEntry.Text.Length > 0)
+                        if (vanillaNameEntry?.Text != null && IsValidFmgText(vanillaNameEntry.Text))
                         {
-                            nameText = $"\u2726 [LootForge] {vanillaNameEntry.Text}";
+                            nameText = $"\u2726 [LootForge] {vanillaNameEntry.Text.Trim()}";
                             break;
                         }
                     }
@@ -95,26 +106,31 @@ namespace LootForge.RegTool
                         if (parenIndex >= 0) vanillaName = vanillaName.Substring(0, parenIndex);
 
                         var nameEntryByText = nameFmg.Entries.FirstOrDefault(e =>
-                            e.Text != null && e.Text.Contains(vanillaName, StringComparison.OrdinalIgnoreCase));
+                            e.Text != null && IsValidFmgText(e.Text) && e.Text.Contains(vanillaName, StringComparison.OrdinalIgnoreCase));
                         if (nameEntryByText != null)
                         {
-                            nameText = $"\u2726 [LootForge] {nameEntryByText.Text}";
+                            nameText = $"\u2726 [LootForge] {nameEntryByText.Text.Trim()}";
                         }
                     }
 
                     if (infoFmg != null)
                     {
                         var vanillaInfoEntry = infoFmg.Entries.FirstOrDefault(e => e.ID == spec.VanillaSourceId);
-                        if (vanillaInfoEntry?.Text != null && vanillaInfoEntry.Text.Length > 0)
+                        if (vanillaInfoEntry?.Text != null && IsValidFmgText(vanillaInfoEntry.Text))
                             infoText = vanillaInfoEntry.Text;
                     }
 
                     if (captionFmg != null)
                     {
                         var vanillaCaptionEntry = captionFmg.Entries.FirstOrDefault(e => e.ID == spec.VanillaSourceId);
-                        if (vanillaCaptionEntry?.Text != null && vanillaCaptionEntry.Text.Length > 0)
+                        if (vanillaCaptionEntry?.Text != null && IsValidFmgText(vanillaCaptionEntry.Text))
                             captionText = vanillaCaptionEntry.Text;
                     }
+                }
+
+                if (!IsValidFmgText(nameText))
+                {
+                    nameText = $"\u2726 [LootForge] {(spec.IsWeapon ? "Weapon" : "Armor")} {spec.ItemId}";
                 }
 
                 nameFmg.Entries.RemoveAll(e => e.ID == spec.ItemId);
