@@ -133,6 +133,60 @@ namespace LootForge.RegTool
                         Console.WriteLine($"  ID={r.ID} Name='{r.Name}' equipId={eqId} equipType={eqType} value={val} iconId={icon} nameMsgId={nameMsg}");
                     }
                 }
+                else if (tableName == "EquipParamProtector")
+                {
+                    var injected = param.Rows.Where(r => r.ID >= 9000000 || (r.Name != null && r.Name.Contains("LootForge"))).ToList();
+                    var badIcons = injected.Where(r => {
+                        int m = ParamHelper.GetCellInt(r, "iconIdM");
+                        int f = ParamHelper.GetCellInt(r, "iconIdF");
+                        return m <= 0 || m == 3141 || m == 3142 || f <= 0 || f == 3141 || f == 3142;
+                    }).ToList();
+
+                    Console.WriteLine($"Injected EquipParamProtector rows: {injected.Count} (Invalid placeholder icons: {badIcons.Count})");
+                    if (badIcons.Count > 0)
+                    {
+                        Console.WriteLine($"[RegTool WARN] Found {badIcons.Count} protector rows with invalid icons:");
+                        foreach (var r in badIcons.Take(10))
+                        {
+                            int iconM = ParamHelper.GetCellInt(r, "iconIdM");
+                            int iconF = ParamHelper.GetCellInt(r, "iconIdF");
+                            Console.WriteLine($"  ID={r.ID} Name='{r.Name}' iconM={iconM} iconF={iconF}");
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("[RegTool SUCCESS] All injected protector rows have authentic retail icons!");
+                    }
+
+                    var vanillaMaiden = param.Rows.Where(r => r.ID >= 902000 && r.ID <= 903200).ToList();
+                    foreach (var r in vanillaMaiden)
+                    {
+                        int iconM = ParamHelper.GetCellInt(r, "iconIdM");
+                        int iconF = ParamHelper.GetCellInt(r, "iconIdF");
+                        int model = ParamHelper.GetCellInt(r, "equipModelId");
+                        Console.WriteLine($"  [Vanilla Maiden] ID={r.ID} Name='{r.Name}' iconM={iconM} iconF={iconF} model={model}");
+                    }
+
+                    // Print short skirts rows
+                    foreach (var r in injected.Where(r => r.Name != null && r.Name.Contains("short skirts", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        int iconM = ParamHelper.GetCellInt(r, "iconIdM");
+                        int iconF = ParamHelper.GetCellInt(r, "iconIdF");
+                        int model = ParamHelper.GetCellInt(r, "equipModelId");
+                        int cat = ParamHelper.GetCellInt(r, "protectorCategory");
+                        Console.WriteLine($"  [Skirt Row] ID={r.ID} Name='{r.Name}' iconM={iconM} iconF={iconF} model={model} cat={cat}");
+                    }
+                }
+                else if (tableName == "EquipParamWeapon")
+                {
+                    var interesting = param.Rows.Where(r => r.ID >= 9000000 || (r.Name != null && r.Name.Contains("LootForge"))).ToList();
+                    Console.WriteLine($"Found {interesting.Count} matching rows in EquipParamWeapon:");
+                    foreach (var r in interesting)
+                    {
+                        int icon = ParamHelper.GetCellInt(r, "iconId");
+                        Console.WriteLine($"  ID={r.ID} Name='{r.Name}' icon={icon}");
+                    }
+                }
             }
 
             InspectTable("ShopLineupParam");

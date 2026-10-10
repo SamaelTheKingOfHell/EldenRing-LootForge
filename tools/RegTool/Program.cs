@@ -36,6 +36,8 @@ namespace LootForge.RegTool
                         return DiagnosticService.ExecuteDumpFmg(options);
                     case "dump-reg":
                         return DiagnosticService.ExecuteDumpReg(options);
+                    case "dump-tpf":
+                        return TpfService.ExecuteDumpTpf(options);
                     default:
                         Console.Error.WriteLine($"Unknown command: '{command}'");
                         PrintUsage();

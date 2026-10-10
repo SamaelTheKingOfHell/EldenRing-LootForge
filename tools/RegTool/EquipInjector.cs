@@ -17,28 +17,51 @@ namespace LootForge.RegTool
         public static bool IsValidProtectorRow(PARAM.Row r)
         {
             if (r.ID <= 0 || r.ID >= 9000000) return false;
-            if (!string.IsNullOrEmpty(r.Name))
-            {
-                if (r.Name.Contains("[ERROR]", StringComparison.OrdinalIgnoreCase)) return false;
-                if (r.Name.Contains("Dummy", StringComparison.OrdinalIgnoreCase)) return false;
-                if (r.Name.StartsWith("?")) return false;
-            }
+            // Exclude naked body rows (unarmored default skin: 10000..10300)
+            if (r.ID >= 10000 && r.ID <= 10300) return false;
+            // Exclude developer test ranges (DS3 test rows and internal debug rows)
+            if (r.ID >= 900000 && r.ID < 902000) return false; // 901200, 901600 are test rows; 902000+ are authentic Finger Maiden sets
+            if (r.ID >= 1960000 && r.ID <= 1980000) return false;
+
+            // Reject rows with empty or whitespace names (developer test rows)
+            if (string.IsNullOrWhiteSpace(r.Name)) return false;
+
+            // Reject placeholder strings
+            if (r.Name.Contains("[ERROR]", StringComparison.OrdinalIgnoreCase)) return false;
+            if (r.Name.Contains("Dummy", StringComparison.OrdinalIgnoreCase)) return false;
+            if (r.Name.StartsWith("?")) return false;
+            if (r.Name.StartsWith("dummy", StringComparison.OrdinalIgnoreCase)) return false;
+
             int iconM = ParamHelper.GetCellInt(r, "iconIdM");
             int iconF = ParamHelper.GetCellInt(r, "iconIdF");
-            return iconM > 0 || iconF > 0;
+            if (iconM <= 0 && iconF <= 0) return false;
+
+            // Reject non-existent test icons (DS3 orphan textures that render as gray "ICON" box)
+            if (iconM == 3141 || iconM == 3142 || iconF == 3141 || iconF == 3142) return false;
+
+            return true;
         }
 
         public static bool IsValidWeaponRow(PARAM.Row r)
         {
-            if (r.ID <= 0 || r.ID >= 9000000) return false;
-            if (!string.IsNullOrEmpty(r.Name))
-            {
-                if (r.Name.Contains("[ERROR]", StringComparison.OrdinalIgnoreCase)) return false;
-                if (r.Name.Contains("Dummy", StringComparison.OrdinalIgnoreCase)) return false;
-                if (r.Name.StartsWith("?")) return false;
-            }
+            if (r.ID <= 0 || r.ID >= 90000000) return false;
+            // Exclude injected LootForge rows
+            if (r.ID >= 9000000 && r.ID < 9900000 && r.Name != null && r.Name.Contains("[LootForge]")) return false;
+
+            // Reject rows with empty or whitespace names
+            if (string.IsNullOrWhiteSpace(r.Name)) return false;
+
+            // Reject placeholder strings
+            if (r.Name.Contains("[ERROR]", StringComparison.OrdinalIgnoreCase)) return false;
+            if (r.Name.Contains("Dummy", StringComparison.OrdinalIgnoreCase)) return false;
+            if (r.Name.StartsWith("?")) return false;
+            if (r.Name.StartsWith("dummy", StringComparison.OrdinalIgnoreCase)) return false;
+
             int icon = ParamHelper.GetCellInt(r, "iconId");
-            return icon > 0;
+            if (icon <= 0) return false;
+            if (icon == 3141 || icon == 3142) return false;
+
+            return true;
         }
 
         public static void InjectEquipParams(
@@ -74,6 +97,7 @@ namespace LootForge.RegTool
 
                 // Locate authentic vanilla clone source row
                 PARAM.Row? baseRow = null;
+                int targetCat = slotOffset == 0 ? 0 : slotOffset == 100 ? 1 : slotOffset == 200 ? 2 : 3;
 
                 // 1. Try by direct baseCloneId if valid
                 if (baseCloneId > 0)
@@ -90,7 +114,7 @@ namespace LootForge.RegTool
                 {
                     if (isProtector)
                     {
-                        baseRow = param.Rows.FirstOrDefault(r => IsValidProtectorRow(r) && r.ID % 1000 == slotOffset && ParamHelper.GetCellInt(r, "equipModelId") == targetModelId)
+                        baseRow = param.Rows.FirstOrDefault(r => IsValidProtectorRow(r) && ParamHelper.GetCellInt(r, "protectorCategory") == targetCat && ParamHelper.GetCellInt(r, "equipModelId") == targetModelId)
                                ?? param.Rows.FirstOrDefault(r => IsValidProtectorRow(r) && ParamHelper.GetCellInt(r, "equipModelId") == targetModelId);
                     }
                     else
@@ -99,17 +123,50 @@ namespace LootForge.RegTool
                     }
                 }
 
-                // 3. Fallback: ANY authentic valid vanilla row (guaranteed icon > 0 and no dummy row)
+                // 2b. Try nearby model variant in same set family (within +- 10)
+                if (baseRow == null && targetModelId > 0 && isProtector)
+                {
+                    baseRow = param.Rows
+                        .Where(r => IsValidProtectorRow(r) && ParamHelper.GetCellInt(r, "protectorCategory") == targetCat && Math.Abs(ParamHelper.GetCellInt(r, "equipModelId") - targetModelId) <= 10)
+                        .OrderBy(r => Math.Abs(ParamHelper.GetCellInt(r, "equipModelId") - targetModelId))
+                        .FirstOrDefault();
+                }
+
+                // 3. Fallback: authentic vanilla row matching equipment slot and category
                 if (baseRow == null)
                 {
                     if (isProtector)
                     {
-                        baseRow = param.Rows.FirstOrDefault(r => IsValidProtectorRow(r) && r.ID % 1000 == slotOffset)
+                        baseRow = param.Rows.FirstOrDefault(r => IsValidProtectorRow(r) && ParamHelper.GetCellInt(r, "protectorCategory") == targetCat && r.ID % 1000 == slotOffset)
+                               ?? param.Rows.FirstOrDefault(r => IsValidProtectorRow(r) && ParamHelper.GetCellInt(r, "protectorCategory") == targetCat)
                                ?? param.Rows.FirstOrDefault(r => IsValidProtectorRow(r));
                     }
                     else
                     {
                         baseRow = param.Rows.FirstOrDefault(r => IsValidWeaponRow(r));
+                    }
+                }
+
+                // 4. Guaranteed retail fallbacks with verified non-placeholder textures
+                if (baseRow == null)
+                {
+                    if (isProtector)
+                    {
+                        int fallbackId = slotOffset switch
+                        {
+                            0 => 40000,   // Scale Helm (icon 13000)
+                            100 => 40100, // Scale Armor (icon 13001)
+                            200 => 40200, // Iron Gauntlets (icon 13002)
+                            300 => 40300, // Leather Boots (icon 13003)
+                            _ => 40100
+                        };
+                        baseRow = param.Rows.FirstOrDefault(r => r.ID == fallbackId)
+                               ?? param.Rows.FirstOrDefault(r => IsValidProtectorRow(r));
+                    }
+                    else
+                    {
+                        baseRow = param.Rows.FirstOrDefault(r => r.ID == 2020000) // Longsword (icon 2020)
+                               ?? param.Rows.FirstOrDefault(r => IsValidWeaponRow(r));
                     }
                 }
 
@@ -146,7 +203,7 @@ namespace LootForge.RegTool
                     }
                 }
 
-                // Ensure icon is never 0 (inherit authentic icons from baseRow)
+                // Ensure icon is never 0 or placeholder 3141/3142 (inherit authentic icons from baseRow)
                 if (isProtector)
                 {
                     int iconM = ParamHelper.GetCellInt(newRow, "iconIdM");
@@ -154,24 +211,52 @@ namespace LootForge.RegTool
                     int baseIconM = ParamHelper.GetCellInt(baseRow, "iconIdM");
                     int baseIconF = ParamHelper.GetCellInt(baseRow, "iconIdF");
 
-                    if (iconM <= 0 && baseIconM > 0)
+                    if ((iconM <= 0 || iconM == 3141 || iconM == 3142) && baseIconM > 0 && baseIconM != 3141 && baseIconM != 3142)
                         ParamHelper.SetCellIfExists(newRow, "iconIdM", (ushort)baseIconM);
-                    if (iconF <= 0 && baseIconF > 0)
+                    if ((iconF <= 0 || iconF == 3141 || iconF == 3142) && baseIconF > 0 && baseIconF != 3141 && baseIconF != 3142)
                         ParamHelper.SetCellIfExists(newRow, "iconIdF", (ushort)baseIconF);
 
-                    // Cross-gender safeguard if one is missing
+                    // Cross-gender safeguard if one is missing or invalid
                     int finalM = ParamHelper.GetCellInt(newRow, "iconIdM");
                     int finalF = ParamHelper.GetCellInt(newRow, "iconIdF");
-                    if (finalM <= 0 && finalF > 0) ParamHelper.SetCellIfExists(newRow, "iconIdM", (ushort)finalF);
-                    if (finalF <= 0 && finalM > 0) ParamHelper.SetCellIfExists(newRow, "iconIdF", (ushort)finalM);
+                    if ((finalM <= 0 || finalM == 3141 || finalM == 3142) && finalF > 0 && finalF != 3141 && finalF != 3142)
+                        ParamHelper.SetCellIfExists(newRow, "iconIdM", (ushort)finalF);
+                    if ((finalF <= 0 || finalF == 3141 || finalF == 3142) && finalM > 0 && finalM != 3141 && finalM != 3142)
+                        ParamHelper.SetCellIfExists(newRow, "iconIdF", (ushort)finalM);
+
+                    // Absolute guaranteed fallback icon if both failed
+                    int curM = ParamHelper.GetCellInt(newRow, "iconIdM");
+                    int curF = ParamHelper.GetCellInt(newRow, "iconIdF");
+                    if (curM <= 0 || curM == 3141 || curM == 3142)
+                    {
+                        ushort defaultIcon = (ushort)(slotOffset switch
+                        {
+                            0 => 13000,   // Scale Helm
+                            100 => 14481, // Finger Maiden Robe
+                            200 => 13002, // Iron Gauntlets
+                            300 => 13003, // Leather Boots
+                            _ => 13001
+                        });
+                        ParamHelper.SetCellIfExists(newRow, "iconIdM", defaultIcon);
+                    }
+                    if (curF <= 0 || curF == 3141 || curF == 3142)
+                    {
+                        ushort finalMIcon = (ushort)ParamHelper.GetCellInt(newRow, "iconIdM");
+                        ParamHelper.SetCellIfExists(newRow, "iconIdF", finalMIcon > 0 ? finalMIcon : (ushort)13001);
+                    }
                 }
                 else
                 {
                     int icon = ParamHelper.GetCellInt(newRow, "iconId");
                     int baseIcon = ParamHelper.GetCellInt(baseRow, "iconId");
-                    if (icon <= 0 && baseIcon > 0)
+                    if ((icon <= 0 || icon == 3141 || icon == 3142) && baseIcon > 0 && baseIcon != 3141 && baseIcon != 3142)
                     {
                         ParamHelper.SetCellIfExists(newRow, "iconId", (ushort)baseIcon);
+                    }
+                    int curIcon = ParamHelper.GetCellInt(newRow, "iconId");
+                    if (curIcon <= 0 || curIcon == 3141 || curIcon == 3142)
+                    {
+                        ParamHelper.SetCellIfExists(newRow, "iconId", (ushort)2020); // Longsword
                     }
                 }
 
