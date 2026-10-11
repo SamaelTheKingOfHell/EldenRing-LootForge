@@ -130,3 +130,14 @@ class VanillaKnowledgeBase:
     def list_merchants(self) -> List[Dict[str, Any]]:
         """Returns all selectable merchants."""
         return list(self._merchants)
+
+    def get_enemy_lot_id(self, enemy_id: str) -> Optional[int]:
+        """Resolves an enemy or elite enemy identifier to its ItemLotParam_enemy ID."""
+        for e in self._elite_enemies:
+            if e.get("id") == enemy_id:
+                return e.get("lotParamId")
+        for e in self._enemies:
+            if e.get("id") == enemy_id:
+                return e.get("lotParamId")
+        return None
+

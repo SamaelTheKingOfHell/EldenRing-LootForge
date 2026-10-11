@@ -148,7 +148,7 @@ class LootDistributor:
         return LootTarget(LootDistributionType.ENEMY_DROP, "431100000", "[Test: Mob 100%] Godrick Soldier", 100.0)
 
     def _rotate_boss_drop(self, original_boss_id: str, original_boss_name: str) -> LootTarget:
-        """AntiDup Option 1: Boss Rotation with cascading fallbacks."""
+        """AntiDup Option 1: Boss Rotation with wrap-around across Remembrance bosses."""
         bosses = self._kb.list_boss_remembrances()
         available = [b for b in bosses if b["id"] != original_boss_id and b["id"] not in self._assigned_bosses]
 
@@ -158,19 +158,23 @@ class LootDistributor:
             system_logger.info(f"Boss Rotation: Rotated from '{original_boss_name}' to '{chosen['name']}'", source="LootDistributor")
             return LootTarget(LootDistributionType.BOSS_REMEMBRANCE, chosen["id"], chosen["name"], float(chosen.get("defaultCost", 30000)))
 
-        # Fallback 1: Mini-bosses
+        # When all bosses have at least 1 mod item assigned, wrap around across other bosses
+        other_bosses = [b for b in bosses if b["id"] != original_boss_id]
+        if other_bosses:
+            chosen = random.choice(other_bosses)
+            system_logger.info(f"Boss Rotation (Wrap): Rotated from '{original_boss_name}' to '{chosen['name']}'", source="LootDistributor")
+            return LootTarget(LootDistributionType.BOSS_REMEMBRANCE, chosen["id"], chosen["name"], float(chosen.get("defaultCost", 30000)))
+
+        # Fallback: Elite enemies across the realm
         mini_bosses = [
             e for e in self._kb.list_elite_enemies()
             if any(k in e["name"].lower() for k in ["sentinel", "knight", "cavalry", "assassin", "darriwil"])
-            and e["id"] not in self._assigned_bosses
         ]
         if mini_bosses:
             chosen_mini = random.choice(mini_bosses)
-            self._assigned_bosses.add(chosen_mini["id"])
             system_logger.info(f"Boss Rotation: Cascaded to Mini-Boss '{chosen_mini['name']}'", source="LootDistributor")
             return LootTarget(LootDistributionType.ENEMY_DROP, chosen_mini["id"], chosen_mini["name"], float(chosen_mini.get("defaultDropChance", 25.0)))
 
-        # Fallback 2: Wild enemies
         return self._place_in_wild(original_boss_name)
 
     def _place_in_wild(self, original_name: str) -> LootTarget:

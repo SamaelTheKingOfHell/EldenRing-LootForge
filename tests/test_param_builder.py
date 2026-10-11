@@ -95,6 +95,40 @@ class TestParamBuilder(unittest.TestCase):
         self.assertEqual(loot["lot_id"], 9100002)
         self.assertEqual(loot["drop_rate_percent"], 15.0)
 
+    def test_enemy_drop_patch_spec_with_knowledge_base(self):
+        """Verifies ItemLotParam resolves authentic enemy lotParamId when KB is supplied."""
+        from src.knowledge_base import VanillaKnowledgeBase
+        kb = VanillaKnowledgeBase.from_data_dir(str(Path(__file__).resolve().parent.parent / "data"))
+        builder_with_kb = ParamBuilder(kb)
+
+        mod_set = DetectedModSet(
+            set_id="cleanrot_variant",
+            folder_or_archive_name="CleanrotVariant",
+            target_model_id="4110",
+            target_vanilla_name="Cleanrot Knight Set",
+            parts=[
+                ModPartFile("hd_m_4110.partsbnd.dcx", "parts/hd_m_4110.partsbnd.dcx", EquipmentSlot.HEAD, "4110")
+            ],
+            allocation=StandaloneAllocation(
+                new_model_id="9002",
+                new_equip_param_id=9002000,
+                new_item_lot_id=9100002,
+                marker_tag="✦ [LootForge]"
+            ),
+            loot_target=LootTarget(
+                route_type=LootDistributionType.ENEMY_DROP,
+                target_id="cleanrot_knight",
+                display_name="Cleanrot Knight",
+                chance_or_cost=15.0
+            )
+        )
+
+        spec = builder_with_kb.build_patch_spec(mod_set)
+        loot = spec["loot_distribution"]
+        self.assertEqual(loot["type"], "enemy_drop")
+        self.assertEqual(loot["lot_id"], 380000000)  # Authentic Cleanrot Knight lot ID!
+
 
 if __name__ == "__main__":
     unittest.main()
+

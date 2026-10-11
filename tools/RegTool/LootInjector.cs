@@ -103,11 +103,24 @@ namespace LootForge.RegTool
         private static int ResolveEnemyLotId(string? name)
         {
             string lower = name?.ToLowerInvariant() ?? "";
-            if (lower.Contains("noble")) return 430000000;
-            if (lower.Contains("godrick knight")) return 435100000;
-            if (lower.Contains("banished")) return 301000000;
+            if (lower.Contains("moongrum")) return 340000000;
+            if (lower.Contains("crucible")) return 250000000;
+            if (lower.Contains("black knife") || lower.Contains("assassin")) return 210000000;
             if (lower.Contains("cleanrot")) return 380000000;
-            return 431100000; // Godrick Soldier default
+            if (lower.Contains("banished")) return 301000000;
+            if (lower.Contains("bloodhound") || lower.Contains("darriwil")) return 410000000;
+            if (lower.Contains("sentinel")) return 420000000;
+            if (lower.Contains("cavalry")) return 450000000;
+            if (lower.Contains("vyke")) return 440000000;
+            if (lower.Contains("makar") || lower.Contains("wyrm")) return 350000000;
+            if (lower.Contains("okina") || lower.Contains("bloody finger")) return 460000000;
+            if (lower.Contains("omen")) return 214000000;
+            if (lower.Contains("crab")) return 227000000;
+            if (lower.Contains("exile") || lower.Contains("vargram")) return 300000000;
+            if (lower.Contains("godrick knight")) return 435100000;
+            if (lower.Contains("noble")) return 430000000;
+            if (lower.Contains("soldier")) return 431100000;
+            return 301000000; // Banished Knight safe non-tutorial fallback
         }
 
         private static void InjectShopLineup(

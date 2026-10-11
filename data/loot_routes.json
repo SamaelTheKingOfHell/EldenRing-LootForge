@@ -86,19 +86,19 @@
     {
       "id": "moongrum_carian_knight",
       "name": "Moongrum, Carian Knight (Raya Lucaria Academy)",
-      "lotParamId": 435100000,
+      "lotParamId": 340000000,
       "defaultDropChance": 25.0
     },
     {
       "id": "crucible_knight_ordovis",
       "name": "Crucible Knight Ordovis (Auriza Hero's Grave)",
-      "lotParamId": 435100000,
+      "lotParamId": 250000000,
       "defaultDropChance": 20.0
     },
     {
       "id": "crucible_knight_siluria",
       "name": "Crucible Knight Siluria (Deeproot Depths)",
-      "lotParamId": 435100100,
+      "lotParamId": 250000100,
       "defaultDropChance": 20.0
     },
     {
@@ -116,37 +116,37 @@
     {
       "id": "black_knife_assassin",
       "name": "Black Knife Assassin (Sage's Cave / Black Knife Catacombs)",
-      "lotParamId": 301000000,
+      "lotParamId": 210000000,
       "defaultDropChance": 20.0
     },
     {
       "id": "bloodhound_knight_darriwil",
       "name": "Bloodhound Knight Darriwil (Forlorn Hound Evergaol)",
-      "lotParamId": 435100000,
+      "lotParamId": 410000000,
       "defaultDropChance": 25.0
     },
     {
       "id": "tree_sentinel_auriza",
       "name": "Tree Sentinel Duo (Altus Plateau)",
-      "lotParamId": 435100000,
+      "lotParamId": 420000000,
       "defaultDropChance": 25.0
     },
     {
       "id": "nights_cavalry_duo",
       "name": "Night's Cavalry (Consecrated Snowfield)",
-      "lotParamId": 435100000,
+      "lotParamId": 450000000,
       "defaultDropChance": 25.0
     },
     {
       "id": "vargram_raging_wolf",
       "name": "Vargram the Raging Wolf (Leyndell)",
-      "lotParamId": 301000000,
+      "lotParamId": 300000000,
       "defaultDropChance": 30.0
     },
     {
       "id": "roundtable_knight_vyke",
       "name": "Roundtable Knight Vyke (Contender's Evergaol)",
-      "lotParamId": 301000000,
+      "lotParamId": 440000000,
       "defaultDropChance": 30.0
     },
     {
@@ -158,13 +158,13 @@
     {
       "id": "magma_wyrm_makar",
       "name": "Magma Wyrm Makar (Ruin-Strewn Precipice)",
-      "lotParamId": 301000000,
+      "lotParamId": 350000000,
       "defaultDropChance": 30.0
     },
     {
       "id": "bloody_finger_okina",
       "name": "Bloody Finger Okina (Church of Repose)",
-      "lotParamId": 301000000,
+      "lotParamId": 460000000,
       "defaultDropChance": 30.0
     }
   ],

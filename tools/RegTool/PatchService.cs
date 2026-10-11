@@ -122,6 +122,9 @@ namespace LootForge.RegTool
                 specs.Add(root);
             }
 
+            // 0. Purge any stale or previous LootForge injections to ensure a pristine baseline
+            ParamInjector.PurgePreviousInjections(GetOrLoadParam);
+
             foreach (var setSpec in specs)
             {
                 // 1. Equip Params (EquipParamProtector / EquipParamWeapon)

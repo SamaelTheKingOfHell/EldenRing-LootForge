@@ -63,6 +63,10 @@ class ParamBuilder:
         EquipmentSlot.WEAPON: (10000, 0),
     }
 
+    def __init__(self, knowledge_base: Optional[Any] = None):
+        self.kb = knowledge_base
+
+
     def build_patch_spec(self, mod_set: DetectedModSet) -> Dict[str, Any]:
         """
         Builds the complete parameter and loot patch dictionary for a mod set.
@@ -153,7 +157,8 @@ class ParamBuilder:
                 "awarded_items": [ep["new_param_id"] for ep in equip_params]
             }
         elif target.route_type == LootDistributionType.ENEMY_DROP:
-            lot_id = int(target.target_id) if target.target_id.isdigit() else alloc.new_item_lot_id
+            resolved_lot = self.kb.get_enemy_lot_id(str(target.target_id)) if self.kb else None
+            lot_id = resolved_lot if resolved_lot else (int(target.target_id) if str(target.target_id).isdigit() else alloc.new_item_lot_id)
             loot_spec = {
                 "type": "enemy_drop",
                 "lot_id": lot_id,

@@ -80,7 +80,7 @@ class LootForgeMainWindow(QMainWindow):
         if not out_p.is_absolute():
             out_p = base_dir / out_p
         self.asset_renumberer = AssetRenumberer(str(out_p))
-        self.param_builder = ParamBuilder()
+        self.param_builder = ParamBuilder(self.knowledge_base)
         backup_p = Path(self.config.backup_directory)
         if not backup_p.is_absolute():
             backup_p = base_dir / backup_p
@@ -836,6 +836,9 @@ class LootForgeMainWindow(QMainWindow):
         if not self.scanned_sets:
             QMessageBox.warning(self, "No Mods", "No mod sets detected in input_mods to forge.")
             return
+
+        # Ensure fresh distribution calculation from active UI settings before forging
+        self._recalculate_distribution()
 
         active_input = self.active_reg_input.text().strip()
 

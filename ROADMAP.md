@@ -65,3 +65,14 @@ This roadmap defines the implementation phases for the cross-platform Standalone
   - Injects rarity tier, star ratings, and detailed affix descriptions formatted strictly at the bottom of item descriptions in `item.msgbnd.dcx` and `item_dlc02.msgbnd.dcx`.
 - [x] **Modular Integration & User Configuration** (`src/config.py`):
   - Optional toggle via `diablo_loot_enabled`, configurable instance counts (`diablo_variants_per_item`), and reproducible RNG seeding (`diablo_seed`).
+
+## Phase 7: Robust Loot Routing & Regulation Clean-Up Pipeline
+- [x] **Pre-Patch Regulation Purge**:
+  - Automatically wipes previous LootForge item injections in `ItemLotParam_enemy` (clearing slots 1-8 of vanilla mobs), `ShopLineupParam`, `EquipParamWeapon`, `EquipParamProtector`, and `SpEffectParam` before applying new patch specs, preventing stale test mode drops from accumulating across forge runs.
+- [x] **Authentic Regional Enemy Lot Mapping**:
+  - Elite enemies mapped to their authentic regional `lotParamId`s across the Lands Between (Raya Lucaria Academy, Auriza Hero's Grave, Deeproot Depths, Caelid, Altus Plateau, Consecrated Snowfield, etc.) rather than defaulting to early-game Gatefront mobs.
+- [x] **Boss Weapon Retention in Standard Addition**:
+  - Boss weapons preserve their authentic Finger Reader Enia Remembrance exchanges without cascading into wild starting mobs.
+- [x] **UI Forge Synchronization**:
+  - `_forge_mods` immediately re-synchronizes active dropdowns, drop rate spinboxes, and multipliers right before executing the patch.
+
