@@ -202,5 +202,5 @@ class ParamBuilder:
         """
         base_spec = self.build_patch_spec(mod_set)
         from src.diablo_generator import DiabloLootGenerator
-        generator = DiabloLootGenerator(seed=seed)
+        generator = DiabloLootGenerator(seed=seed, knowledge_base=self.kb)
         return generator.generate_variants_for_spec(base_spec, variants_per_item=variants_count)

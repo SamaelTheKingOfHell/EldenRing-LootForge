@@ -141,6 +141,68 @@ class TestDiabloLoot(unittest.TestCase):
             self.assertEqual(ep["param_table"], "EquipParamWeapon")
             self.assertIn("sortId", ep["field_updates"])
 
+    def test_boss_always_giga_legendary(self):
+        """Verifies that boss rolls are strictly guaranteed to be Legendary or Mythic."""
+        for _ in range(50):
+            tier = self.generator.roll_rarity(is_boss=True)
+            self.assertIn(tier, (RarityTier.LEGENDARY, RarityTier.MYTHIC))
+            self.assertNotIn(tier, (RarityTier.COMMON, RarityTier.MAGIC, RarityTier.RARE))
+
+        boss_affixes = self.generator.roll_affixes(RarityTier.MYTHIC, is_weapon=True, is_boss=True)
+        self.assertGreaterEqual(len(boss_affixes), 3)
+        self.assertTrue(any(a.sp_effect_id is not None for a in boss_affixes), "Boss affixes must include passive SpEffect!")
+
+        boss_caption = self.generator.build_caption_with_affixes(
+            "Starscourge Greatsword", RarityTier.MYTHIC, boss_affixes, boss_name="General Radahn"
+        )
+        self.assertIn("GIGA MYTHIC", boss_caption)
+        self.assertIn("General Radahn", boss_caption)
+
+    def test_game_wide_loot_distribution(self):
+        """Verifies that variants of sets are distributed across bosses, shops, chests, and enemies."""
+        from src.knowledge_base import VanillaKnowledgeBase
+        kb = VanillaKnowledgeBase.from_data_dir("data")
+        builder_with_kb = ParamBuilder(knowledge_base=kb)
+
+        armor_set = DetectedModSet(
+            set_id="Cleanrot_1800",
+            folder_or_archive_name="Cleanrot Set",
+            target_model_id="1800",
+            target_vanilla_name="Cleanrot Knight Armor",
+            parts=[ModPartFile("bd_m_1800.partsbnd.dcx", "bd_m_1800.partsbnd.dcx", EquipmentSlot.BODY, "1800", "m", 100)],
+            allocation=StandaloneAllocation(
+                new_model_id="9002",
+                new_equip_param_id=9002000,
+                new_item_lot_id=9100002,
+                marker_tag="✦ [LootForge]"
+            ),
+            loot_target=LootTarget(
+                route_type=LootDistributionType.ENEMY_DROP,
+                target_id="380000000",
+                display_name="Cleanrot Knight",
+                chance_or_cost=15.0
+            )
+        )
+
+        variants = builder_with_kb.build_diablo_patch_specs(armor_set, variants_count=10, seed=777)
+        self.assertEqual(len(variants), 10)
+
+        # Collect distinct targets and types
+        targets = [v["loot_distribution"]["target_id"] for v in variants if "loot_distribution" in v]
+        types = [v["loot_distribution"]["type"] for v in variants if "loot_distribution" in v]
+
+        # Must not all go to Cleanrot Knight!
+        self.assertGreater(len(set(targets)), 1, "Variants must be distributed across different targets!")
+        self.assertIn("shop_lineup", types, "Must distribute to Finger Reader Enia boss remembrance exchange!")
+        self.assertIn("merchant_shop", types, "Must distribute to non-enemy merchants!")
+
+        # Verify boss variant is Giga Legendary or Mythic
+        boss_variants = [v for v in variants if v["loot_distribution"].get("type") == "shop_lineup"]
+        for bv in boss_variants:
+            fmg = bv["fmg_texts"][0]
+            self.assertIn("Giga", fmg["name"])
+            self.assertIn("BOSS TROPHY", fmg["caption"])
+
 
 if __name__ == "__main__":
     unittest.main()

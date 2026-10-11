@@ -567,7 +567,7 @@ class LootForgeMainWindow(QMainWindow):
                 base_spec = self.param_builder.build_patch_spec(s)
                 if self.config.diablo_loot_enabled and self.config.diablo_variants_per_item > 1:
                     from src.diablo_generator import DiabloLootGenerator
-                    diablo_gen = DiabloLootGenerator(seed=self.config.diablo_seed)
+                    diablo_gen = DiabloLootGenerator(seed=self.config.diablo_seed, knowledge_base=self.knowledge_base)
                     variants = diablo_gen.generate_variants_for_spec(
                         base_spec, variants_per_item=self.config.diablo_variants_per_item
                     )

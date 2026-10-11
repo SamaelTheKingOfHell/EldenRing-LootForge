@@ -37,6 +37,7 @@ class LootDistributionType(str, Enum):
     BOSS_REMEMBRANCE = "boss_remembrance"
     ENEMY_DROP = "enemy_drop"
     MERCHANT_SHOP = "merchant_shop"
+    MAP_PICKUP = "map_pickup"
 
 
 class AdditionType(int, Enum):

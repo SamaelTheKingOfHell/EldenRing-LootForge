@@ -36,6 +36,7 @@ class VanillaKnowledgeBase:
         self._boss_remembrances = routes_data.get("bossRemembrances", [])
         self._elite_enemies = routes_data.get("eliteEnemies", [])
         self._merchants = routes_data.get("merchants", [])
+        self._enemies = routes_data.get("enemies", [])
 
     @classmethod
     def from_data_dir(cls, data_dir: str = "data") -> "VanillaKnowledgeBase":
@@ -140,4 +141,44 @@ class VanillaKnowledgeBase:
             if e.get("id") == enemy_id:
                 return e.get("lotParamId")
         return None
+
+    def list_enemies(self) -> List[Dict[str, Any]]:
+        """Returns all roaming and standard enemies."""
+        return list(self._enemies)
+
+    def get_diablo_distribution_pools(self) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Returns categorized game-wide loot targets for procedural Diablo loot distribution:
+        - bosses: Major Remembrance bosses (Finger Reader Enia / Boss events)
+        - merchants: Non-enemy shops (Twin Maiden Husks, Kalé, Nomadic Merchants)
+        - chests: Non-enemy world chests and discoverable map pickups
+        - elites: Elite knights and roaming champions across all regions
+        - roaming: Roaming enemies and standard encounter mobs
+        """
+        chests = [
+            {"id": "gatefront_ruins_chest", "name": "Gatefront Ruins Chest (Limgrave)", "lotParamId": 102100},
+            {"id": "castle_sol_medallion", "name": "Castle Sol Secret Chest (Mountaintops)", "lotParamId": 102800},
+            {"id": "morne_tunnel_cache", "name": "Morne Tunnel Hidden Cache (Weeping Peninsula)", "lotParamId": 20600},
+            {"id": "alexander_warrior_remains", "name": "Alexander Warrior Jar Treasure (Farum Azula)", "lotParamId": 101740},
+            {"id": "patches_leather_cache", "name": "Patches' Murkwater Cave Cache (Limgrave)", "lotParamId": 101840},
+            {"id": "yura_ronin_cache", "name": "Yura's Zamor Ruins Cache (Mountaintops)", "lotParamId": 101640},
+        ]
+        for e in self._enemies:
+            if "chest" in e.get("name", "").lower() or "cache" in e.get("name", "").lower():
+                if not any(c["id"] == e.get("id") for c in chests):
+                    chests.append(e)
+
+        roaming = [
+            e for e in self._enemies
+            if not any(k in e.get("name", "").lower() for k in ["chest", "quest", "cache"])
+        ]
+
+        return {
+            "bosses": list(self._boss_remembrances),
+            "merchants": list(self._merchants),
+            "chests": chests,
+            "elites": list(self._elite_enemies),
+            "roaming": roaming if roaming else list(self._elite_enemies)
+        }
+
 

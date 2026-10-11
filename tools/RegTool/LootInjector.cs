@@ -15,11 +15,13 @@ namespace LootForge.RegTool
     public static class LootInjector
     {
         private static Dictionary<int, PARAM.Row>? _enemyLotRowMap;
+        private static Dictionary<int, PARAM.Row>? _mapLotRowMap;
         private static HashSet<int>? _shopRowIds;
 
         public static void ResetCache()
         {
             _enemyLotRowMap = null;
+            _mapLotRowMap = null;
             _shopRowIds = null;
         }
 
@@ -40,7 +42,11 @@ namespace LootForge.RegTool
 
             if (lootType == "enemy_drop" && awardedItems.Count > 0)
             {
-                InjectEnemyDrop(lootEl, getOrLoadParam, itemIdToIsProtector, itemIdToIsWeapon, awardedItems, ref injectedLootCount);
+                InjectItemLotDrop("ItemLotParam_enemy", ref _enemyLotRowMap, lootEl, getOrLoadParam, itemIdToIsProtector, itemIdToIsWeapon, awardedItems, ref injectedLootCount);
+            }
+            else if ((lootType == "map_pickup" || lootType == "world_chest" || lootType == "map_drop") && awardedItems.Count > 0)
+            {
+                InjectItemLotDrop("ItemLotParam_map", ref _mapLotRowMap, lootEl, getOrLoadParam, itemIdToIsProtector, itemIdToIsWeapon, awardedItems, ref injectedLootCount);
             }
             else if ((lootType == "shop_lineup" || lootType == "merchant_shop") && awardedItems.Count > 0)
             {
@@ -48,7 +54,9 @@ namespace LootForge.RegTool
             }
         }
 
-        private static void InjectEnemyDrop(
+        private static void InjectItemLotDrop(
+            string tableName,
+            ref Dictionary<int, PARAM.Row>? rowMap,
             JsonElement lootEl,
             Func<string, string, (PARAM Param, BinderFile File)> getOrLoadParam,
             Dictionary<int, bool> itemIdToIsProtector,
@@ -58,40 +66,47 @@ namespace LootForge.RegTool
         {
             string rawTid = lootEl.TryGetProperty("target_id", out var tid) ? tid.GetString() ?? "" : "";
             int targetLotId = 0;
-            if (int.TryParse(rawTid, out int parsedTid) && parsedTid > 1000000 && !(parsedTid >= 9100000 && parsedTid < 9200000))
+            if (int.TryParse(rawTid, out int parsedTid) && parsedTid > 10000 && !(parsedTid >= 9100000 && parsedTid < 9200000))
                 targetLotId = parsedTid;
-            else if (lootEl.TryGetProperty("lot_id", out var lid) && lid.GetInt32() > 1000000 && !(lid.GetInt32() >= 9100000 && lid.GetInt32() < 9200000))
+            else if (lootEl.TryGetProperty("lot_id", out var lid) && lid.GetInt32() > 10000 && !(lid.GetInt32() >= 9100000 && lid.GetInt32() < 9200000))
                 targetLotId = lid.GetInt32();
             else
                 targetLotId = ResolveEnemyLotId(rawTid);
 
             double dropRatePercent = lootEl.TryGetProperty("drop_rate_percent", out var dr) ? dr.GetDouble() : 20.0;
-            var (itemLotParam, _) = getOrLoadParam("ItemLotParam_enemy", "ItemLotParam");
+            var (itemLotParam, _) = getOrLoadParam(tableName, "ItemLotParam");
 
-            if (_enemyLotRowMap == null)
+            if (rowMap == null)
             {
-                _enemyLotRowMap = new Dictionary<int, PARAM.Row>(itemLotParam.Rows.Count);
+                rowMap = new Dictionary<int, PARAM.Row>(itemLotParam.Rows.Count);
                 foreach (var r in itemLotParam.Rows)
                 {
-                    _enemyLotRowMap[r.ID] = r;
+                    rowMap[r.ID] = r;
                 }
             }
 
             var candidateRows = new List<PARAM.Row>(2);
-            if (_enemyLotRowMap.TryGetValue(targetLotId, out var pRow)) candidateRows.Add(pRow);
-            if (_enemyLotRowMap.TryGetValue(targetLotId + 10, out var cRow)) candidateRows.Add(cRow);
+            if (rowMap.TryGetValue(targetLotId, out var pRow)) candidateRows.Add(pRow);
+            if (rowMap.TryGetValue(targetLotId + 10, out var cRow)) candidateRows.Add(cRow);
 
-            if (candidateRows.Count == 0) return;
+            if (candidateRows.Count == 0)
+            {
+                // Fallback: If not found in this lot table, spill over to Twin Maiden Husks in ShopLineupParam
+                InjectShopLineup(lootEl, getOrLoadParam, itemIdToIsProtector, itemIdToIsWeapon, awardedItems, ref injectedLootCount);
+                return;
+            }
 
             ushort ratePoints = (ushort)(dropRatePercent >= 100.0 ? 1000 : Math.Clamp((int)(dropRatePercent * 10), 1, 1000));
+            var overflowItems = new List<int>();
 
-            foreach (var targetRow in candidateRows)
+            foreach (int itemId in awardedItems)
             {
-                foreach (int itemId in awardedItems)
-                {
-                    bool isArmor = itemIdToIsProtector.TryGetValue(itemId, out var ip) ? ip : !itemIdToIsWeapon.GetValueOrDefault(itemId, false);
-                    int lotCategory = isArmor ? 3 : 2;
+                bool isArmor = itemIdToIsProtector.TryGetValue(itemId, out var ip) ? ip : !itemIdToIsWeapon.GetValueOrDefault(itemId, false);
+                int lotCategory = isArmor ? 3 : 2;
+                bool placed = false;
 
+                foreach (var targetRow in candidateRows)
+                {
                     int slotToUse = -1;
                     for (int s = 1; s <= 8; s++)
                     {
@@ -107,9 +122,22 @@ namespace LootForge.RegTool
                         ParamHelper.SetCellIfExists(targetRow, $"lotItemBasePoint0{slotToUse}", ratePoints);
                         ParamHelper.SetCellIfExists(targetRow, $"lotItemNum0{slotToUse}", (byte)1);
                         ParamHelper.SetCellIfExists(targetRow, $"getItemFlagId0{slotToUse}", 0u);
+                        placed = true;
+                        break;
                     }
                 }
+
+                if (!placed)
+                {
+                    overflowItems.Add(itemId);
+                }
             }
+
+            if (overflowItems.Count > 0)
+            {
+                InjectShopLineup(lootEl, getOrLoadParam, itemIdToIsProtector, itemIdToIsWeapon, overflowItems, ref injectedLootCount);
+            }
+
             injectedLootCount++;
         }
 
@@ -161,37 +189,18 @@ namespace LootForge.RegTool
             else if (lootEl.TryGetProperty("shop_id", out var sIdEl))
                 targetId = sIdEl.GetString() ?? "";
 
-            int rangeStart = 100500;
-            int rangeEnd = 100524;
-
-            if (targetId.Contains("kale", StringComparison.OrdinalIgnoreCase) ||
-                shopName.Contains("kale", StringComparison.OrdinalIgnoreCase) ||
-                shopName.Contains("kalé", StringComparison.OrdinalIgnoreCase))
+            int rangeStart = 100500, rangeEnd = 100524;
+            if (targetId.Contains("twin", StringComparison.OrdinalIgnoreCase) || shopName.Contains("twin", StringComparison.OrdinalIgnoreCase) || shopName.Contains("husks", StringComparison.OrdinalIgnoreCase))
             {
-                rangeStart = 100500;
-                rangeEnd = 100524;
+                rangeStart = 101800; rangeEnd = 101899;
             }
-            else if (targetId.Contains("twin", StringComparison.OrdinalIgnoreCase) ||
-                     targetId.Contains("maiden", StringComparison.OrdinalIgnoreCase) ||
-                     targetId.Contains("husks", StringComparison.OrdinalIgnoreCase) ||
-                     shopName.Contains("twin", StringComparison.OrdinalIgnoreCase) ||
-                     shopName.Contains("husks", StringComparison.OrdinalIgnoreCase))
+            else if (targetId.Contains("liurnia", StringComparison.OrdinalIgnoreCase) || shopName.Contains("liurnia", StringComparison.OrdinalIgnoreCase))
             {
-                rangeStart = 101800;
-                rangeEnd = 101899;
+                rangeStart = 100625; rangeEnd = 100637;
             }
-            else if (targetId.Contains("liurnia", StringComparison.OrdinalIgnoreCase) ||
-                     shopName.Contains("liurnia", StringComparison.OrdinalIgnoreCase))
+            else if (targetId.Contains("remembrance", StringComparison.OrdinalIgnoreCase) || shopName.Contains("remembrance", StringComparison.OrdinalIgnoreCase) || shopName.Contains("enia", StringComparison.OrdinalIgnoreCase))
             {
-                rangeStart = 100625;
-                rangeEnd = 100637;
-            }
-            else if (targetId.Contains("remembrance", StringComparison.OrdinalIgnoreCase) ||
-                     shopName.Contains("remembrance", StringComparison.OrdinalIgnoreCase) ||
-                     shopName.Contains("enia", StringComparison.OrdinalIgnoreCase))
-            {
-                rangeStart = 101900;
-                rangeEnd = 101949;
+                rangeStart = 101900; rangeEnd = 101949;
             }
 
             if (_shopRowIds == null)
