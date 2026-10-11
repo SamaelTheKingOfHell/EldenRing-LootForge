@@ -48,18 +48,22 @@ class LootDistributor:
         """Calculates the single unified loot target for an entire mod set."""
         model_id = mod_set.target_model_id
         is_weapon = mod_set.is_weapon
-
-        if is_weapon:
-            system_logger.info(
-                f"Custom weapon '{mod_set.set_id}': using standalone fallback definition.",
-                source="LootDistributor"
-            )
-
         vanilla_info = (
             self._kb.lookup_weapon(model_id)
             if is_weapon
             else self._kb.lookup_protector(model_id)
         )
+
+        if not vanilla_info:
+            system_logger.info(
+                f"Mod '{mod_set.set_id}' (model {model_id}): not in knowledge base, using thematic fallback.",
+                source="LootDistributor"
+            )
+        else:
+            system_logger.debug(
+                f"Mod '{mod_set.set_id}' (model {model_id}): matched vanilla item '{vanilla_info.get('name')}'",
+                source="LootDistributor"
+            )
 
         is_not_dropped = False
         is_100_percent_boss = False

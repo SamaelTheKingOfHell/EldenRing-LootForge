@@ -64,12 +64,14 @@ class VanillaKnowledgeBase:
     def lookup_protector(self, model_id: str) -> Optional[Dict[str, Any]]:
         """Finds vanilla armor data by 4-digit model ID."""
         cleaned = model_id.lstrip("0") or "0"
-        # Check both direct and zero-padded
-        return self._protectors.get(model_id) or self._protectors.get(cleaned)
+        padded = model_id.zfill(4)
+        return self._protectors.get(model_id) or self._protectors.get(padded) or self._protectors.get(cleaned)
 
     def lookup_weapon(self, model_id: str) -> Optional[Dict[str, Any]]:
         """Finds vanilla weapon data by 4-digit model ID."""
-        return self._weapons.get(model_id)
+        cleaned = model_id.lstrip("0") or "0"
+        padded = model_id.zfill(4)
+        return self._weapons.get(model_id) or self._weapons.get(padded) or self._weapons.get(cleaned)
 
     def get_default_loot_target(self, model_id: str, is_weapon: bool = False) -> LootTarget:
         """
