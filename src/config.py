@@ -52,7 +52,10 @@ class LootForgeConfig:
         items_per_page: int = 8,
         banner_collapsed: bool = False,
         user_drop_rates: Optional[Dict[str, float]] = None,
-        item_spoiled_states: Optional[Dict[str, bool]] = None
+        item_spoiled_states: Optional[Dict[str, bool]] = None,
+        diablo_loot_enabled: bool = False,
+        diablo_variants_per_item: int = 3,
+        diablo_seed: Optional[int] = None
     ):
         self.game_directory = game_directory
         self.input_directory = input_directory
@@ -76,6 +79,9 @@ class LootForgeConfig:
         self.banner_collapsed = banner_collapsed
         self.user_drop_rates = user_drop_rates if user_drop_rates is not None else {}
         self.item_spoiled_states = item_spoiled_states if item_spoiled_states is not None else {}
+        self.diablo_loot_enabled = diablo_loot_enabled
+        self.diablo_variants_per_item = diablo_variants_per_item
+        self.diablo_seed = diablo_seed
 
         # Auto-discover game directory if not specified
         if not self.game_directory:
@@ -183,6 +189,9 @@ class LootForgeConfig:
             "banner_collapsed": self.banner_collapsed,
             "user_drop_rates": self.user_drop_rates,
             "item_spoiled_states": self.item_spoiled_states,
+            "diablo_loot_enabled": self.diablo_loot_enabled,
+            "diablo_variants_per_item": self.diablo_variants_per_item,
+            "diablo_seed": self.diablo_seed,
             "is_windows": self.is_windows,
             "is_steam_deck": self.is_steam_deck
         }
@@ -230,7 +239,10 @@ class LootForgeConfig:
                 items_per_page=int(data.get("items_per_page", 8)),
                 banner_collapsed=bool(data.get("banner_collapsed", False)),
                 user_drop_rates=data.get("user_drop_rates", {}),
-                item_spoiled_states=data.get("item_spoiled_states", {})
+                item_spoiled_states=data.get("item_spoiled_states", {}),
+                diablo_loot_enabled=bool(data.get("diablo_loot_enabled", False)),
+                diablo_variants_per_item=int(data.get("diablo_variants_per_item", 3)),
+                diablo_seed=data.get("diablo_seed", None)
             )
         except Exception as e:
             system_logger.warning(f"Error reading {file_path}; using defaults: {e}", source="Config")

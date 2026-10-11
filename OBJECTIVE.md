@@ -34,3 +34,8 @@ Develop a cross-platform desktop application and mod engine for *Elden Ring* tha
    - Modern, sleek desktop interface inspired by the dark Souls aesthetic (obsidian surfaces, antique gold accents, responsive animations).
    - Real-time floating developer console button (`[CS-DEBUG]`).
    - Centralized multi-language localization catalog (`[CS-LOCALIZATION]`).
+
+7. **Diablo-Style Procedural ARPG Loot & Affixes**:
+   - Optional procedural ARPG loot generator that transforms standalone mod items into multi-tier relics.
+   - Generates multiple distinct instances per item with randomized rarity tiers (Common to Mythic), prefix/suffix stat infusions, and authentic FromSoftware `SpEffectParam` passives (HP regen, FP on kill, successive attack multipliers, resistance charms).
+   - Dynamically titles items based on rolled affixes and formats rarity and combat perks at the bottom of in-game lore descriptions.

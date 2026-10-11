@@ -5,7 +5,7 @@ Generates structured parameter and text modification specifications for EquipPar
 EquipParamWeapon, ItemLotParam_enemy, ShopLineupParam, and FMG item text.
 """
 
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from src.models import DetectedModSet, LootDistributionType, EquipmentSlot
 from src.logger import system_logger
 
@@ -185,3 +185,17 @@ class ParamBuilder:
             "fmg_texts": fmg_texts,
             "loot_distribution": loot_spec
         }
+
+    def build_diablo_patch_specs(
+        self,
+        mod_set: DetectedModSet,
+        variants_count: int = 3,
+        seed: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Builds multiple procedural Diablo-style patch specifications for a mod set.
+        """
+        base_spec = self.build_patch_spec(mod_set)
+        from src.diablo_generator import DiabloLootGenerator
+        generator = DiabloLootGenerator(seed=seed)
+        return generator.generate_variants_for_spec(base_spec, variants_per_item=variants_count)

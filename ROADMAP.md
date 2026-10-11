@@ -50,3 +50,18 @@ This roadmap defines the implementation phases for the cross-platform Standalone
 ## Phase 5: Cross-Platform Packaging & Verification
 - [x] Validate on Windows 10/11 and Linux (Steam Deck Proton / SteamOS paths).
 - [x] End-to-end automated tests with synthetic replacer assets and verification test harness.
+
+## Phase 6: Diablo-Style Procedural ARPG Loot System
+- [x] **Rarity Tiers & Weight Engine** (`src/diablo_affixes.py`):
+  - Common, Magic, Rare, Legendary, and Mythic tiers with star ratings and authentic ARPG roll distributions.
+- [x] **Extensive Elden Ring Affix Library** (`src/diablo_affixes.py`):
+  - Elemental attack infusions (Fire, Lightning, Magic/Frost, Holy), physical scalings (Str, Dex), and defenses (Physical, Poise, Elemental Wards).
+  - Authentic `SpEffectParam` passives: HP regeneration (Blessed Dew), FP on kill (Ancestral Horn), Stamina recovery (Green Turtle), successive hit attack ramps (Rotten Winged Insignia), critical strike recovery, and low-HP buffs.
+- [x] **Procedural Variant Generator** (`src/diablo_generator.py`):
+  - Generates multiple uniquely-rolled instances per base item/set (scalable up to 1,000+ variants per item) with non-colliding ID offsets.
+- [x] **Dynamic Diablo Naming Convention**:
+  - Dynamically synthesizes item titles: `✦ [LootForge] [{Rarity}] {Prefix} {BaseName} {Suffix} ({Slot})`.
+- [x] **In-Game Lore & Affix Breakdowns**:
+  - Injects rarity tier, star ratings, and detailed affix descriptions formatted strictly at the bottom of item descriptions in `item.msgbnd.dcx` and `item_dlc02.msgbnd.dcx`.
+- [x] **Modular Integration & User Configuration** (`src/config.py`):
+  - Optional toggle via `diablo_loot_enabled`, configurable instance counts (`diablo_variants_per_item`), and reproducible RNG seeding (`diablo_seed`).
