@@ -80,16 +80,13 @@ class ParamBuilder:
         # Determine slots present in the mod set
         slots_present = {part.slot for part in mod_set.parts}
 
-        # Determine gender restriction
+        # Determine gender restriction (only female-exclusive sets are restricted)
         gender_res = getattr(mod_set, "gender_restriction", None)
         gender_tag = ""
         gender_caption = ""
         if gender_res == "female":
             gender_tag = "[Female Only] "
             gender_caption = "⚠️ [RESTRICTION: Female Only] Tailored exclusively for Type B (Female) bodies. Attempting to equip on Type A (Male) characters is unsupported.\n\n"
-        elif gender_res == "male":
-            gender_tag = "[Male Only] "
-            gender_caption = "⚠️ [RESTRICTION: Male Only] Forged exclusively for Type A (Male) bodies. Attempting to equip on Type B (Female) characters is unsupported.\n\n"
 
         for slot in slots_present:
             slot_offset = self.SLOT_ID_OFFSET.get(slot, 0)
@@ -100,7 +97,7 @@ class ParamBuilder:
             multiplier, vanilla_offset = self.VANILLA_CLONE_OFFSETS.get(slot, (100, 0))
             base_clone_id = int(mod_set.target_model_id) * multiplier + vanilla_offset
 
-            # Item display name with marker tag and optional gender restriction
+            # Item display name with marker tag (only female-exclusive gear gets restriction tag)
             cleaned_title = _clean_mod_folder_name(mod_set.folder_or_archive_name)
             item_display_name = f"{alloc.marker_tag} {gender_tag}{cleaned_title} ({slot_name})".strip()
 
@@ -110,8 +107,8 @@ class ParamBuilder:
                 "isDeposit": 1,
             }
 
-            if not mod_set.is_weapon and gender_res in ("female", "male"):
-                field_updates["equipModelGender"] = 2 if gender_res == "female" else 1
+            if not mod_set.is_weapon and gender_res == "female":
+                field_updates["equipModelGender"] = 2
 
             model_field = self.SLOT_MODEL_FIELD.get(slot)
             if model_field:

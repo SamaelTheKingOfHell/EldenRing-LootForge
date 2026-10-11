@@ -175,16 +175,12 @@ class DetectedModSet:
 
     @property
     def gender_restriction(self) -> Optional[str]:
-        """Returns 'female' if set only has female parts, 'male' if male only, 'both' if both, or None."""
+        """Returns 'female' if set only has female parts, or None."""
         if self.is_weapon or not self.parts:
             return None
         genders = {p.gender_variant.lower() for p in self.parts if getattr(p, "gender_variant", None)}
         if genders == {"f"}:
             return "female"
-        if genders == {"m"}:
-            return "male"
-        if "f" in genders and "m" in genders:
-            return "both"
         return None
 
 
