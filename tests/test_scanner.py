@@ -66,10 +66,10 @@ class TestModScanner(unittest.TestCase):
         self.assertEqual(weapon_set.target_vanilla_name, "Moonveil")
         self.assertTrue(weapon_set.is_weapon)
 
-    def test_cross_gender_mirroring(self):
-        """Verifies single-gender armor parts are mirrored to prevent invisible body meshes."""
-        from src.asset_renumberer import AssetRenumberer
-        from src.models import StandaloneAllocation
+    def test_gender_restriction_marking(self):
+        """Verifies single-gender armor sets are identified and tagged in patch specs."""
+        from src.param_builder import ParamBuilder
+        from src.models import StandaloneAllocation, LootTarget, LootDistributionType
 
         female_dir = self.test_dir / "ShortSkirts" / "parts"
         female_dir.mkdir(parents=True, exist_ok=True)
@@ -79,6 +79,7 @@ class TestModScanner(unittest.TestCase):
         detected = self.scanner.scan_directory(str(self.test_dir))
         skirt_set = next((s for s in detected if s.target_model_id == "1160"), None)
         self.assertIsNotNone(skirt_set)
+        self.assertEqual(skirt_set.gender_restriction, "female")
 
         skirt_set.allocation = StandaloneAllocation(
             new_model_id="9007",
@@ -86,14 +87,22 @@ class TestModScanner(unittest.TestCase):
             new_item_lot_id=9100007,
             marker_tag="✦ [LootForge]"
         )
+        skirt_set.loot_target = LootTarget(
+            route_type=LootDistributionType.ENEMY_DROP,
+            target_id="431100000",
+            display_name="Godrick Soldier",
+            chance_or_cost=100.0
+        )
 
-        out_dir = self.test_dir / "output"
-        renumberer = AssetRenumberer(str(out_dir))
-        staged = renumberer.stage_mod_set(str(self.test_dir), skirt_set)
+        builder = ParamBuilder()
+        spec = builder.build_patch_spec(skirt_set)
 
-        parts_dir = out_dir / "parts"
-        self.assertTrue((parts_dir / "bd_f_9007.partsbnd.dcx").exists())
-        self.assertTrue((parts_dir / "bd_m_9007.partsbnd.dcx").exists())
+        fmg_spec = spec["fmg_texts"][0]
+        self.assertIn("[Female Only]", fmg_spec["name"])
+        self.assertIn("[RESTRICTION: Female Only]", fmg_spec["caption"])
+
+        equip_spec = spec["equip_params"][0]
+        self.assertEqual(equip_spec["field_updates"].get("equipModelGender"), 2)
 
 
 if __name__ == "__main__":
