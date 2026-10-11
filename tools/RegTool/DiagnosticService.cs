@@ -190,9 +190,12 @@ namespace LootForge.RegTool
                 }
                 else if (tableName == "ItemLotParam_enemy")
                 {
-                    var interesting = param.Rows.Where(r => r.ID >= 9000000 || (r.Name != null && r.Name.Contains("LootForge")) || (r.ID >= 100000 && r.ID <= 100500 && r.ID % 100 == 0)).ToList();
+                    string search = options.TryGetValue("search", out string? sVal) ? sVal : "";
+                    var interesting = !string.IsNullOrEmpty(search)
+                        ? param.Rows.Where(r => r.Name != null && r.Name.Contains(search, StringComparison.OrdinalIgnoreCase)).ToList()
+                        : param.Rows.Where(r => r.ID >= 9000000 || (r.Name != null && (r.Name.Contains("Godrick") || r.Name.Contains("Noble") || r.Name.Contains("Soldier") || r.Name.Contains("Wolf")))).ToList();
                     Console.WriteLine($"Found {interesting.Count} matching rows in ItemLotParam_enemy:");
-                    foreach (var r in interesting.Take(20))
+                    foreach (var r in interesting.Take(40))
                     {
                         Console.WriteLine($"  ID={r.ID} Name='{r.Name}'");
                         for (int s = 1; s <= 8; s++)
@@ -209,12 +212,24 @@ namespace LootForge.RegTool
                         }
                     }
                 }
+                else if (tableName == "NpcParam")
+                {
+                    string search = options.TryGetValue("search", out string? sVal) ? sVal : "Soldier";
+                    var interesting = param.Rows.Where(r => r.Name != null && r.Name.Contains(search, StringComparison.OrdinalIgnoreCase)).Take(10).ToList();
+                    Console.WriteLine($"Found {interesting.Count} matching rows in NpcParam:");
+                    foreach (var r in interesting)
+                    {
+                        int lot = ParamHelper.GetCellInt(r, "itemLotId_enemy");
+                        Console.WriteLine($"  ID={r.ID} Name='{r.Name}' itemLotId_enemy={lot}");
+                    }
+                }
             }
 
             InspectTable("ShopLineupParam");
             InspectTable("EquipParamProtector");
             InspectTable("EquipParamWeapon");
             InspectTable("ItemLotParam_enemy");
+            InspectTable("NpcParam");
             return 0;
         }
 

@@ -95,7 +95,8 @@ namespace LootForge.RegTool
                 string infoText = spec.Info;
                 string captionText = spec.Caption;
 
-                if (spec.VanillaSourceId > 0)
+                // Only search vanilla name if custom mod name was not provided
+                if ((string.IsNullOrWhiteSpace(nameText) || !IsValidFmgText(nameText)) && spec.VanillaSourceId > 0)
                 {
                     int[] fmgIdsToTry = new int[] {
                         spec.VanillaSourceId,
@@ -111,35 +112,22 @@ namespace LootForge.RegTool
                         var vanillaNameEntry = nameFmg.Entries.FirstOrDefault(e => e.ID == fmgId);
                         if (vanillaNameEntry?.Text != null && IsValidFmgText(vanillaNameEntry.Text))
                         {
-                            nameText = $"\u2726 [LootForge] {vanillaNameEntry.Text.Trim()}";
+                            nameText = vanillaNameEntry.Text.Trim();
                             break;
                         }
                     }
+                }
 
-                    if (nameText == spec.Name && !string.IsNullOrEmpty(spec.Name))
-                    {
-                        string vanillaName = spec.Name;
-                        int markerIndex = vanillaName.IndexOf("] ");
-                        if (markerIndex >= 0) vanillaName = vanillaName.Substring(markerIndex + 2);
-                        int parenIndex = vanillaName.LastIndexOf(" (");
-                        if (parenIndex >= 0) vanillaName = vanillaName.Substring(0, parenIndex);
-
-                        var nameEntryByText = nameFmg.Entries.FirstOrDefault(e =>
-                            e.Text != null && IsValidFmgText(e.Text) && e.Text.Contains(vanillaName, StringComparison.OrdinalIgnoreCase));
-                        if (nameEntryByText != null)
-                        {
-                            nameText = $"\u2726 [LootForge] {nameEntryByText.Text.Trim()}";
-                        }
-                    }
-
-                    if (infoFmg != null)
+                if (spec.VanillaSourceId > 0)
+                {
+                    if (infoFmg != null && (string.IsNullOrWhiteSpace(infoText) || !IsValidFmgText(infoText)))
                     {
                         var vanillaInfoEntry = infoFmg.Entries.FirstOrDefault(e => e.ID == spec.VanillaSourceId);
                         if (vanillaInfoEntry?.Text != null && IsValidFmgText(vanillaInfoEntry.Text))
                             infoText = vanillaInfoEntry.Text;
                     }
 
-                    if (captionFmg != null)
+                    if (captionFmg != null && (string.IsNullOrWhiteSpace(captionText) || !IsValidFmgText(captionText)))
                     {
                         var vanillaCaptionEntry = captionFmg.Entries.FirstOrDefault(e => e.ID == spec.VanillaSourceId);
                         if (vanillaCaptionEntry?.Text != null && IsValidFmgText(vanillaCaptionEntry.Text))

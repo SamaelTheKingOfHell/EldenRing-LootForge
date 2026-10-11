@@ -141,9 +141,11 @@ class ParamBuilder:
                 "awarded_items": [ep["new_param_id"] for ep in equip_params]
             }
         elif target.route_type == LootDistributionType.ENEMY_DROP:
+            lot_id = int(target.target_id) if target.target_id.isdigit() else alloc.new_item_lot_id
             loot_spec = {
                 "type": "enemy_drop",
-                "lot_id": alloc.new_item_lot_id,
+                "lot_id": lot_id,
+                "target_id": str(target.target_id),
                 "target_enemy": target.display_name,
                 "drop_rate_percent": target.chance_or_cost,
                 "awarded_items": [ep["new_param_id"] for ep in equip_params]

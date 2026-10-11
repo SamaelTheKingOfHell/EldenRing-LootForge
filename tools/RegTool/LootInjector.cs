@@ -47,103 +47,67 @@ namespace LootForge.RegTool
             List<int> awardedItems,
             ref int injectedLootCount)
         {
+            string rawTid = lootEl.TryGetProperty("target_id", out var tid) ? tid.GetString() ?? "" : "";
             int targetLotId = 0;
-            if (lootEl.TryGetProperty("target_id", out var tid) && int.TryParse(tid.GetString(), out int parsedTid) && parsedTid > 0)
+            if (int.TryParse(rawTid, out int parsedTid) && parsedTid > 1000000 && !(parsedTid >= 9100000 && parsedTid < 9200000))
                 targetLotId = parsedTid;
-            else if (lootEl.TryGetProperty("lot_id", out var lid) && lid.GetInt32() > 0)
+            else if (lootEl.TryGetProperty("lot_id", out var lid) && lid.GetInt32() > 1000000 && !(lid.GetInt32() >= 9100000 && lid.GetInt32() < 9200000))
                 targetLotId = lid.GetInt32();
+            else
+                targetLotId = ResolveEnemyLotId(rawTid);
 
-            string targetEnemy = lootEl.TryGetProperty("target_enemy", out var te) ? te.GetString() ?? "Wild Enemy" : "Wild Enemy";
             double dropRatePercent = lootEl.TryGetProperty("drop_rate_percent", out var dr) ? dr.GetDouble() : 20.0;
-
-            if (targetLotId <= 0) return;
-
             var (itemLotParam, _) = getOrLoadParam("ItemLotParam_enemy", "ItemLotParam");
-            var targetLotRow = itemLotParam.Rows.FirstOrDefault(r => r.ID == targetLotId);
 
-            if (targetLotRow == null)
+            // Purge old orphaned synthetic rows in 9100000 range
+            itemLotParam.Rows.RemoveAll(r => r.ID >= 9100000 && r.ID < 9200000);
+
+            var candidateRows = new List<PARAM.Row>();
+            var pRow = itemLotParam.Rows.FirstOrDefault(r => r.ID == targetLotId);
+            if (pRow != null) candidateRows.Add(pRow);
+            var cRow = itemLotParam.Rows.FirstOrDefault(r => r.ID == targetLotId + 10);
+            if (cRow != null) candidateRows.Add(cRow);
+
+            if (candidateRows.Count == 0) return;
+
+            ushort ratePoints = (ushort)(dropRatePercent >= 100.0 ? 1000 : Math.Clamp((int)(dropRatePercent * 10), 1, 1000));
+
+            foreach (var targetRow in candidateRows)
             {
-                var baseLot = itemLotParam.Rows.FirstOrDefault();
-                if (baseLot != null)
+                foreach (int itemId in awardedItems)
                 {
-                    targetLotRow = new PARAM.Row(baseLot)
+                    bool isArmor = itemIdToIsProtector.TryGetValue(itemId, out var ip) ? ip : !itemIdToIsWeapon.GetValueOrDefault(itemId, false);
+                    int lotCategory = isArmor ? 3 : 2;
+
+                    int slotToUse = -1;
+                    for (int s = 1; s <= 8; s++)
                     {
-                        ID = targetLotId,
-                        Name = $"[LootForge] {targetEnemy}"
-                    };
-                    for (int slot = 1; slot <= 8; slot++)
-                    {
-                        ParamHelper.SetCellIfExists(targetLotRow, $"lotItemId0{slot}", 0);
-                        ParamHelper.SetCellIfExists(targetLotRow, $"lotItemCategory0{slot}", 0);
-                        ParamHelper.SetCellIfExists(targetLotRow, $"lotItemBasePoint0{slot}", (ushort)0);
-                        ParamHelper.SetCellIfExists(targetLotRow, $"lotItemNum0{slot}", (byte)0);
+                        int cur = ParamHelper.GetCellInt(targetRow, $"lotItemId0{s}");
+                        if (cur == itemId) { slotToUse = s; break; }
+                        if (cur == 0 && slotToUse == -1) slotToUse = s;
                     }
-                    itemLotParam.Rows.Add(targetLotRow);
-                }
-            }
 
-            if (targetLotRow == null) return;
-
-            ushort ratePoints = (ushort)Math.Clamp((int)(dropRatePercent * 100), 1, 10000);
-            for (int itemIndex = 0; itemIndex < awardedItems.Count; itemIndex++)
-            {
-                int itemId = awardedItems[itemIndex];
-                bool isArmor = itemIdToIsProtector.TryGetValue(itemId, out var ip) ? ip : !itemIdToIsWeapon.GetValueOrDefault(itemId, false);
-                // ItemLotParam category enum: 2 = Weapon, 3 = Protector (Armor)
-                int lotCategory = isArmor ? 3 : 2;
-
-                int existingSlot = -1;
-                int firstEmptySlot = -1;
-
-                for (int s = 1; s <= 8; s++)
-                {
-                    int curItem = ParamHelper.GetCellInt(targetLotRow, $"lotItemId0{s}");
-                    if (curItem == itemId) { existingSlot = s; break; }
-                    if (curItem == 0 && firstEmptySlot == -1) firstEmptySlot = s;
-                }
-
-                int slotToUse = existingSlot != -1 ? existingSlot : firstEmptySlot;
-                if (slotToUse != -1)
-                {
-                    ParamHelper.SetCellIfExists(targetLotRow, $"lotItemId0{slotToUse}", itemId);
-                    ParamHelper.SetCellIfExists(targetLotRow, $"lotItemCategory0{slotToUse}", lotCategory);
-                    ParamHelper.SetCellIfExists(targetLotRow, $"lotItemBasePoint0{slotToUse}", ratePoints);
-                    ParamHelper.SetCellIfExists(targetLotRow, $"lotItemNum0{slotToUse}", (byte)1);
-                }
-                else
-                {
-                    int overflowLotId = targetLotId < 9000000 ? 9100000 + (targetLotId % 10000) : targetLotId + 1;
-                    var overflowRow = itemLotParam.Rows.FirstOrDefault(r => r.ID == overflowLotId);
-                    if (overflowRow == null)
+                    if (slotToUse != -1)
                     {
-                        var baseLot = itemLotParam.Rows.FirstOrDefault();
-                        if (baseLot != null)
-                        {
-                            overflowRow = new PARAM.Row(baseLot)
-                            {
-                                ID = overflowLotId,
-                                Name = $"[LootForge Chained] {targetEnemy}"
-                            };
-                            for (int s = 1; s <= 8; s++)
-                            {
-                                ParamHelper.SetCellIfExists(overflowRow, $"lotItemId0{s}", 0);
-                                ParamHelper.SetCellIfExists(overflowRow, $"lotItemCategory0{s}", 0);
-                                ParamHelper.SetCellIfExists(overflowRow, $"lotItemBasePoint0{s}", (ushort)0);
-                                ParamHelper.SetCellIfExists(overflowRow, $"lotItemNum0{s}", (byte)0);
-                            }
-                            itemLotParam.Rows.Add(overflowRow);
-                        }
-                    }
-                    if (overflowRow != null)
-                    {
-                        ParamHelper.SetCellIfExists(overflowRow, "lotItemId01", itemId);
-                        ParamHelper.SetCellIfExists(overflowRow, "lotItemCategory01", lotCategory);
-                        ParamHelper.SetCellIfExists(overflowRow, "lotItemBasePoint01", ratePoints);
-                        ParamHelper.SetCellIfExists(overflowRow, "lotItemNum01", (byte)1);
+                        ParamHelper.SetCellIfExists(targetRow, $"lotItemId0{slotToUse}", itemId);
+                        ParamHelper.SetCellIfExists(targetRow, $"lotItemCategory0{slotToUse}", lotCategory);
+                        ParamHelper.SetCellIfExists(targetRow, $"lotItemBasePoint0{slotToUse}", ratePoints);
+                        ParamHelper.SetCellIfExists(targetRow, $"lotItemNum0{slotToUse}", (byte)1);
+                        ParamHelper.SetCellIfExists(targetRow, $"getItemFlagId0{slotToUse}", 0u);
                     }
                 }
             }
             injectedLootCount++;
+        }
+
+        private static int ResolveEnemyLotId(string? name)
+        {
+            string lower = name?.ToLowerInvariant() ?? "";
+            if (lower.Contains("noble")) return 430000000;
+            if (lower.Contains("godrick knight")) return 435100000;
+            if (lower.Contains("banished")) return 301000000;
+            if (lower.Contains("cleanrot")) return 380000000;
+            return 431100000; // Godrick Soldier default
         }
 
         private static void InjectShopLineup(
