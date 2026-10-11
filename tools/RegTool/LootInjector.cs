@@ -14,6 +14,15 @@ namespace LootForge.RegTool
     /// </summary>
     public static class LootInjector
     {
+        private static Dictionary<int, PARAM.Row>? _enemyLotRowMap;
+        private static HashSet<int>? _shopRowIds;
+
+        public static void ResetCache()
+        {
+            _enemyLotRowMap = null;
+            _shopRowIds = null;
+        }
+
         public static void InjectLootDistribution(
             JsonElement lootEl,
             Func<string, string, (PARAM Param, BinderFile File)> getOrLoadParam,
@@ -59,14 +68,18 @@ namespace LootForge.RegTool
             double dropRatePercent = lootEl.TryGetProperty("drop_rate_percent", out var dr) ? dr.GetDouble() : 20.0;
             var (itemLotParam, _) = getOrLoadParam("ItemLotParam_enemy", "ItemLotParam");
 
-            // Purge old orphaned synthetic rows in 9100000 range
-            itemLotParam.Rows.RemoveAll(r => r.ID >= 9100000 && r.ID < 9200000);
+            if (_enemyLotRowMap == null)
+            {
+                _enemyLotRowMap = new Dictionary<int, PARAM.Row>(itemLotParam.Rows.Count);
+                foreach (var r in itemLotParam.Rows)
+                {
+                    _enemyLotRowMap[r.ID] = r;
+                }
+            }
 
-            var candidateRows = new List<PARAM.Row>();
-            var pRow = itemLotParam.Rows.FirstOrDefault(r => r.ID == targetLotId);
-            if (pRow != null) candidateRows.Add(pRow);
-            var cRow = itemLotParam.Rows.FirstOrDefault(r => r.ID == targetLotId + 10);
-            if (cRow != null) candidateRows.Add(cRow);
+            var candidateRows = new List<PARAM.Row>(2);
+            if (_enemyLotRowMap.TryGetValue(targetLotId, out var pRow)) candidateRows.Add(pRow);
+            if (_enemyLotRowMap.TryGetValue(targetLotId + 10, out var cRow)) candidateRows.Add(cRow);
 
             if (candidateRows.Count == 0) return;
 
@@ -181,6 +194,15 @@ namespace LootForge.RegTool
                 rangeEnd = 101949;
             }
 
+            if (_shopRowIds == null)
+            {
+                _shopRowIds = new HashSet<int>(shopParam.Rows.Count + 10000);
+                foreach (var r in shopParam.Rows)
+                {
+                    _shopRowIds.Add(r.ID);
+                }
+            }
+
             var templateRow = shopParam.Rows.FirstOrDefault(r => r.ID >= rangeStart && r.ID <= rangeEnd)
                               ?? shopParam.Rows.FirstOrDefault();
 
@@ -188,56 +210,46 @@ namespace LootForge.RegTool
             {
                 int itemId = awardedItems[i];
 
-                var existingRow = shopParam.Rows.FirstOrDefault(r =>
-                    r.ID >= rangeStart && r.ID <= rangeEnd && ParamHelper.GetCellInt(r, "equipId") == itemId);
-
-                PARAM.Row targetShopRow;
-                if (existingRow != null)
+                int shopRowId = -1;
+                for (int cand = rangeStart; cand <= rangeEnd; cand++)
                 {
-                    targetShopRow = existingRow;
-                }
-                else
-                {
-                    int shopRowId = -1;
-                    for (int cand = rangeStart; cand <= rangeEnd; cand++)
+                    if (!_shopRowIds.Contains(cand))
                     {
-                        if (!shopParam.Rows.Any(r => r.ID == cand))
+                        shopRowId = cand;
+                        break;
+                    }
+                }
+
+                // Merchant capacity overflow handling:
+                // If range is exhausted, spillover to Twin Maiden Husks (101800..101899)
+                if (shopRowId == -1)
+                {
+                    for (int cand = 101800; cand <= 101899; cand++)
+                    {
+                        if (!_shopRowIds.Contains(cand))
                         {
                             shopRowId = cand;
+                            shopName = "Twin Maiden Husks";
                             break;
                         }
                     }
-
-                    // Merchant capacity overflow handling:
-                    // If range is exhausted (e.g. Kalé's 8 free slots full), spillover to Twin Maiden Husks (101800..101899)
-                    if (shopRowId == -1)
-                    {
-                        Console.WriteLine($"[RegTool] Merchant range {rangeStart}..{rangeEnd} full. Spilling item {itemId} to Twin Maiden Husks.");
-                        for (int cand = 101800; cand <= 101899; cand++)
-                        {
-                            if (!shopParam.Rows.Any(r => r.ID == cand))
-                            {
-                                shopRowId = cand;
-                                shopName = "Twin Maiden Husks";
-                                break;
-                            }
-                        }
-                    }
-
-                    if (shopRowId == -1)
-                    {
-                        shopRowId = 101899 + 1;
-                        while (shopParam.Rows.Any(r => r.ID == shopRowId))
-                            shopRowId++;
-                    }
-
-                    targetShopRow = new PARAM.Row(templateRow!)
-                    {
-                        ID = shopRowId,
-                        Name = $"[LootForge] {shopName}"
-                    };
-                    shopParam.Rows.Add(targetShopRow);
                 }
+
+                if (shopRowId == -1)
+                {
+                    shopRowId = 101900;
+                    while (_shopRowIds.Contains(shopRowId))
+                        shopRowId++;
+                }
+
+                _shopRowIds.Add(shopRowId);
+
+                PARAM.Row targetShopRow = new PARAM.Row(templateRow!)
+                {
+                    ID = shopRowId,
+                    Name = $"[LootForge] {shopName}"
+                };
+                shopParam.Rows.Add(targetShopRow);
 
                 bool isArmor = itemIdToIsProtector.TryGetValue(itemId, out var ip) ? ip : !itemIdToIsWeapon.GetValueOrDefault(itemId, false);
                 ParamHelper.SetCellIfExists(targetShopRow, "equipId", itemId);

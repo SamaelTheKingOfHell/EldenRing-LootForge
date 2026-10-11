@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
 using SoulsFormats;
 using SoulsFormats.Cryptography;
 
@@ -59,8 +60,8 @@ namespace LootForge.RegTool
             }
 
             Console.WriteLine($"[RegTool] Loading patch specification: {specPath}...");
-            string specJson = File.ReadAllText(specPath);
-            using var doc = JsonDocument.Parse(specJson);
+            using var specStream = File.OpenRead(specPath);
+            using var doc = JsonDocument.Parse(specStream);
             var root = doc.RootElement;
 
             Console.WriteLine($"[RegTool] Decrypting source regulation: {inputPath}...");
@@ -124,6 +125,8 @@ namespace LootForge.RegTool
 
             // 0. Purge any stale or previous LootForge injections to ensure a pristine baseline
             ParamInjector.PurgePreviousInjections(GetOrLoadParam);
+            EquipInjector.ResetCache();
+            LootInjector.ResetCache();
 
             foreach (var setSpec in specs)
             {
@@ -172,12 +175,12 @@ namespace LootForge.RegTool
                 }
             }
 
-            foreach (var kvp in paramCache)
+            Parallel.ForEach(paramCache, kvp =>
             {
                 var (param, file) = kvp.Value;
                 Console.WriteLine($"[RegTool] Serializing modified table: {kvp.Key} ({param.Rows.Count} rows)...");
                 file.Bytes = param.Write();
-            }
+            });
 
             string? outDir = Path.GetDirectoryName(outputPath);
             if (!string.IsNullOrEmpty(outDir) && !Directory.Exists(outDir))

@@ -64,6 +64,15 @@ namespace LootForge.RegTool
             return true;
         }
 
+        private static readonly Dictionary<string, Dictionary<int, PARAM.Row>> _rowMapByTable = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<(string, int, int, int), PARAM.Row> _baseRowCache = new();
+
+        public static void ResetCache()
+        {
+            _rowMapByTable.Clear();
+            _baseRowCache.Clear();
+        }
+
         public static void InjectEquipParams(
             JsonElement equipParamsEl,
             Func<string, string, (PARAM Param, BinderFile File)> getOrLoadParam,
@@ -88,85 +97,99 @@ namespace LootForge.RegTool
                 string defName = tableName;
                 var (param, _) = getOrLoadParam(tableName, defName);
 
-                // If already present (re-forge), remove old injected row to update cleanly
-                var existingIndex = param.Rows.FindIndex(r => r.ID == newParamId);
-                if (existingIndex >= 0)
+                // Index rows for O(1) lookups
+                if (!_rowMapByTable.TryGetValue(tableName, out var rowMap))
                 {
-                    param.Rows.RemoveAt(existingIndex);
+                    rowMap = new Dictionary<int, PARAM.Row>(param.Rows.Count + 100000);
+                    foreach (var r in param.Rows)
+                    {
+                        rowMap[r.ID] = r;
+                    }
+                    _rowMapByTable[tableName] = rowMap;
                 }
 
-                // Locate authentic vanilla clone source row
-                PARAM.Row? baseRow = null;
+                // If already present in table, skip duplicate
+                if (rowMap.ContainsKey(newParamId))
+                {
+                    continue;
+                }
+
                 int targetCat = slotOffset == 0 ? 0 : slotOffset == 100 ? 1 : slotOffset == 200 ? 2 : 3;
 
-                // 1. Try by direct baseCloneId if valid
-                if (baseCloneId > 0)
+                // Fast O(1) cached lookup for identical base set variants
+                var cacheKey = (tableName, baseCloneId, targetModelId, slotOffset);
+                if (!_baseRowCache.TryGetValue(cacheKey, out PARAM.Row? baseRow))
                 {
-                    var cand = param.Rows.FirstOrDefault(r => r.ID == baseCloneId);
-                    if (cand != null && (isProtector ? IsValidProtectorRow(cand) : IsValidWeaponRow(cand)))
+                    // 1. Try by direct baseCloneId if valid
+                    if (baseCloneId > 0 && rowMap.TryGetValue(baseCloneId, out var cand) && (isProtector ? IsValidProtectorRow(cand) : IsValidWeaponRow(cand)))
                     {
                         baseRow = cand;
                     }
-                }
 
-                // 2. Try by authentic equipModelId (matching targetModelId)
-                if (baseRow == null && targetModelId > 0)
-                {
-                    if (isProtector)
+                    // 2. Try by authentic equipModelId (matching targetModelId)
+                    if (baseRow == null && targetModelId > 0)
                     {
-                        baseRow = param.Rows.FirstOrDefault(r => IsValidProtectorRow(r) && ParamHelper.GetCellInt(r, "protectorCategory") == targetCat && ParamHelper.GetCellInt(r, "equipModelId") == targetModelId)
-                               ?? param.Rows.FirstOrDefault(r => IsValidProtectorRow(r) && ParamHelper.GetCellInt(r, "equipModelId") == targetModelId);
-                    }
-                    else
-                    {
-                        baseRow = param.Rows.FirstOrDefault(r => IsValidWeaponRow(r) && ParamHelper.GetCellInt(r, "equipModelId") == targetModelId);
-                    }
-                }
-
-                // 2b. Try nearby model variant in same set family (within +- 10)
-                if (baseRow == null && targetModelId > 0 && isProtector)
-                {
-                    baseRow = param.Rows
-                        .Where(r => IsValidProtectorRow(r) && ParamHelper.GetCellInt(r, "protectorCategory") == targetCat && Math.Abs(ParamHelper.GetCellInt(r, "equipModelId") - targetModelId) <= 10)
-                        .OrderBy(r => Math.Abs(ParamHelper.GetCellInt(r, "equipModelId") - targetModelId))
-                        .FirstOrDefault();
-                }
-
-                // 3. Fallback: authentic vanilla row matching equipment slot and category
-                if (baseRow == null)
-                {
-                    if (isProtector)
-                    {
-                        baseRow = param.Rows.FirstOrDefault(r => IsValidProtectorRow(r) && ParamHelper.GetCellInt(r, "protectorCategory") == targetCat && r.ID % 1000 == slotOffset)
-                               ?? param.Rows.FirstOrDefault(r => IsValidProtectorRow(r) && ParamHelper.GetCellInt(r, "protectorCategory") == targetCat)
-                               ?? param.Rows.FirstOrDefault(r => IsValidProtectorRow(r));
-                    }
-                    else
-                    {
-                        baseRow = param.Rows.FirstOrDefault(r => IsValidWeaponRow(r));
-                    }
-                }
-
-                // 4. Guaranteed retail fallbacks with verified non-placeholder textures
-                if (baseRow == null)
-                {
-                    if (isProtector)
-                    {
-                        int fallbackId = slotOffset switch
+                        if (isProtector)
                         {
-                            0 => 40000,   // Scale Helm (icon 13000)
-                            100 => 40100, // Scale Armor (icon 13001)
-                            200 => 40200, // Iron Gauntlets (icon 13002)
-                            300 => 40300, // Leather Boots (icon 13003)
-                            _ => 40100
-                        };
-                        baseRow = param.Rows.FirstOrDefault(r => r.ID == fallbackId)
-                               ?? param.Rows.FirstOrDefault(r => IsValidProtectorRow(r));
+                            baseRow = param.Rows.FirstOrDefault(r => IsValidProtectorRow(r) && ParamHelper.GetCellInt(r, "protectorCategory") == targetCat && ParamHelper.GetCellInt(r, "equipModelId") == targetModelId)
+                                   ?? param.Rows.FirstOrDefault(r => IsValidProtectorRow(r) && ParamHelper.GetCellInt(r, "equipModelId") == targetModelId);
+                        }
+                        else
+                        {
+                            baseRow = param.Rows.FirstOrDefault(r => IsValidWeaponRow(r) && ParamHelper.GetCellInt(r, "equipModelId") == targetModelId);
+                        }
                     }
-                    else
+
+                    // 2b. Try nearby model variant in same set family (within +- 10)
+                    if (baseRow == null && targetModelId > 0 && isProtector)
                     {
-                        baseRow = param.Rows.FirstOrDefault(r => r.ID == 2020000) // Longsword (icon 2020)
-                               ?? param.Rows.FirstOrDefault(r => IsValidWeaponRow(r));
+                        baseRow = param.Rows
+                            .Where(r => IsValidProtectorRow(r) && ParamHelper.GetCellInt(r, "protectorCategory") == targetCat && Math.Abs(ParamHelper.GetCellInt(r, "equipModelId") - targetModelId) <= 10)
+                            .OrderBy(r => Math.Abs(ParamHelper.GetCellInt(r, "equipModelId") - targetModelId))
+                            .FirstOrDefault();
+                    }
+
+                    // 3. Fallback: authentic vanilla row matching equipment slot and category
+                    if (baseRow == null)
+                    {
+                        if (isProtector)
+                        {
+                            baseRow = param.Rows.FirstOrDefault(r => IsValidProtectorRow(r) && ParamHelper.GetCellInt(r, "protectorCategory") == targetCat && r.ID % 1000 == slotOffset)
+                                   ?? param.Rows.FirstOrDefault(r => IsValidProtectorRow(r) && ParamHelper.GetCellInt(r, "protectorCategory") == targetCat)
+                                   ?? param.Rows.FirstOrDefault(r => IsValidProtectorRow(r));
+                        }
+                        else
+                        {
+                            baseRow = param.Rows.FirstOrDefault(r => IsValidWeaponRow(r));
+                        }
+                    }
+
+                    // 4. Guaranteed retail fallbacks with verified non-placeholder textures
+                    if (baseRow == null)
+                    {
+                        if (isProtector)
+                        {
+                            int fallbackId = slotOffset switch
+                            {
+                                0 => 40000,   // Scale Helm (icon 13000)
+                                100 => 40100, // Scale Armor (icon 13001)
+                                200 => 40200, // Iron Gauntlets (icon 13002)
+                                300 => 40300, // Leather Boots (icon 13003)
+                                _ => 40100
+                            };
+                            baseRow = (rowMap.TryGetValue(fallbackId, out var fb) ? fb : null)
+                                   ?? param.Rows.FirstOrDefault(r => IsValidProtectorRow(r));
+                        }
+                        else
+                        {
+                            baseRow = (rowMap.TryGetValue(2020000, out var fb) ? fb : null)
+                                   ?? param.Rows.FirstOrDefault(r => IsValidWeaponRow(r));
+                        }
+                    }
+
+                    if (baseRow != null)
+                    {
+                        _baseRowCache[cacheKey] = baseRow;
                     }
                 }
 
@@ -260,6 +283,7 @@ namespace LootForge.RegTool
                     }
                 }
 
+                rowMap[newParamId] = newRow;
                 param.Rows.Add(newRow);
                 injectedEquipCount++;
             }

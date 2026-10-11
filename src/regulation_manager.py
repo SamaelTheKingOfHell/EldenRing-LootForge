@@ -234,7 +234,7 @@ class RegulationManager:
 
         # Write specs to temporary JSON file
         with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as tf:
-            json.dump(specs, tf, indent=2)
+            json.dump(specs, tf, separators=(',', ':'))
             temp_spec_path = tf.name
 
         try:

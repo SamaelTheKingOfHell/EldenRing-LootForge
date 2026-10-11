@@ -74,28 +74,46 @@ namespace LootForge.RegTool
                 return fmg;
             }
 
-            var protectorName    = FindAndLoadFmg("ProtectorName");
-            var protectorInfo    = FindAndLoadFmg("ProtectorInfo");
-            var protectorCaption = FindAndLoadFmg("ProtectorCaption");
-            var weaponName       = FindAndLoadFmg("WeaponName");
-            var weaponInfo       = FindAndLoadFmg("WeaponInfo");
-            var weaponCaption    = FindAndLoadFmg("WeaponCaption");
+            var fmgMaps = new Dictionary<string, Dictionary<int, string?>>(StringComparer.OrdinalIgnoreCase);
+
+            Dictionary<int, string?> GetOrCreateMap(string categoryName)
+            {
+                if (!fmgMaps.TryGetValue(categoryName, out var map))
+                {
+                    var fmg = FindAndLoadFmg(categoryName);
+                    map = new Dictionary<int, string?>(fmg != null ? fmg.Entries.Count + fmgTexts.Count : fmgTexts.Count);
+                    if (fmg != null)
+                    {
+                        foreach (var entry in fmg.Entries)
+                        {
+                            map[entry.ID] = entry.Text;
+                        }
+                    }
+                    fmgMaps[categoryName] = map;
+                }
+                return map;
+            }
+
+            var protectorNameMap    = GetOrCreateMap("ProtectorName");
+            var protectorInfoMap    = GetOrCreateMap("ProtectorInfo");
+            var protectorCaptionMap = GetOrCreateMap("ProtectorCaption");
+            var weaponNameMap       = GetOrCreateMap("WeaponName");
+            var weaponInfoMap       = GetOrCreateMap("WeaponInfo");
+            var weaponCaptionMap    = GetOrCreateMap("WeaponCaption");
 
             int count = 0;
 
             foreach (var spec in fmgTexts)
             {
-                FMG? nameFmg    = spec.IsWeapon ? weaponName    : protectorName;
-                FMG? infoFmg    = spec.IsWeapon ? weaponInfo    : protectorInfo;
-                FMG? captionFmg = spec.IsWeapon ? weaponCaption : protectorCaption;
-
-                if (nameFmg == null) continue;
+                var nameMap    = spec.IsWeapon ? weaponNameMap    : protectorNameMap;
+                var infoMap    = spec.IsWeapon ? weaponInfoMap    : protectorInfoMap;
+                var captionMap = spec.IsWeapon ? weaponCaptionMap : protectorCaptionMap;
 
                 string nameText = spec.Name;
                 string infoText = spec.Info;
                 string captionText = spec.Caption;
 
-                // Only search vanilla name if custom mod name was not provided
+                // Fast O(1) lookup for vanilla name if custom mod name was not provided
                 if ((string.IsNullOrWhiteSpace(nameText) || !IsValidFmgText(nameText)) && spec.VanillaSourceId > 0)
                 {
                     int[] fmgIdsToTry = new int[] {
@@ -109,10 +127,9 @@ namespace LootForge.RegTool
 
                     foreach (int fmgId in fmgIdsToTry)
                     {
-                        var vanillaNameEntry = nameFmg.Entries.FirstOrDefault(e => e.ID == fmgId);
-                        if (vanillaNameEntry?.Text != null && IsValidFmgText(vanillaNameEntry.Text))
+                        if (nameMap.TryGetValue(fmgId, out var vanillaNameText) && IsValidFmgText(vanillaNameText))
                         {
-                            nameText = vanillaNameEntry.Text.Trim();
+                            nameText = vanillaNameText!.Trim();
                             break;
                         }
                     }
@@ -120,18 +137,16 @@ namespace LootForge.RegTool
 
                 if (spec.VanillaSourceId > 0)
                 {
-                    if (infoFmg != null && (string.IsNullOrWhiteSpace(infoText) || !IsValidFmgText(infoText)))
+                    if (string.IsNullOrWhiteSpace(infoText) || !IsValidFmgText(infoText))
                     {
-                        var vanillaInfoEntry = infoFmg.Entries.FirstOrDefault(e => e.ID == spec.VanillaSourceId);
-                        if (vanillaInfoEntry?.Text != null && IsValidFmgText(vanillaInfoEntry.Text))
-                            infoText = vanillaInfoEntry.Text;
+                        if (infoMap.TryGetValue(spec.VanillaSourceId, out var vanillaInfoText) && IsValidFmgText(vanillaInfoText))
+                            infoText = vanillaInfoText!;
                     }
 
-                    if (captionFmg != null && (string.IsNullOrWhiteSpace(captionText) || !IsValidFmgText(captionText)))
+                    if (string.IsNullOrWhiteSpace(captionText) || !IsValidFmgText(captionText))
                     {
-                        var vanillaCaptionEntry = captionFmg.Entries.FirstOrDefault(e => e.ID == spec.VanillaSourceId);
-                        if (vanillaCaptionEntry?.Text != null && IsValidFmgText(vanillaCaptionEntry.Text))
-                            captionText = vanillaCaptionEntry.Text;
+                        if (captionMap.TryGetValue(spec.VanillaSourceId, out var vanillaCaptionText) && IsValidFmgText(vanillaCaptionText))
+                            captionText = vanillaCaptionText!;
                     }
                 }
 
@@ -141,28 +156,28 @@ namespace LootForge.RegTool
                 }
 
                 nameText = FormatLootForgeItemName(nameText);
-                nameFmg.Entries.RemoveAll(e => e.ID == spec.ItemId);
-                nameFmg.Entries.Add(new FMG.Entry(spec.ItemId, nameText));
 
-                if (infoFmg != null)
-                {
-                    infoFmg.Entries.RemoveAll(e => e.ID == spec.ItemId);
-                    infoFmg.Entries.Add(new FMG.Entry(spec.ItemId, infoText));
-                }
-
-                if (captionFmg != null)
-                {
-                    captionFmg.Entries.RemoveAll(e => e.ID == spec.ItemId);
-                    captionFmg.Entries.Add(new FMG.Entry(spec.ItemId, captionText));
-                }
+                // O(1) assignment replaces expensive linear RemoveAll and Add
+                nameMap[spec.ItemId] = nameText;
+                infoMap[spec.ItemId] = infoText;
+                captionMap[spec.ItemId] = captionText;
 
                 count++;
             }
 
+            // Reconstruct FMG entries in bulk and serialize in parallel
             foreach (var kvp in fmgFileCache)
             {
-                kvp.Value.File.Bytes = kvp.Value.Fmg.Write();
+                if (fmgMaps.TryGetValue(kvp.Key, out var map))
+                {
+                    kvp.Value.Fmg.Entries = map.Select(e => new FMG.Entry(e.Key, e.Value)).ToList();
+                }
             }
+
+            System.Threading.Tasks.Parallel.ForEach(fmgFileCache.Values, entry =>
+            {
+                entry.File.Bytes = entry.Fmg.Write();
+            });
 
             return count;
         }
