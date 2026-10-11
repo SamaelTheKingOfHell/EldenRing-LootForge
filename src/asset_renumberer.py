@@ -60,6 +60,25 @@ class AssetRenumberer:
             shutil.copy2(source_file, dest_file)
             staged_files.append(str(dest_file.relative_to(self._output_dir)))
 
+            # Cross-gender mirror: ensure both Male (_m_) and Female (_f_) exist
+            # Prevents invisible body mesh / floating head when equipping single-gender mods
+            if "_f_" in new_name:
+                opp_name = new_name.replace("_f_", "_m_", 1)
+                has_opp = any(p.slot == part.slot and getattr(p, "gender_variant", "") == "m" for p in mod_set.parts)
+                opp_file = self._parts_dir / opp_name
+                if not has_opp and not opp_file.exists():
+                    shutil.copy2(dest_file, opp_file)
+                    staged_files.append(str(opp_file.relative_to(self._output_dir)))
+                    system_logger.debug(f"Cross-gender mirror: {new_name} -> {opp_name}", source="AssetRenumberer")
+            elif "_m_" in new_name:
+                opp_name = new_name.replace("_m_", "_f_", 1)
+                has_opp = any(p.slot == part.slot and getattr(p, "gender_variant", "") == "f" for p in mod_set.parts)
+                opp_file = self._parts_dir / opp_name
+                if not has_opp and not opp_file.exists():
+                    shutil.copy2(dest_file, opp_file)
+                    staged_files.append(str(opp_file.relative_to(self._output_dir)))
+                    system_logger.debug(f"Cross-gender mirror: {new_name} -> {opp_name}", source="AssetRenumberer")
+
             system_logger.debug(
                 f"Renumbered and staged: {old_name} -> {new_name}",
                 source="AssetRenumberer"

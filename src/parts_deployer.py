@@ -72,6 +72,24 @@ class PartsDeployer:
                         f"Deployed: {part.file_name} -> {target_name}",
                         source="PartsDeployer"
                     )
+
+                    # Cross-gender mirror: ensure both Male (_m_) and Female (_f_) exist
+                    if "_f_" in target_name:
+                        opp_name = target_name.replace("_f_", "_m_", 1)
+                        has_opp = any(p.slot == part.slot and getattr(p, "gender_variant", "") == "m" for p in ms.parts)
+                        opp_target = parts_output / opp_name
+                        if not has_opp and not opp_target.exists():
+                            shutil.copy2(str(target), str(opp_target))
+                            deployed += 1
+                            system_logger.debug(f"Cross-gender mirror: {target_name} -> {opp_name}", source="PartsDeployer")
+                    elif "_m_" in target_name:
+                        opp_name = target_name.replace("_m_", "_f_", 1)
+                        has_opp = any(p.slot == part.slot and getattr(p, "gender_variant", "") == "f" for p in ms.parts)
+                        opp_target = parts_output / opp_name
+                        if not has_opp and not opp_target.exists():
+                            shutil.copy2(str(target), str(opp_target))
+                            deployed += 1
+                            system_logger.debug(f"Cross-gender mirror: {target_name} -> {opp_name}", source="PartsDeployer")
                 except Exception as ex:
                     system_logger.error(
                         f"Failed to deploy part {part.file_name}: {ex}",
