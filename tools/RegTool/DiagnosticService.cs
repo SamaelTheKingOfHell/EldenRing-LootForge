@@ -111,7 +111,8 @@ namespace LootForge.RegTool
                 var file = bnd.Files.FirstOrDefault(f => f.Name.EndsWith($"{tableName}.param", StringComparison.OrdinalIgnoreCase));
                 if (file == null) return;
                 var param = PARAM.Read(file.Bytes);
-                string xmlFile = Path.Combine(defsDir, $"{tableName}.xml");
+                string defBaseName = tableName.StartsWith("ItemLotParam", StringComparison.OrdinalIgnoreCase) ? "ItemLotParam" : tableName;
+                string xmlFile = Path.Combine(defsDir, $"{defBaseName}.xml");
                 if (File.Exists(xmlFile))
                 {
                     var def = PARAMDEF.XmlDeserialize(xmlFile, false, false);
@@ -187,11 +188,33 @@ namespace LootForge.RegTool
                         Console.WriteLine($"  ID={r.ID} Name='{r.Name}' icon={icon}");
                     }
                 }
+                else if (tableName == "ItemLotParam_enemy")
+                {
+                    var interesting = param.Rows.Where(r => r.ID >= 9000000 || (r.Name != null && r.Name.Contains("LootForge")) || (r.ID >= 100000 && r.ID <= 100500 && r.ID % 100 == 0)).ToList();
+                    Console.WriteLine($"Found {interesting.Count} matching rows in ItemLotParam_enemy:");
+                    foreach (var r in interesting.Take(20))
+                    {
+                        Console.WriteLine($"  ID={r.ID} Name='{r.Name}'");
+                        for (int s = 1; s <= 8; s++)
+                        {
+                            int item = ParamHelper.GetCellInt(r, $"lotItemId0{s}");
+                            if (item > 0)
+                            {
+                                int cat = ParamHelper.GetCellInt(r, $"lotItemCategory0{s}");
+                                int pts = ParamHelper.GetCellInt(r, $"lotItemBasePoint0{s}");
+                                int num = ParamHelper.GetCellInt(r, $"lotItemNum0{s}");
+                                int flag = ParamHelper.GetCellInt(r, $"getItemFlagId0{s}");
+                                Console.WriteLine($"    Slot {s}: item={item} cat={cat} pts={pts} num={num} flag={flag}");
+                            }
+                        }
+                    }
+                }
             }
 
             InspectTable("ShopLineupParam");
             InspectTable("EquipParamProtector");
             InspectTable("EquipParamWeapon");
+            InspectTable("ItemLotParam_enemy");
             return 0;
         }
 
