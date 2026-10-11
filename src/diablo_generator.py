@@ -185,6 +185,12 @@ class DiabloLootGenerator:
                         fmg["name"] = self.build_item_name(fmg["name"], rarity, affixes)
                         fmg["caption"] = self.build_caption_with_affixes(fmg["caption"], rarity, affixes)
 
+            # Synchronize loot distribution awarded items to new variant IDs
+            if "loot_distribution" in spec_copy and "awarded_items" in spec_copy["loot_distribution"]:
+                spec_copy["loot_distribution"]["awarded_items"] = [
+                    ep["new_param_id"] for ep in spec_copy.get("equip_params", [])
+                ]
+
             variant_specs.append(spec_copy)
 
         return variant_specs

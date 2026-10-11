@@ -76,3 +76,16 @@ This roadmap defines the implementation phases for the cross-platform Standalone
 - [x] **UI Forge Synchronization**:
   - `_forge_mods` immediately re-synchronizes active dropdowns, drop rate spinboxes, and multipliers right before executing the patch.
 
+## Phase 8: Modular Schema-Driven UI & Dedicated Loot Modal
+- [x] **Data-Driven Parameter Schema (`src/ui/param_schema.py`)**:
+  - Strongly-typed parameter descriptors (`ParamDescriptor`, `ParamType`, `ParamPurpose`) decoupling engine parameter definitions from visual rendering per `[CS-DECOUPLE]`.
+  - Automatic organization into purposeful cards: Loot & Drop Rules (Enums, Multipliers), Diablo ARPG Generator (Bools, Variant Counts, Seeds), and Staging Paths.
+- [x] **ParamWidgetFactory (`src/ui/param_widget_factory.py`)**:
+  - Automatically constructs Dark Souls styled controls (QComboBox, QSpinBox, QSlider, QCheckBox, Path LineEdit + Browse) and groups them by purpose.
+- [x] **Interactive Loot Review Modal (`src/ui/loot_modal.py`)**:
+  - Extracted giant static table into a spacious, dedicated modal dialog (`QDialog`).
+  - Features real-time search filtering across item names and drop locations, page size selector, global mystery mode toggle, editable drop rate spinboxes with color status, and pagination.
+- [x] **Full Diablo UI Integration & Pipeline Execution**:
+  - Exposed Diablo procedural loot toggle, scalable variants count (1 to 1,000 instances), and optional seed controls directly in UI.
+  - Automatically invokes procedural variant generation during `_forge_mods()` with synchronized `awarded_items` for authentic in-game discovery.
+
