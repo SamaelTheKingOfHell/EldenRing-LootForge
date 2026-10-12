@@ -589,7 +589,11 @@ class LootForgeMainWindow(QMainWindow):
                 base_spec = self.param_builder.build_patch_spec(s)
                 if self.config.diablo_loot_enabled and self.config.diablo_variants_per_item > 1:
                     from src.diablo_generator import DiabloLootGenerator
-                    diablo_gen = DiabloLootGenerator(seed=self.config.diablo_seed, knowledge_base=self.knowledge_base)
+                    diablo_gen = DiabloLootGenerator(
+                        seed=self.config.diablo_seed,
+                        knowledge_base=self.knowledge_base,
+                        randomize_weapon_skills=self.config.diablo_randomize_weapon_skills
+                    )
                     variants = diablo_gen.generate_variants_for_spec(
                         base_spec, variants_per_item=self.config.diablo_variants_per_item
                     )
@@ -604,7 +608,11 @@ class LootForgeMainWindow(QMainWindow):
             # Inject vanilla base items for distribution if enabled
             if self.config.diablo_use_vanilla_base_items:
                 from src.diablo_generator import DiabloLootGenerator
-                diablo_gen = DiabloLootGenerator(seed=self.config.diablo_seed, knowledge_base=self.knowledge_base)
+                diablo_gen = DiabloLootGenerator(
+                    seed=self.config.diablo_seed,
+                    knowledge_base=self.knowledge_base,
+                    randomize_weapon_skills=self.config.diablo_randomize_weapon_skills
+                )
                 vanilla_dist_specs = diablo_gen.generate_vanilla_base_distribution_specs(
                     knowledge_base=self.knowledge_base,
                     id_allocator=self.id_allocator,
@@ -618,7 +626,11 @@ class LootForgeMainWindow(QMainWindow):
             # Inject stats into vanilla item loots if enabled
             if self.config.diablo_inject_vanilla_stats:
                 from src.diablo_generator import DiabloLootGenerator
-                diablo_gen = DiabloLootGenerator(seed=self.config.diablo_seed, knowledge_base=self.knowledge_base)
+                diablo_gen = DiabloLootGenerator(
+                    seed=self.config.diablo_seed,
+                    knowledge_base=self.knowledge_base,
+                    randomize_weapon_skills=self.config.diablo_randomize_weapon_skills
+                )
                 vanilla_stat_specs = diablo_gen.generate_vanilla_stat_injections(knowledge_base=self.knowledge_base)
                 patch_specs.extend(vanilla_stat_specs)
                 system_logger.info(f"Injected Diablo stats into {len(vanilla_stat_specs)} vanilla item loots.", source="QtApp")

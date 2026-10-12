@@ -8,7 +8,10 @@ SpEffectParam passive buffs, dynamic item naming, and detailed Diablo-style lore
 import copy
 import random
 from typing import List, Dict, Any, Optional
-from src.diablo_affixes import RarityTier, AffixType, AffixDefinition, AFFIX_POOL
+from src.diablo_affixes import (
+    RarityTier, AffixType, AffixDefinition, AFFIX_POOL,
+    WeaponSkill, WEAPON_SKILL_POOL
+)
 from src.logger import system_logger
 
 
@@ -44,15 +47,65 @@ class DiabloLootGenerator:
         knowledge_base: Optional[Any] = None,
         max_shop_per_merchant: int = DEFAULT_MAX_SHOP_PER_MERCHANT,
         max_enia_rows: int = DEFAULT_MAX_ENIA_SHOP_ROWS,
-        max_total_shop_rows: int = DEFAULT_MAX_TOTAL_SHOP_ROWS
+        max_total_shop_rows: int = DEFAULT_MAX_TOTAL_SHOP_ROWS,
+        randomize_weapon_skills: bool = False,
+        weapon_skills_pool: Optional[List[WeaponSkill]] = None
     ):
         self._rng = random.Random(seed)
         self._knowledge_base = knowledge_base
         self.max_shop_per_merchant = max_shop_per_merchant
         self.max_enia_rows = max_enia_rows
         self.max_total_shop_rows = max_total_shop_rows
+        self.randomize_weapon_skills = randomize_weapon_skills
+        self._weapon_skills_pool = list(weapon_skills_pool or WEAPON_SKILL_POOL)
         self._shop_allocations: Dict[str, int] = {}
         self._total_shop_allocations: int = 0
+
+    def roll_weapon_skill(self) -> WeaponSkill:
+        """Rolls a random authentic Ash of War or weapon skill from the weapon skill pool."""
+        return self._rng.choice(self._weapon_skills_pool)
+
+    @staticmethod
+    def apply_affixes_to_equipment(
+        field_updates: Dict[str, Any],
+        affixes: List[AffixDefinition],
+        is_weapon: bool
+    ) -> None:
+        """
+        Applies affix modifiers to equip param dictionary.
+        Routes status buildups to spEffectBehaviorId0..2 and WeaponEffect UI slots spEffectMsgId0..2.
+        Routes resident passives to residentSpEffectId / residentSpEffectId1 / residentSpEffectId2 for weapons,
+        and residentSpEffectId / residentSpEffectId2 / residentSpEffectId3 for protectors.
+        """
+        wep_behavior_slot = 0
+        wep_resident_slot = 0
+        wep_msg_slot = 0
+        armor_resident_slot = 0
+
+        for aff in affixes:
+            for field_name, delta in aff.field_modifiers.items():
+                field_updates[field_name] = field_updates.get(field_name, 0) + delta
+
+            if aff.sp_effect_id:
+                if is_weapon:
+                    if getattr(aff, "is_on_hit_effect", False):
+                        if wep_behavior_slot < 3:
+                            field_updates[f"spEffectBehaviorId{wep_behavior_slot}"] = aff.sp_effect_id
+                            wep_behavior_slot += 1
+                    else:
+                        if wep_resident_slot < 3:
+                            key = "residentSpEffectId" if wep_resident_slot == 0 else f"residentSpEffectId{wep_resident_slot}"
+                            field_updates[key] = aff.sp_effect_id
+                            wep_resident_slot += 1
+                else:
+                    if armor_resident_slot < 3:
+                        key = "residentSpEffectId" if armor_resident_slot == 0 else f"residentSpEffectId{armor_resident_slot + 1}"
+                        field_updates[key] = aff.sp_effect_id
+                        armor_resident_slot += 1
+
+            if is_weapon and getattr(aff, "sp_effect_msg_id", None) and wep_msg_slot < 3:
+                field_updates[f"spEffectMsgId{wep_msg_slot}"] = aff.sp_effect_msg_id
+                wep_msg_slot += 1
 
     def is_shop_capacity_exceeded(self, shop_id: str, is_enia: bool = False) -> bool:
         """Checks whether a merchant, Enia, or total ShopLineupParam has reached capacity."""
@@ -175,13 +228,17 @@ class DiabloLootGenerator:
         base_caption: str,
         rarity: RarityTier,
         affixes: List[AffixDefinition],
-        boss_name: Optional[str] = None
+        boss_name: Optional[str] = None,
+        skill: Optional[WeaponSkill] = None
     ) -> str:
-        """Appends formatted rarity and affix breakdown to the bottom of item description."""
+        """Appends formatted rarity, skill, and affix breakdown to the bottom of item description."""
         lines = [base_caption.rstrip(), ""]
         lines.append("----------------------------------------")
         tier_title = f"GIGA {rarity.display_name.upper()}" if boss_name else rarity.display_name.upper()
         lines.append(f"RARITY: {tier_title} {rarity.stars}")
+
+        if skill:
+            lines.append(f"SKILL: {skill.name}")
 
         if boss_name:
             lines.append(f"[BOSS TROPHY] Claimed from {boss_name}")
@@ -341,26 +398,20 @@ class DiabloLootGenerator:
                 field_updates = ep.setdefault("field_updates", {})
                 field_updates["sortId"] = new_id
 
-                sp_effect_slot = 0
-                for aff in affixes:
-                    for field_name, delta in aff.field_modifiers.items():
-                        current_val = field_updates.get(field_name, 0)
-                        field_updates[field_name] = current_val + delta
+                rolled_skill: Optional[WeaponSkill] = None
+                if is_weapon and self.randomize_weapon_skills:
+                    rolled_skill = self.roll_weapon_skill()
+                    field_updates["swordArtsParamId"] = rolled_skill.id
 
-                    if aff.sp_effect_id:
-                        if is_weapon and sp_effect_slot < 3:
-                            field_updates[f"spEffectId{sp_effect_slot}"] = aff.sp_effect_id
-                            sp_effect_slot += 1
-                        elif not is_weapon and sp_effect_slot < 3:
-                            key = "residentSpEffectId" if sp_effect_slot == 0 else f"residentSpEffectId{sp_effect_slot + 1}"
-                            field_updates[key] = aff.sp_effect_id
-                            sp_effect_slot += 1
+                self.apply_affixes_to_equipment(field_updates, affixes, is_weapon=is_weapon)
 
                 for fmg in spec_copy.get("fmg_texts", []):
                     if fmg["item_id"] == old_id:
                         fmg["item_id"] = new_id
                         fmg["name"] = self.build_item_name(fmg["name"], rarity, affixes, is_boss=is_boss)
-                        fmg["caption"] = self.build_caption_with_affixes(fmg["caption"], rarity, affixes, boss_name=boss_name)
+                        fmg["caption"] = self.build_caption_with_affixes(
+                            fmg["caption"], rarity, affixes, boss_name=boss_name, skill=rolled_skill
+                        )
 
             # 3. Synchronize loot distribution
             if loot_spec:
@@ -399,19 +450,17 @@ class DiabloLootGenerator:
             affixes = self.roll_affixes(rarity, is_weapon=True, is_boss=False)
 
             field_updates: Dict[str, Any] = {}
-            sp_effect_slot = 0
-            for aff in affixes:
-                for field_name, delta in aff.field_modifiers.items():
-                    field_updates[field_name] = field_updates.get(field_name, 0) + delta
+            rolled_skill: Optional[WeaponSkill] = None
+            if self.randomize_weapon_skills:
+                rolled_skill = self.roll_weapon_skill()
+                field_updates["swordArtsParamId"] = rolled_skill.id
 
-                if aff.sp_effect_id and sp_effect_slot < 3:
-                    field_updates[f"spEffectId{sp_effect_slot}"] = aff.sp_effect_id
-                    sp_effect_slot += 1
+            self.apply_affixes_to_equipment(field_updates, affixes, is_weapon=True)
 
             clean_name = w_info.get("name", "Weapon")
             clean_desc = w_info.get("description", "")
             fmg_name = f"[{rarity.display_name}] {clean_name}" if rarity != RarityTier.COMMON else clean_name
-            fmg_caption = self.build_caption_with_affixes(clean_desc, rarity, affixes)
+            fmg_caption = self.build_caption_with_affixes(clean_desc, rarity, affixes, skill=rolled_skill)
 
             specs.append({
                 "set_id": f"vanilla_weapon_inject_{base_param_id}",
@@ -446,20 +495,20 @@ class DiabloLootGenerator:
             affixes = self.roll_affixes(rarity, is_weapon=False, is_boss=False)
 
             field_updates: Dict[str, Any] = {}
-            sp_effect_slot = 0
-            for aff in affixes:
-                for field_name, delta in aff.field_modifiers.items():
-                    field_updates[field_name] = field_updates.get(field_name, 0) + delta
-
-                if aff.sp_effect_id and sp_effect_slot < 3:
-                    key = "residentSpEffectId" if sp_effect_slot == 0 else f"residentSpEffectId{sp_effect_slot + 1}"
-                    field_updates[key] = aff.sp_effect_id
-                    sp_effect_slot += 1
+            self.apply_affixes_to_equipment(field_updates, affixes, is_weapon=False)
 
             fmg_caption = self.build_caption_with_affixes(clean_desc, rarity, affixes)
 
-            for slot_offset, slot_name in [(0, "Helm"), (100, "Armor"), (200, "Gauntlets"), (300, "Greaves")]:
-                piece_id = base_param_id + slot_offset
+            explicit_pieces = p_info.get("pieces")
+            if explicit_pieces and isinstance(explicit_pieces, dict):
+                pieces_to_process = [(pid, sname) for sname, pid in explicit_pieces.items()]
+            else:
+                pieces_to_process = [
+                    (base_param_id + slot_offset, slot_name)
+                    for slot_offset, slot_name in [(0, "Helm"), (100, "Armor"), (200, "Gauntlets"), (300, "Greaves")]
+                ]
+
+            for piece_id, slot_name in pieces_to_process:
                 piece_name = f"[{rarity.display_name}] {clean_set_name} ({slot_name})" if rarity != RarityTier.COMMON else f"{clean_set_name} ({slot_name})"
 
                 specs.append({
@@ -569,20 +618,30 @@ class DiabloLootGenerator:
             fmg_texts = []
             awarded_ids = []
 
-            for slot_offset, slot_name, slot_key, field_name in [
+            explicit_pieces = p_info.get("pieces")
+            slot_config = [
                 (0, "Helm", "head", "headEquipModelId"),
                 (100, "Armor", "body", "bodyEquipModelId"),
                 (200, "Gauntlets", "arms", "armEquipModelId"),
                 (300, "Greaves", "legs", "legEquipModelId")
-            ]:
+            ]
+            if explicit_pieces and isinstance(explicit_pieces, dict):
+                slot_config = [
+                    (s_offset, s_name, s_key, f_name)
+                    for s_offset, s_name, s_key, f_name in slot_config
+                    if s_name in explicit_pieces
+                ]
+
+            for slot_offset, slot_name, slot_key, field_name in slot_config:
                 item_id = alloc.new_equip_param_id + slot_offset
                 awarded_ids.append(item_id)
                 model_int = int(model_id) if model_id.isdigit() else 0
+                clone_id = explicit_pieces[slot_name] if (explicit_pieces and slot_name in explicit_pieces) else (base_clone_id + slot_offset)
 
                 equip_params.append({
                     "param_table": "EquipParamProtector",
                     "new_param_id": item_id,
-                    "base_clone_id": base_clone_id + slot_offset,
+                    "base_clone_id": clone_id,
                     "target_model_id": model_int,
                     "slot": slot_key,
                     "slot_offset": slot_offset,
@@ -597,7 +656,7 @@ class DiabloLootGenerator:
 
                 fmg_texts.append({
                     "item_id": item_id,
-                    "vanilla_source_id": base_clone_id + slot_offset,
+                    "vanilla_source_id": clone_id,
                     "target_model_id": model_int,
                     "slot": slot_key,
                     "slot_offset": slot_offset,

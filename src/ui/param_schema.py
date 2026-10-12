@@ -152,6 +152,14 @@ def get_generator_param_descriptors() -> List[ParamDescriptor]:
             description="Uses vanilla weapons and armor sets as base items to generate standalone procedural relics and distribute them across bosses, merchants, chests, and enemy drops.",
             default=False
         ),
+        ParamDescriptor(
+            key="diablo_randomize_weapon_skills",
+            label="Randomize Weapon Skills (Ashes of War)",
+            param_type=ParamType.BOOL,
+            purpose=ParamPurpose.DIABLO_ARPG,
+            description="Randomly rolls authentic Ashes of War and unique boss weapon skills (SwordArtsParam) on Diablo weapon variants.",
+            default=False
+        ),
 
         # --- Group 3: Paths & Installation ---
         ParamDescriptor(

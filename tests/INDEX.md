@@ -13,6 +13,9 @@ Automated verification suites adhering to `[CS-NO-MOCK]`. Tests exercise concret
 | `test_param_builder.py` | Validates parameter spec construction for Boss Remembrances and enemy drops. |
 | `test_loot_distributor.py` | Validates AdditionType & AntiDup Enums, set invariance, and rate color coding. |
 | `test_qt_app.py` | Validates Qt GUI headless launch, manual folder pickers, path bindings, and presets. |
+| `test_diablo_loot.py` | Validates Diablo-style ARPG affix rolling, weapon skills randomization, rarity tiers, and distribution pools. |
+| `test_ui_modular_schema.py` | Validates modular parameter descriptors, widget factory generation, and interactive Loot Review Modal dialog. |
+| `test_injection_harness.py` | Synthetic injection harness testing all loot pools and distribution modes. |
 | `test_regulation_manager.py` | Validates non-destructive regulation decryption, parameter injection, and encryption. |
 | `test_localization_parity.py` | Verifies 100% string key parity across all localization dictionaries (`[CS-LOCALIZATION]`). |
 | `verify_server.py` | End-to-end integration test validating HTTP API endpoints and UI asset serving (`[CS-NO-MOCK]`). |

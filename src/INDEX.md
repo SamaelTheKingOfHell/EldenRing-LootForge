@@ -18,8 +18,8 @@ This directory contains the core Python engine implementation for LootForge, org
 | `param_builder.py` | `ParamBuilder` | Builds patch records for `EquipParam`, `ItemLotParam`, `ShopLineupParam`, and FMG text with unisex protector support. |
 | `manifest_store.py` | `ManifestStore` | Ledger tracking injected items for auditability and clean 1-click rollbacks. |
 | `loot_distributor.py` | `LootDistributor` | Calculates drop rates, set invariance, boss rotation, and color statuses. |
-| `diablo_affixes.py` | Diablo Affix Engine | Rarity tiers, affix definitions, stat deltas, and Elden Ring SpEffect passives. |
-| `diablo_generator.py` | `DiabloLootGenerator` | Procedural multi-tier variant generator, affix roll engine, and dynamic lore injector. |
+| `diablo_affixes.py` | Diablo Affix Engine | Rarity tiers, affix definitions, stat deltas, Elden Ring SpEffect passives, and authentic WeaponSkill (Ash of War) pool. |
+| `diablo_generator.py` | `DiabloLootGenerator` | Procedural multi-tier variant generator, affix roll engine, weapon skills randomization, and dynamic lore injector. |
 | `regulation_manager.py` | `RegulationManager` | Non-destructive regulation.bin decryptor, param patcher, and AES-256 encryptor. |
 | `parts_deployer.py` | `PartsDeployer` | Standalone .partsbnd.dcx model deployment and cross-gender mesh mirroring service. |
 | `ui/` | UI Components | Themed styles (`theme.py`), modular parameter schema, widget factory, and modals. |

@@ -187,12 +187,17 @@ class ParamBuilder:
         self,
         mod_set: DetectedModSet,
         variants_count: int = 3,
-        seed: Optional[int] = None
+        seed: Optional[int] = None,
+        randomize_weapon_skills: bool = False
     ) -> List[Dict[str, Any]]:
         """
         Builds multiple procedural Diablo-style patch specifications for a mod set.
         """
         base_spec = self.build_patch_spec(mod_set)
         from src.diablo_generator import DiabloLootGenerator
-        generator = DiabloLootGenerator(seed=seed, knowledge_base=self.kb)
+        generator = DiabloLootGenerator(
+            seed=seed,
+            knowledge_base=self.kb,
+            randomize_weapon_skills=randomize_weapon_skills
+        )
         return generator.generate_variants_for_spec(base_spec, variants_per_item=variants_count)

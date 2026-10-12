@@ -57,6 +57,10 @@ class TestUIModularSchema(unittest.TestCase):
         self.assertIn("diablo_seed", keys)
         self.assertEqual(keys["diablo_seed"].param_type, ParamType.INT)
 
+        self.assertIn("diablo_randomize_weapon_skills", keys)
+        self.assertEqual(keys["diablo_randomize_weapon_skills"].param_type, ParamType.BOOL)
+        self.assertEqual(keys["diablo_randomize_weapon_skills"].purpose, ParamPurpose.DIABLO_ARPG)
+
         # Paths
         self.assertIn("active_regulation_path", keys)
         self.assertEqual(keys["active_regulation_path"].param_type, ParamType.PATH_FILE)
@@ -91,6 +95,7 @@ class TestUIModularSchema(unittest.TestCase):
         self.assertIn("diablo_loot_enabled", diablo_ctrls)
         self.assertIn("diablo_variants_per_item", diablo_ctrls)
         self.assertIn("diablo_seed", diablo_ctrls)
+        self.assertIn("diablo_randomize_weapon_skills", diablo_ctrls)
 
         # Toggle diablo enabled checkbox
         cb = diablo_ctrls["diablo_loot_enabled"]

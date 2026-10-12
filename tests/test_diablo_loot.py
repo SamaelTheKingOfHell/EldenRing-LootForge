@@ -249,10 +249,12 @@ class TestDiabloLoot(unittest.TestCase):
         cfg = LootForgeConfig()
         self.assertFalse(cfg.diablo_inject_vanilla_stats)
         self.assertFalse(cfg.diablo_use_vanilla_base_items)
+        self.assertFalse(cfg.diablo_randomize_weapon_skills)
 
         cfg_dict = cfg.to_dict()
         self.assertIn("diablo_inject_vanilla_stats", cfg_dict)
         self.assertIn("diablo_use_vanilla_base_items", cfg_dict)
+        self.assertIn("diablo_randomize_weapon_skills", cfg_dict)
 
     def test_shop_capacity_limitation_and_pool_overflow_rotation(self):
         """Verifies that shop param row limits are strictly respected and overflowed items rotate to other pools."""
@@ -335,6 +337,236 @@ class TestDiabloLoot(unittest.TestCase):
         # Check overflow rotation
         self.assertGreater(rotated_to_chests, 5, "Overflowed items must rotate into chest pools!")
         self.assertGreater(rotated_to_enemies, 10, "Overflowed items must rotate into enemy drop pools!")
+
+    def test_weapon_skill_pool_integrity(self):
+        """Verifies that weapon skill pool is populated with authentic valid skills."""
+        from src.diablo_affixes import WEAPON_SKILL_POOL, WeaponSkill
+        self.assertGreater(len(WEAPON_SKILL_POOL), 50, "Weapon skill pool must have substantial skills!")
+        # Ensure No Skill (10) is excluded from random weapon rolls
+        skill_ids = [s.id for s in WEAPON_SKILL_POOL]
+        self.assertNotIn(10, skill_ids, "'No Skill' (10) should not be in the active randomization pool!")
+        for s in WEAPON_SKILL_POOL:
+            self.assertIsInstance(s.id, int)
+            self.assertGreater(s.id, 0)
+            self.assertTrue(len(s.name) > 0)
+            self.assertFalse(s.name.startswith("%"))
+
+    def test_weapon_skill_rolling(self):
+        """Verifies roll_weapon_skill produces valid skills."""
+        skill = self.generator.roll_weapon_skill()
+        self.assertIsNotNone(skill)
+        self.assertGreater(skill.id, 0)
+        self.assertTrue(len(skill.name) > 0)
+
+    def test_weapon_skill_randomization_enabled(self):
+        """Verifies that weapons receive randomized swordArtsParamId when randomize_weapon_skills=True."""
+        generator_with_skills = DiabloLootGenerator(seed=101, randomize_weapon_skills=True)
+
+        wpn_set = DetectedModSet(
+            set_id="Moonveil_0617",
+            folder_or_archive_name="Moonveil Mod",
+            target_model_id="0617",
+            target_vanilla_name="Moonveil",
+            is_weapon=True,
+            parts=[ModPartFile("wp_a_0617.partsbnd.dcx", "wp_a_0617.partsbnd.dcx", EquipmentSlot.WEAPON, "0617", "m", 100)],
+            allocation=StandaloneAllocation(
+                new_model_id="9001",
+                new_equip_param_id=9001000,
+                new_item_lot_id=9100001,
+                marker_tag="[LootForge]"
+            ),
+            loot_target=LootTarget(
+                route_type=LootDistributionType.ENEMY_DROP,
+                target_id="431100000",
+                display_name="Godrick Soldier",
+                chance_or_cost=100.0
+            )
+        )
+
+        base_spec = self.builder.build_patch_spec(wpn_set)
+        variants = generator_with_skills.generate_variants_for_spec(base_spec, variants_per_item=3)
+        self.assertEqual(len(variants), 3)
+
+        for v in variants:
+            ep = v["equip_params"][0]
+            self.assertEqual(ep["param_table"], "EquipParamWeapon")
+            self.assertIn("swordArtsParamId", ep["field_updates"], "Weapons must have swordArtsParamId randomized!")
+            skill_id = ep["field_updates"]["swordArtsParamId"]
+            self.assertGreater(skill_id, 0)
+            # Verify caption mentions skill
+            fmg = v["fmg_texts"][0]
+            self.assertIn("SKILL:", fmg["caption"], "Item description must display randomized skill!")
+
+    def test_weapon_skill_randomization_disabled(self):
+        """Verifies that weapons do NOT alter swordArtsParamId when randomize_weapon_skills=False."""
+        generator_no_skills = DiabloLootGenerator(seed=101, randomize_weapon_skills=False)
+
+        wpn_set = DetectedModSet(
+            set_id="Moonveil_0617",
+            folder_or_archive_name="Moonveil Mod",
+            target_model_id="0617",
+            target_vanilla_name="Moonveil",
+            is_weapon=True,
+            parts=[ModPartFile("wp_a_0617.partsbnd.dcx", "wp_a_0617.partsbnd.dcx", EquipmentSlot.WEAPON, "0617", "m", 100)],
+            allocation=StandaloneAllocation(
+                new_model_id="9001",
+                new_equip_param_id=9001000,
+                new_item_lot_id=9100001,
+                marker_tag="[LootForge]"
+            ),
+            loot_target=LootTarget(
+                route_type=LootDistributionType.ENEMY_DROP,
+                target_id="431100000",
+                display_name="Godrick Soldier",
+                chance_or_cost=100.0
+            )
+        )
+
+        base_spec = self.builder.build_patch_spec(wpn_set)
+        variants = generator_no_skills.generate_variants_for_spec(base_spec, variants_per_item=3)
+        for v in variants:
+            ep = v["equip_params"][0]
+            self.assertNotIn("swordArtsParamId", ep["field_updates"], "swordArtsParamId must not be set when disabled!")
+            fmg = v["fmg_texts"][0]
+            self.assertNotIn("SKILL:", fmg["caption"])
+
+    def test_armor_not_receiving_weapon_skills(self):
+        """Verifies that armor pieces never receive swordArtsParamId even when randomize_weapon_skills=True."""
+        generator_with_skills = DiabloLootGenerator(seed=101, randomize_weapon_skills=True)
+
+        armor_set = DetectedModSet(
+            set_id="KnightArmor_1570",
+            folder_or_archive_name="Knight Armor",
+            target_model_id="1570",
+            target_vanilla_name="Knight Armor",
+            parts=[ModPartFile("bd_m_1570.partsbnd.dcx", "bd_m_1570.partsbnd.dcx", EquipmentSlot.BODY, "1570", "m", 100)],
+            allocation=StandaloneAllocation(
+                new_model_id="9000",
+                new_equip_param_id=9000000,
+                new_item_lot_id=9100000,
+                marker_tag="[LootForge]"
+            ),
+            loot_target=LootTarget(
+                route_type=LootDistributionType.ENEMY_DROP,
+                target_id="431100000",
+                display_name="Godrick Soldier",
+                chance_or_cost=100.0
+            )
+        )
+
+        base_spec = self.builder.build_patch_spec(armor_set)
+        variants = generator_with_skills.generate_variants_for_spec(base_spec, variants_per_item=3)
+        for v in variants:
+            ep = v["equip_params"][0]
+            self.assertEqual(ep["param_table"], "EquipParamProtector")
+            self.assertNotIn("swordArtsParamId", ep["field_updates"])
+            fmg = v["fmg_texts"][0]
+            self.assertNotIn("SKILL:", fmg["caption"])
+
+    def test_vanilla_stat_injections_weapon_skills(self):
+        """Verifies vanilla weapon stat infusions randomize skills when enabled."""
+        from src.knowledge_base import VanillaKnowledgeBase
+        kb = VanillaKnowledgeBase.from_data_dir("data")
+
+        gen = DiabloLootGenerator(seed=42, randomize_weapon_skills=True)
+        specs = gen.generate_vanilla_stat_injections(knowledge_base=kb)
+
+        weapon_specs = [s for s in specs if s["equip_params"][0]["param_table"] == "EquipParamWeapon"]
+        protector_specs = [s for s in specs if s["equip_params"][0]["param_table"] == "EquipParamProtector"]
+
+        self.assertGreater(len(weapon_specs), 0)
+        for ws in weapon_specs:
+            ep = ws["equip_params"][0]
+            self.assertIn("swordArtsParamId", ep["field_updates"])
+            fmg = ws["fmg_texts"][0]
+            self.assertIn("SKILL:", fmg["caption"])
+
+        for ps in protector_specs:
+            ep = ps["equip_params"][0]
+            self.assertNotIn("swordArtsParamId", ep["field_updates"])
+            fmg = ps["fmg_texts"][0]
+            self.assertNotIn("SKILL:", fmg["caption"])
+
+    def test_starting_gear_modifications(self):
+        """Verifies starting gear for all 10 classes is modified with authentic IDs."""
+        from src.knowledge_base import VanillaKnowledgeBase
+        kb = VanillaKnowledgeBase.from_data_dir("data")
+
+        gen = DiabloLootGenerator(seed=123)
+        specs = gen.generate_vanilla_stat_injections(knowledge_base=kb)
+
+        injected_ids = {s["equip_params"][0]["new_param_id"] for s in specs}
+
+        # Check Starting Class Weapons & Shields
+        starting_weapons = [
+            2000000,   # Vagabond Longsword
+            18000000,  # Vagabond Halberd
+            31330000,  # Vagabond Heater Shield
+            7140000,   # Warrior Scimitar
+            30090000,  # Warrior Riveted Wooden Shield
+            14000000,  # Hero Battle Axe
+            31230000,  # Hero Large Leather Shield
+            1090000,   # Bandit Great Knife
+            40000000,  # Bandit Shortbow
+            30000000,  # Bandit Buckler
+            33130000,  # Astrologer's Staff
+            2010000,   # Astrologer Short Sword
+            30080000,  # Astrologer Scripture Wooden Shield
+            16000000,  # Prophet Short Spear
+            34000000,  # Prophet / Confessor Finger Seal
+            30030000,  # Prophet Rickety Shield
+            9000000,   # Samurai Uchigatana
+            41000000,  # Samurai Longbow
+            30070000,  # Samurai Red Thorn Roundshield
+            5000000,   # Prisoner Estoc
+            33000000,  # Prisoner Glintstone Staff
+            30110000,  # Prisoner Rift Shield
+            2020000,   # Confessor Broadsword
+            31100000,  # Confessor Blue-Gold Kite Shield
+            11010000,  # Wretch Club
+        ]
+
+        for w_id in starting_weapons:
+            self.assertIn(w_id, injected_ids, f"Starting weapon/shield {w_id} must be injected!")
+
+        # Check Starting Class Armor Pieces
+        starting_armors = [
+            660000, 660100, 660200, 660300,  # Vagabond Knight Set
+            870000, 870100, 870200, 870300,  # Land of Reeds Set
+            630000, 630100, 630200, 630300,  # Astrologer Set
+            730000, 730100, 730200, 730300,  # Champion Set
+            1401000, 931100, 930200, 930300, # Bandit Set
+            670000, 670100, 670200, 670300,  # Blue Cloth Set
+            880000, 880100, 880200, 880300,  # Confessor Set
+            890000, 890100, 890300,          # Prisoner Set
+            620000, 622100, 620300           # Prophet Set
+        ]
+
+        for a_id in starting_armors:
+            self.assertIn(a_id, injected_ids, f"Starting armor piece {a_id} must be injected!")
+
+    def test_passive_ui_effect_routing(self):
+        """Verifies passive effects populate weapon UI slots (spEffectMsgId0..2) and resident/on-hit IDs."""
+        from src.diablo_affixes import AFFIX_POOL, AffixDefinition
+
+        # Find status buildup affix (Glacial)
+        glacial = next(a for a in AFFIX_POOL if a.name == "Glacial")
+        self.assertTrue(glacial.is_on_hit_effect)
+        self.assertEqual(glacial.sp_effect_msg_id, 6601)
+        self.assertEqual(glacial.sp_effect_id, 6702)
+
+        # Test application to weapon
+        updates = {}
+        DiabloLootGenerator.apply_affixes_to_equipment(updates, [glacial], is_weapon=True)
+        self.assertEqual(updates.get("spEffectBehaviorId0"), 6702)
+        self.assertEqual(updates.get("spEffectMsgId0"), 6601)
+
+        # Test resident passive buff (of the Mind)
+        mind = next(a for a in AFFIX_POOL if a.name == "of the Mind")
+        updates_res = {}
+        DiabloLootGenerator.apply_affixes_to_equipment(updates_res, [mind], is_weapon=True)
+        self.assertEqual(updates_res.get("residentSpEffectId"), mind.sp_effect_id)
+        self.assertEqual(updates_res.get("spEffectMsgId0"), 1002)
 
 
 if __name__ == "__main__":

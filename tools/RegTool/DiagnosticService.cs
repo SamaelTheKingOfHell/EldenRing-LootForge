@@ -54,6 +54,30 @@ namespace LootForge.RegTool
 
             string searchQuery = options.TryGetValue("search", out string? sq) ? sq : "";
 
+            if (options.TryGetValue("export-json", out string? exportJson) && !string.IsNullOrEmpty(exportJson))
+            {
+                var dict = new Dictionary<string, Dictionary<int, string>>();
+                foreach (var file in bnd.Files)
+                {
+                    string fname = Path.GetFileNameWithoutExtension(file.Name ?? "");
+                    if (fname.Equals("WeaponName", StringComparison.OrdinalIgnoreCase) ||
+                        fname.Equals("ProtectorName", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var fmg = FMG.Read(file.Bytes);
+                        var entries = new Dictionary<int, string>();
+                        foreach (var e in fmg.Entries)
+                        {
+                            if (!string.IsNullOrWhiteSpace(e.Text))
+                                entries[e.ID] = e.Text;
+                        }
+                        dict[fname] = entries;
+                    }
+                }
+                File.WriteAllText(exportJson, System.Text.Json.JsonSerializer.Serialize(dict, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+                Console.WriteLine($"[RegTool] Exported FMG entries to {exportJson}");
+                return 0;
+            }
+
             foreach (var file in bnd.Files)
             {
                 string fname = Path.GetFileName(file.Name ?? "???");
@@ -134,6 +158,7 @@ namespace LootForge.RegTool
                         Console.WriteLine($"  ID={r.ID} Name='{r.Name}' equipId={eqId} equipType={eqType} value={val} iconId={icon} nameMsgId={nameMsg}");
                     }
                 }
+
                 else if (tableName == "EquipParamProtector")
                 {
                     var injected = param.Rows.Where(r => r.ID >= 9000000 || (r.Name != null && r.Name.Contains("LootForge"))).ToList();

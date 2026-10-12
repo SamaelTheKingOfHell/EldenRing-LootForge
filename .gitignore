@@ -18,3 +18,5 @@ backups/
 lootforge_manifest.json
 config.json
 tests/injection_output/
+scratch/
+data/*.dcx

@@ -52,7 +52,7 @@ namespace LootForge.RegTool
             try
             {
                 var (itemLotParam, _) = getOrLoadParam("ItemLotParam_enemy", "ItemLotParam");
-                itemLotParam.Rows.RemoveAll(r => r.ID >= 9100000 && r.ID < 9200000);
+                itemLotParam.Rows.RemoveAll(r => (r.Name != null && r.Name.Contains("[LootForge]")) || (r.ID >= 9100000 && r.ID < 9200000));
 
                 foreach (var row in itemLotParam.Rows)
                 {
@@ -79,7 +79,7 @@ namespace LootForge.RegTool
             try
             {
                 var (mapLotParam, _) = getOrLoadParam("ItemLotParam_map", "ItemLotParam");
-                mapLotParam.Rows.RemoveAll(r => r.ID >= 9100000 && r.ID < 9200000);
+                mapLotParam.Rows.RemoveAll(r => (r.Name != null && r.Name.Contains("[LootForge]")) || (r.ID >= 9100000 && r.ID < 9200000));
 
                 foreach (var row in mapLotParam.Rows)
                 {

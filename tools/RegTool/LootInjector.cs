@@ -96,6 +96,7 @@ namespace LootForge.RegTool
                 return;
             }
 
+            bool isMapTable = tableName.Equals("ItemLotParam_map", StringComparison.OrdinalIgnoreCase);
             ushort ratePoints = (ushort)(dropRatePercent >= 100.0 ? 1000 : Math.Clamp((int)(dropRatePercent * 10), 1, 1000));
             var overflowItems = new List<int>();
 
@@ -105,25 +106,127 @@ namespace LootForge.RegTool
                 int lotCategory = isArmor ? 3 : 2;
                 bool placed = false;
 
-                foreach (var targetRow in candidateRows)
+                if (isMapTable)
                 {
-                    int slotToUse = -1;
-                    for (int s = 1; s <= 8; s++)
+                    // Chests and world pickups: NEVER share an existing ItemLotParam row with an existing drop,
+                    // as FromSoftware engines roll a single slot and will cannibalize/replace the vanilla chest item!
+                    // Instead, chain a sequential ID (targetLotId + 1..9), which Elden Ring evaluates and awards
+                    // concurrently with the chest!
+                    var templateRow = candidateRows[0];
+                    int freeChainId = -1;
+                    for (int offset = 1; offset <= 9; offset++)
                     {
-                        int cur = ParamHelper.GetCellInt(targetRow, $"lotItemId0{s}");
-                        if (cur == itemId) { slotToUse = s; break; }
-                        if (cur == 0 && slotToUse == -1) slotToUse = s;
+                        int candId = targetLotId + offset;
+                        if (!rowMap.ContainsKey(candId))
+                        {
+                            freeChainId = candId;
+                            break;
+                        }
                     }
 
-                    if (slotToUse != -1)
+                    if (freeChainId != -1)
                     {
-                        ParamHelper.SetCellIfExists(targetRow, $"lotItemId0{slotToUse}", itemId);
-                        ParamHelper.SetCellIfExists(targetRow, $"lotItemCategory0{slotToUse}", lotCategory);
-                        ParamHelper.SetCellIfExists(targetRow, $"lotItemBasePoint0{slotToUse}", ratePoints);
-                        ParamHelper.SetCellIfExists(targetRow, $"lotItemNum0{slotToUse}", (byte)1);
-                        ParamHelper.SetCellIfExists(targetRow, $"getItemFlagId0{slotToUse}", 0u);
+                        PARAM.Row chainedRow = new PARAM.Row(templateRow)
+                        {
+                            ID = freeChainId,
+                            Name = $"[LootForge] Injected Map Drop ({itemId})"
+                        };
+
+                        for (int s = 1; s <= 8; s++)
+                        {
+                            ParamHelper.SetCellIfExists(chainedRow, $"lotItemId0{s}", 0);
+                            ParamHelper.SetCellIfExists(chainedRow, $"lotItemCategory0{s}", 0);
+                            ParamHelper.SetCellIfExists(chainedRow, $"lotItemBasePoint0{s}", (ushort)0);
+                            ParamHelper.SetCellIfExists(chainedRow, $"lotItemNum0{s}", (byte)0);
+                            ParamHelper.SetCellIfExists(chainedRow, $"getItemFlagId0{s}", 0u);
+                        }
+
+                        ParamHelper.SetCellIfExists(chainedRow, "lotItemId01", itemId);
+                        ParamHelper.SetCellIfExists(chainedRow, "lotItemCategory01", lotCategory);
+                        ParamHelper.SetCellIfExists(chainedRow, "lotItemBasePoint01", (ushort)1000);
+                        ParamHelper.SetCellIfExists(chainedRow, "lotItemNum01", (byte)1);
+                        ParamHelper.SetCellIfExists(chainedRow, "getItemFlagId01", 0u);
+
+                        itemLotParam.Rows.Add(chainedRow);
+                        rowMap[freeChainId] = chainedRow;
                         placed = true;
-                        break;
+                    }
+                }
+                else
+                {
+                    // Enemy drops:
+                    // Check if primary slot is a guaranteed drop (1000 points, e.g. boss remembrance / trophy).
+                    // If so, chain a sequential row so the guaranteed drop is never cannibalized.
+                    int p01 = ParamHelper.GetCellInt(candidateRows[0], "lotItemBasePoint01");
+                    int item01 = ParamHelper.GetCellInt(candidateRows[0], "lotItemId01");
+                    bool isGuaranteedDrop = item01 > 0 && p01 >= 1000;
+
+                    if (isGuaranteedDrop)
+                    {
+                        var templateRow = candidateRows[0];
+                        int freeChainId = -1;
+                        for (int offset = 1; offset <= 9; offset++)
+                        {
+                            int candId = targetLotId + offset;
+                            if (!rowMap.ContainsKey(candId))
+                            {
+                                freeChainId = candId;
+                                break;
+                            }
+                        }
+
+                        if (freeChainId != -1)
+                        {
+                            PARAM.Row chainedRow = new PARAM.Row(templateRow)
+                            {
+                                ID = freeChainId,
+                                Name = $"[LootForge] Injected Enemy Drop ({itemId})"
+                            };
+
+                            for (int s = 1; s <= 8; s++)
+                            {
+                                ParamHelper.SetCellIfExists(chainedRow, $"lotItemId0{s}", 0);
+                                ParamHelper.SetCellIfExists(chainedRow, $"lotItemCategory0{s}", 0);
+                                ParamHelper.SetCellIfExists(chainedRow, $"lotItemBasePoint0{s}", (ushort)0);
+                                ParamHelper.SetCellIfExists(chainedRow, $"lotItemNum0{s}", (byte)0);
+                                ParamHelper.SetCellIfExists(chainedRow, $"getItemFlagId0{s}", 0u);
+                            }
+
+                            ParamHelper.SetCellIfExists(chainedRow, "lotItemId01", itemId);
+                            ParamHelper.SetCellIfExists(chainedRow, "lotItemCategory01", lotCategory);
+                            ParamHelper.SetCellIfExists(chainedRow, "lotItemBasePoint01", ratePoints);
+                            ParamHelper.SetCellIfExists(chainedRow, "lotItemNum01", (byte)1);
+                            ParamHelper.SetCellIfExists(chainedRow, "getItemFlagId01", 0u);
+
+                            itemLotParam.Rows.Add(chainedRow);
+                            rowMap[freeChainId] = chainedRow;
+                            placed = true;
+                        }
+                    }
+                    else
+                    {
+                        // Standard mob chance drop: use empty slot in candidate rows
+                        foreach (var targetRow in candidateRows)
+                        {
+                            int slotToUse = -1;
+                            for (int s = 1; s <= 8; s++)
+                            {
+                                int cur = ParamHelper.GetCellInt(targetRow, $"lotItemId0{s}");
+                                if (cur == itemId) { slotToUse = s; break; }
+                                if (cur == 0 && slotToUse == -1) slotToUse = s;
+                            }
+
+                            if (slotToUse != -1)
+                            {
+                                ParamHelper.SetCellIfExists(targetRow, $"lotItemId0{slotToUse}", itemId);
+                                ParamHelper.SetCellIfExists(targetRow, $"lotItemCategory0{slotToUse}", lotCategory);
+                                ParamHelper.SetCellIfExists(targetRow, $"lotItemBasePoint0{slotToUse}", ratePoints);
+                                ParamHelper.SetCellIfExists(targetRow, $"lotItemNum0{slotToUse}", (byte)1);
+                                ParamHelper.SetCellIfExists(targetRow, $"getItemFlagId0{slotToUse}", 0u);
+                                placed = true;
+                                break;
+                            }
+                        }
                     }
                 }
 
