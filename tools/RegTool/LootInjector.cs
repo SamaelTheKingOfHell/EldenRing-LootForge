@@ -244,11 +244,26 @@ namespace LootForge.RegTool
                     }
                 }
 
+                // If Twin Maiden Husks is also exhausted, try Finger Reader Enia (101900..101949)
                 if (shopRowId == -1)
                 {
-                    shopRowId = 101900;
-                    while (_shopRowIds.Contains(shopRowId))
-                        shopRowId++;
+                    for (int cand = 101900; cand <= 101949; cand++)
+                    {
+                        if (!_shopRowIds.Contains(cand))
+                        {
+                            shopRowId = cand;
+                            shopName = "Finger Reader Enia";
+                            break;
+                        }
+                    }
+                }
+
+                // If ALL shop param ranges have reached capacity limitation, rotate to other pools (ItemLotParam_enemy)
+                if (shopRowId == -1)
+                {
+                    Console.WriteLine($"[RegTool WARN] ShopLineupParam capacity limit reached. Rotating overflowed item ID {itemId} to ItemLotParam_enemy pool.");
+                    RotateOverflowToEnemyDrop(itemId, getOrLoadParam, itemIdToIsProtector, itemIdToIsWeapon, ref injectedLootCount);
+                    continue;
                 }
 
                 _shopRowIds.Add(shopRowId);
@@ -277,6 +292,60 @@ namespace LootForge.RegTool
                 ParamHelper.SetCellIfExists(targetShopRow, "menuTitleMsgId", -1);
                 ParamHelper.SetCellIfExists(targetShopRow, "menuIconId", (short)-1);
 
+                injectedLootCount++;
+            }
+        }
+
+        private static void RotateOverflowToEnemyDrop(
+            int itemId,
+            Func<string, string, (PARAM Param, BinderFile File)> getOrLoadParam,
+            Dictionary<int, bool> itemIdToIsProtector,
+            Dictionary<int, bool> itemIdToIsWeapon,
+            ref int injectedLootCount)
+        {
+            var (itemLotParam, _) = getOrLoadParam("ItemLotParam_enemy", "ItemLotParam_enemy");
+            int[] fallbackLots = new[] { 301000000, 380000000, 431100000, 430000000 };
+            PARAM.Row? targetRow = null;
+            foreach (int lotId in fallbackLots)
+            {
+                var row = itemLotParam.Rows.FirstOrDefault(r => r.ID == lotId);
+                if (row != null)
+                {
+                    for (int s = 1; s <= 8; s++)
+                    {
+                        int cur = ParamHelper.GetCellInt(row, $"lotItemId0{s}");
+                        if (cur == 0 || cur == itemId)
+                        {
+                            targetRow = row;
+                            break;
+                        }
+                    }
+                    if (targetRow != null) break;
+                }
+            }
+
+            if (targetRow == null)
+            {
+                targetRow = itemLotParam.Rows.FirstOrDefault(r => r.ID == 301000000) ?? itemLotParam.Rows.FirstOrDefault();
+            }
+
+            if (targetRow != null)
+            {
+                bool isArmor = itemIdToIsProtector.TryGetValue(itemId, out var ip) ? ip : !itemIdToIsWeapon.GetValueOrDefault(itemId, false);
+                int lotCategory = isArmor ? 3 : 2;
+                int slotToUse = 1;
+                for (int s = 1; s <= 8; s++)
+                {
+                    int cur = ParamHelper.GetCellInt(targetRow, $"lotItemId0{s}");
+                    if (cur == itemId || cur == 0) { slotToUse = s; break; }
+                }
+
+                ParamHelper.SetCellIfExists(targetRow, $"lotItemId0{slotToUse}", itemId);
+                ParamHelper.SetCellIfExists(targetRow, $"lotItemCategory0{slotToUse}", lotCategory);
+                ParamHelper.SetCellIfExists(targetRow, $"lotItemBasePoint0{slotToUse}", (ushort)250);
+                ParamHelper.SetCellIfExists(targetRow, $"lotItemNum0{slotToUse}", (byte)1);
+                ParamHelper.SetCellIfExists(targetRow, $"getItemFlagId0{slotToUse}", 0u);
+                Console.WriteLine($"[RegTool SUCCESS] Rotated overflowed item ID {itemId} to ItemLotParam_enemy lot ID {targetRow.ID} slot {slotToUse}.");
                 injectedLootCount++;
             }
         }

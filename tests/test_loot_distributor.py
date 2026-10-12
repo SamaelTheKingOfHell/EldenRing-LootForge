@@ -169,6 +169,32 @@ class TestLootDistributor(unittest.TestCase):
         # Enemy drop in test mode should have 100% drop rate for guaranteed in-game verification
         self.assertEqual(targets[1].chance_or_cost, 100.0)
 
+    def test_shop_capacity_overflow_rotates_to_wild(self):
+        """Verifies that when shop/merchant capacity is full, items automatically rotate to wild enemy drops."""
+        # Set max_shop_capacity to 1 so the second item for the same merchant overflows
+        dist = LootDistributor(self.kb, max_shop_capacity=1)
+        mod_set1 = DetectedModSet(
+            set_id="shop_item_1",
+            folder_or_archive_name="ShopItem1",
+            target_model_id="4000",
+            target_vanilla_name="Carian Knight Set",
+            parts=[ModPartFile("bd_m_4000_1.dcx", "p", EquipmentSlot.BODY, "4000")]
+        )
+        mod_set2 = DetectedModSet(
+            set_id="shop_item_2",
+            folder_or_archive_name="ShopItem2",
+            target_model_id="4000",
+            target_vanilla_name="Carian Knight Set",
+            parts=[ModPartFile("bd_m_4000_2.dcx", "p", EquipmentSlot.BODY, "4000")]
+        )
+
+        t1 = dist._standard_placement("merchant_shop", "kale", "Merchant Kalé")
+        self.assertEqual(t1.route_type, LootDistributionType.MERCHANT_SHOP)
+
+        # Second item exceeds capacity of 1 for kale -> rotates to wild enemy drop
+        t2 = dist._standard_placement("merchant_shop", "kale", "Merchant Kalé")
+        self.assertEqual(t2.route_type, LootDistributionType.ENEMY_DROP)
+
 
 if __name__ == "__main__":
     unittest.main()

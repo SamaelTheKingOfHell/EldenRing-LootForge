@@ -9,6 +9,7 @@ import copy
 import random
 from typing import List, Dict, Any, Optional
 from src.diablo_affixes import RarityTier, AffixType, AffixDefinition, AFFIX_POOL
+from src.logger import system_logger
 
 
 class DiabloLootGenerator:
@@ -19,6 +20,10 @@ class DiabloLootGenerator:
         Enables rich, repeatable ARPG-style item progression in Elden Ring,
         turning standalone mod items into thousands of uniquely-rolled relics.
     """
+
+    DEFAULT_MAX_SHOP_PER_MERCHANT = 15
+    DEFAULT_MAX_ENIA_SHOP_ROWS = 30
+    DEFAULT_MAX_TOTAL_SHOP_ROWS = 80
 
     RARITY_WEIGHTS = {
         RarityTier.COMMON: 25,
@@ -33,9 +38,44 @@ class DiabloLootGenerator:
         RarityTier.MYTHIC: 35
     }
 
-    def __init__(self, seed: Optional[int] = None, knowledge_base: Optional[Any] = None):
+    def __init__(
+        self,
+        seed: Optional[int] = None,
+        knowledge_base: Optional[Any] = None,
+        max_shop_per_merchant: int = DEFAULT_MAX_SHOP_PER_MERCHANT,
+        max_enia_rows: int = DEFAULT_MAX_ENIA_SHOP_ROWS,
+        max_total_shop_rows: int = DEFAULT_MAX_TOTAL_SHOP_ROWS
+    ):
         self._rng = random.Random(seed)
         self._knowledge_base = knowledge_base
+        self.max_shop_per_merchant = max_shop_per_merchant
+        self.max_enia_rows = max_enia_rows
+        self.max_total_shop_rows = max_total_shop_rows
+        self._shop_allocations: Dict[str, int] = {}
+        self._total_shop_allocations: int = 0
+
+    def is_shop_capacity_exceeded(self, shop_id: str, is_enia: bool = False) -> bool:
+        """Checks whether a merchant, Enia, or total ShopLineupParam has reached capacity."""
+        if self._total_shop_allocations >= self.max_total_shop_rows:
+            return True
+        if is_enia:
+            enia_total = self._shop_allocations.get("finger_reader_enia", 0)
+            return enia_total >= self.max_enia_rows
+        return self._shop_allocations.get(shop_id, 0) >= self.max_shop_per_merchant
+
+    def record_shop_allocation(self, shop_id: str, is_enia: bool = False) -> None:
+        """Records an allocation into ShopLineupParam."""
+        if is_enia:
+            self._shop_allocations["finger_reader_enia"] = self._shop_allocations.get("finger_reader_enia", 0) + 1
+            self._shop_allocations[shop_id] = self._shop_allocations.get(shop_id, 0) + 1
+        else:
+            self._shop_allocations[shop_id] = self._shop_allocations.get(shop_id, 0) + 1
+        self._total_shop_allocations += 1
+
+    def reset_shop_allocations(self) -> None:
+        """Resets tracked shop allocations."""
+        self._shop_allocations.clear()
+        self._total_shop_allocations = 0
 
     def roll_rarity(self, is_boss: bool = False) -> RarityTier:
         """Selects a rarity tier using drop weights. Bosses are guaranteed Giga Legendary or Mythic."""
@@ -197,26 +237,48 @@ class DiabloLootGenerator:
                 mod_bucket = v_idx % 5
                 if mod_bucket == 0 and boss_pool:
                     boss = boss_pool[(v_idx // 5) % len(boss_pool)]
-                    is_boss = True
-                    boss_name = boss.get("name", "Great Enemy")
-                    loot_spec = {
-                        "type": "shop_lineup",
-                        "shop_type": "finger_reader_enia",
-                        "target_id": boss["id"],
-                        "display_name": f"[Boss Remembrance] {boss_name}",
-                        "cost_or_remembrance": float(boss.get("defaultCost", 30000))
-                    }
+                    shop_id = boss["id"]
+                    if not self.is_shop_capacity_exceeded(shop_id, is_enia=True):
+                        is_boss = True
+                        boss_name = boss.get("name", "Great Enemy")
+                        loot_spec = {
+                            "type": "shop_lineup",
+                            "shop_type": "finger_reader_enia",
+                            "target_id": boss["id"],
+                            "display_name": f"[Boss Remembrance] {boss_name}",
+                            "cost_or_remembrance": float(boss.get("defaultCost", 30000))
+                        }
+                        self.record_shop_allocation(shop_id, is_enia=True)
+                    else:
+                        system_logger.info(
+                            f"Shop param row limit reached for Enia remembrance '{boss.get('name')}' "
+                            f"({self._shop_allocations.get('finger_reader_enia', 0)}/{self.max_enia_rows}). "
+                            f"Rotating overflowed item to alternate pool.",
+                            source="DiabloGenerator"
+                        )
+
                 elif mod_bucket == 1 and merchant_pool:
                     merch = merchant_pool[(v_idx // 5) % len(merchant_pool)]
-                    loot_spec = {
-                        "type": "merchant_shop",
-                        "shop_id": merch["id"],
-                        "target_id": merch["id"],
-                        "display_name": f"[Merchant Shop] {merch['name']}",
-                        "merchant_name": merch["name"],
-                        "cost_or_remembrance": float(merch.get("defaultRuneCost", 8000)),
-                        "rune_cost": int(merch.get("defaultRuneCost", 8000))
-                    }
+                    shop_id = merch["id"]
+                    if not self.is_shop_capacity_exceeded(shop_id, is_enia=False):
+                        loot_spec = {
+                            "type": "merchant_shop",
+                            "shop_id": merch["id"],
+                            "target_id": merch["id"],
+                            "display_name": f"[Merchant Shop] {merch['name']}",
+                            "merchant_name": merch["name"],
+                            "cost_or_remembrance": float(merch.get("defaultRuneCost", 8000)),
+                            "rune_cost": int(merch.get("defaultRuneCost", 8000))
+                        }
+                        self.record_shop_allocation(shop_id)
+                    else:
+                        system_logger.info(
+                            f"Shop param row limit reached for merchant '{merch.get('name')}' "
+                            f"({self._shop_allocations.get(shop_id, 0)}/{self.max_shop_per_merchant}). "
+                            f"Rotating overflowed item to alternate pool.",
+                            source="DiabloGenerator"
+                        )
+
                 elif mod_bucket == 2 and chest_pool:
                     chest = chest_pool[(v_idx // 5) % len(chest_pool)]
                     loot_spec = {
@@ -226,17 +288,42 @@ class DiabloLootGenerator:
                         "display_name": f"[World Discovery] {chest['name']}",
                         "drop_rate_percent": 100.0
                     }
-                elif enemy_pool:
-                    enemy = enemy_pool[v_idx % len(enemy_pool)]
-                    lot_id = enemy.get("lotParamId", 431100000)
-                    loot_spec = {
-                        "type": "enemy_drop",
-                        "lot_id": lot_id,
-                        "target_id": str(enemy.get("id", lot_id)),
-                        "target_enemy": enemy["name"],
-                        "display_name": enemy["name"],
-                        "drop_rate_percent": float(enemy.get("defaultDropChance", 20.0))
-                    }
+
+                # If mod_bucket was >= 3 OR if a shop candidate overflowed and loot_spec is None:
+                if loot_spec is None:
+                    # Alternate pool rotation: distribute overflow into chests, elites, and roaming mobs
+                    alt_cycle = v_idx % 3
+                    if alt_cycle == 0 and chest_pool:
+                        chest = chest_pool[(v_idx // 3) % len(chest_pool)]
+                        loot_spec = {
+                            "type": "map_pickup",
+                            "lot_id": chest["lotParamId"],
+                            "target_id": str(chest["lotParamId"]),
+                            "display_name": f"[World Discovery] {chest['name']}",
+                            "drop_rate_percent": 100.0
+                        }
+                    elif elites:
+                        elite = elites[(v_idx // 2) % len(elites)]
+                        lot_id = elite.get("lotParamId", 380000000)
+                        loot_spec = {
+                            "type": "enemy_drop",
+                            "lot_id": lot_id,
+                            "target_id": str(elite.get("id", lot_id)),
+                            "target_enemy": elite["name"],
+                            "display_name": elite["name"],
+                            "drop_rate_percent": float(elite.get("defaultDropChance", 25.0))
+                        }
+                    elif enemy_pool:
+                        enemy = enemy_pool[v_idx % len(enemy_pool)]
+                        lot_id = enemy.get("lotParamId", 431100000)
+                        loot_spec = {
+                            "type": "enemy_drop",
+                            "lot_id": lot_id,
+                            "target_id": str(enemy.get("id", lot_id)),
+                            "target_enemy": enemy["name"],
+                            "display_name": enemy["name"],
+                            "drop_rate_percent": float(enemy.get("defaultDropChance", 20.0))
+                        }
 
             # 2. Modify Equip Params and FMG texts with rolled affixes
             variant_new_ids: List[int] = []

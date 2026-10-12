@@ -17,12 +17,14 @@ from src.logger import system_logger
 class LootDistributor:
     """Orchestrates loot distribution according to AdditionType and AntiDup rules."""
 
-    def __init__(self, knowledge_base: VanillaKnowledgeBase):
+    def __init__(self, knowledge_base: VanillaKnowledgeBase, max_shop_capacity: int = 15):
         self._kb = knowledge_base
         self._assigned_bosses: Set[str] = set()
         self._global_spoil_enabled: bool = False
         self._item_configs: Dict[str, ItemDropConfig] = {}
         self._test_mode_index: int = 0
+        self._shop_allocations: Dict[str, int] = {}
+        self.max_shop_capacity: int = max_shop_capacity
 
     @property
     def global_spoil_enabled(self) -> bool:
@@ -34,8 +36,9 @@ class LootDistributor:
         self._global_spoil_enabled = bool(val)
 
     def reset_rotation_state(self) -> None:
-        """Clears boss assignment ledger and test mode index for a fresh run."""
+        """Clears boss assignment ledger, shop counts, and test mode index for a fresh run."""
         self._assigned_bosses.clear()
+        self._shop_allocations.clear()
         self._test_mode_index = 0
 
     def distribute_set(
@@ -119,49 +122,56 @@ class LootDistributor:
         return target
 
     def _test_mode_placement(self) -> LootTarget:
-        """Cycles items across all 3 major loot pools for test verification."""
+        """Cycles items across all 3 major loot pools for test verification with shop overflow protection."""
         pool_type, idx = self._test_mode_index % 3, self._test_mode_index // 3
         self._test_mode_index += 1
 
         if pool_type == 0:
             bosses = self._kb.list_boss_remembrances()
             if bosses:
-                chosen = bosses[idx % len(bosses)]
-                system_logger.info(f"Test Mode: Routed to Boss Remembrance -> '{chosen['name']}'", source="LootDistributor")
-                return LootTarget(LootDistributionType.BOSS_REMEMBRANCE, chosen["id"], f"[Test: Boss] {chosen['name']}", float(chosen.get("defaultCost", 1000.0)))
-        elif pool_type == 1:
-            test_mobs = [
-                {"id": "431100000", "name": "Godrick Soldier (Gatefront / Limgrave)"},
-                {"id": "430000000", "name": "Wandering Noble (Church of Elleh Road)"},
-                {"id": "435100000", "name": "Godrick Knight (Gatefront Ruins)"},
-            ]
-            chosen = test_mobs[idx % len(test_mobs)]
-            system_logger.info(f"Test Mode: Routed to Enemy Drop -> '{chosen['name']}' (100% drop)", source="LootDistributor")
-            return LootTarget(LootDistributionType.ENEMY_DROP, chosen["id"], f"[Test: Mob 100%] {chosen['name']}", 100.0)
-        else:
+                available_bosses = [b for b in bosses if self._shop_allocations.get(b["id"], 0) < self.max_shop_capacity]
+                if available_bosses:
+                    chosen = available_bosses[idx % len(available_bosses)]
+                    self._shop_allocations[chosen["id"]] = self._shop_allocations.get(chosen["id"], 0) + 1
+                    system_logger.info(f"Test Mode: Routed to Boss Remembrance -> '{chosen['name']}'", source="LootDistributor")
+                    return LootTarget(LootDistributionType.BOSS_REMEMBRANCE, chosen["id"], f"[Test: Boss] {chosen['name']}", float(chosen.get("defaultCost", 1000.0)))
+        elif pool_type == 2:
             merchants = self._kb.list_merchants()
             if merchants:
-                chosen = merchants[idx % len(merchants)]
-                system_logger.info(f"Test Mode: Routed to Merchant Shop -> '{chosen['name']}'", source="LootDistributor")
-                return LootTarget(LootDistributionType.MERCHANT_SHOP, chosen["id"], f"[Test: Shop] {chosen['name']}", float(chosen.get("defaultRuneCost", 100.0)))
+                available_merchants = [m for m in merchants if self._shop_allocations.get(m["id"], 0) < self.max_shop_capacity]
+                if available_merchants:
+                    chosen = available_merchants[idx % len(available_merchants)]
+                    self._shop_allocations[chosen["id"]] = self._shop_allocations.get(chosen["id"], 0) + 1
+                    system_logger.info(f"Test Mode: Routed to Merchant Shop -> '{chosen['name']}'", source="LootDistributor")
+                    return LootTarget(LootDistributionType.MERCHANT_SHOP, chosen["id"], f"[Test: Shop] {chosen['name']}", float(chosen.get("defaultRuneCost", 100.0)))
 
-        return LootTarget(LootDistributionType.ENEMY_DROP, "431100000", "[Test: Mob 100%] Godrick Soldier", 100.0)
+        # Fallback to enemy drop pool when shop rows are full or pool_type == 1
+        test_mobs = [
+            {"id": "431100000", "name": "Godrick Soldier (Gatefront / Limgrave)"},
+            {"id": "430000000", "name": "Wandering Noble (Church of Elleh Road)"},
+            {"id": "435100000", "name": "Godrick Knight (Gatefront Ruins)"},
+        ]
+        chosen = test_mobs[idx % len(test_mobs)]
+        system_logger.info(f"Test Mode: Routed to Enemy Drop -> '{chosen['name']}' (100% drop)", source="LootDistributor")
+        return LootTarget(LootDistributionType.ENEMY_DROP, chosen["id"], f"[Test: Mob 100%] {chosen['name']}", 100.0)
 
     def _rotate_boss_drop(self, original_boss_id: str, original_boss_name: str) -> LootTarget:
         """AntiDup Option 1: Boss Rotation with wrap-around across Remembrance bosses."""
         bosses = self._kb.list_boss_remembrances()
-        available = [b for b in bosses if b["id"] != original_boss_id and b["id"] not in self._assigned_bosses]
+        available = [b for b in bosses if b["id"] != original_boss_id and b["id"] not in self._assigned_bosses and self._shop_allocations.get(b["id"], 0) < self.max_shop_capacity]
 
         if available:
             chosen = random.choice(available)
             self._assigned_bosses.add(chosen["id"])
+            self._shop_allocations[chosen["id"]] = self._shop_allocations.get(chosen["id"], 0) + 1
             system_logger.info(f"Boss Rotation: Rotated from '{original_boss_name}' to '{chosen['name']}'", source="LootDistributor")
             return LootTarget(LootDistributionType.BOSS_REMEMBRANCE, chosen["id"], chosen["name"], float(chosen.get("defaultCost", 30000)))
 
-        # When all bosses have at least 1 mod item assigned, wrap around across other bosses
-        other_bosses = [b for b in bosses if b["id"] != original_boss_id]
+        # When all bosses have at least 1 mod item assigned, wrap around across other bosses under capacity
+        other_bosses = [b for b in bosses if b["id"] != original_boss_id and self._shop_allocations.get(b["id"], 0) < self.max_shop_capacity]
         if other_bosses:
             chosen = random.choice(other_bosses)
+            self._shop_allocations[chosen["id"]] = self._shop_allocations.get(chosen["id"], 0) + 1
             system_logger.info(f"Boss Rotation (Wrap): Rotated from '{original_boss_name}' to '{chosen['name']}'", source="LootDistributor")
             return LootTarget(LootDistributionType.BOSS_REMEMBRANCE, chosen["id"], chosen["name"], float(chosen.get("defaultCost", 30000)))
 
@@ -185,16 +195,24 @@ class LootDistributor:
         return LootTarget(LootDistributionType.ENEMY_DROP, chosen["id"], chosen["name"], float(chosen.get("defaultDropChance", 20.0)))
 
     def _random_boss_shop_or_transfusion(self) -> LootTarget:
-        """Places non-dropped items randomly across bosses, shops, or transfusions."""
+        """Places non-dropped items randomly across bosses, shops, or transfusions with capacity checking."""
         pool = [
             {"type": LootDistributionType.BOSS_REMEMBRANCE, "id": b["id"], "name": b["name"], "cost": float(b.get("defaultCost", 30000))}
             for b in self._kb.list_boss_remembrances()
+            if self._shop_allocations.get(b["id"], 0) < self.max_shop_capacity
         ] + [
             {"type": LootDistributionType.MERCHANT_SHOP, "id": m["id"], "name": m["name"], "cost": float(m.get("defaultRuneCost", 10000))}
             for m in self._kb.list_merchants()
+            if self._shop_allocations.get(m["id"], 0) < self.max_shop_capacity
         ]
-        chosen = random.choice(pool) if pool else {"type": LootDistributionType.MERCHANT_SHOP, "id": "kale", "name": "Merchant Kalé", "cost": 5000.0}
-        return LootTarget(chosen["type"], chosen["id"], chosen["name"], chosen["cost"])
+        if pool:
+            chosen = random.choice(pool)
+            self._shop_allocations[chosen["id"]] = self._shop_allocations.get(chosen["id"], 0) + 1
+            return LootTarget(chosen["type"], chosen["id"], chosen["name"], chosen["cost"])
+
+        # When all shops/bosses hit row limit, rotate overflowed item to wild enemy pool
+        system_logger.info("Shop row limits reached for all merchants/bosses. Rotating overflowed item to wild enemies.", source="LootDistributor")
+        return self._place_in_wild(original_name="Overflowed Mod Item")
 
     def _random_mob_drop(self) -> LootTarget:
         """Places normal items randomly onto wild mobs."""
@@ -203,7 +221,16 @@ class LootDistributor:
         return LootTarget(LootDistributionType.ENEMY_DROP, chosen["id"], chosen["name"], float(chosen.get("defaultDropChance", 20.0)))
 
     def _standard_placement(self, default_route: str, source_id: str, source_name: str) -> LootTarget:
-        """Standard thematic placement."""
+        """Standard thematic placement with shop capacity overflow checks."""
+        if default_route in ("boss_remembrance", "merchant_shop"):
+            if self._shop_allocations.get(source_id, 0) >= self.max_shop_capacity:
+                system_logger.info(
+                    f"Shop param row limit reached for '{source_name}'. Rotating overflowed item to wild enemy drop.",
+                    source="LootDistributor"
+                )
+                return self._place_in_wild(source_name)
+            self._shop_allocations[source_id] = self._shop_allocations.get(source_id, 0) + 1
+
         route_map = {
             "boss_remembrance": (LootDistributionType.BOSS_REMEMBRANCE, 30000.0),
             "merchant_shop": (LootDistributionType.MERCHANT_SHOP, 10000.0),

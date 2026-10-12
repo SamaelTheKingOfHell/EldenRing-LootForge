@@ -254,6 +254,88 @@ class TestDiabloLoot(unittest.TestCase):
         self.assertIn("diablo_inject_vanilla_stats", cfg_dict)
         self.assertIn("diablo_use_vanilla_base_items", cfg_dict)
 
+    def test_shop_capacity_limitation_and_pool_overflow_rotation(self):
+        """Verifies that shop param row limits are strictly respected and overflowed items rotate to other pools."""
+        from src.knowledge_base import VanillaKnowledgeBase
+        kb = VanillaKnowledgeBase.from_data_dir("data")
+
+        # Constrain shop capacities tightly to trigger overflow rotation
+        generator = DiabloLootGenerator(
+            seed=12345,
+            knowledge_base=kb,
+            max_shop_per_merchant=2,
+            max_enia_rows=3,
+            max_total_shop_rows=10
+        )
+
+        dummy_spec = {
+            "set_id": "test_armor_set",
+            "equip_params": [{
+                "param_table": "EquipParamProtector",
+                "new_param_id": 9001000,
+                "base_clone_id": 400000,
+                "target_model_id": 4000,
+                "slot": "body",
+                "slot_offset": 100,
+                "row_name": "[LootForge] Test Armor",
+                "field_updates": {}
+            }],
+            "fmg_texts": [{
+                "item_id": 9001000,
+                "vanilla_source_id": 400000,
+                "target_model_id": 4000,
+                "slot": "body",
+                "slot_offset": 100,
+                "is_weapon": False,
+                "name": "[LootForge] Test Armor",
+                "caption": "Test Armor caption.",
+                "info": "Origin: Test"
+            }],
+            "loot_distribution": {
+                "type": "enemy_drop",
+                "lot_id": 431100000,
+                "target_id": "431100000",
+                "drop_rate_percent": 20.0,
+                "awarded_items": [9001000]
+            }
+        }
+
+        # Generate 40 variants
+        variants = generator.generate_variants_for_spec(dummy_spec, variants_per_item=40, knowledge_base=kb)
+        self.assertEqual(len(variants), 40)
+
+        # Count distribution across pools
+        shop_count = 0
+        merchant_counts = {}
+        enia_count = 0
+        rotated_to_chests = 0
+        rotated_to_enemies = 0
+
+        for v in variants:
+            dist = v.get("loot_distribution", {})
+            dist_type = dist.get("type")
+            if dist_type in ("shop_lineup", "merchant_shop"):
+                shop_count += 1
+                if dist_type == "shop_lineup":
+                    enia_count += 1
+                else:
+                    shop_id = dist.get("shop_id") or dist.get("target_id")
+                    merchant_counts[shop_id] = merchant_counts.get(shop_id, 0) + 1
+            elif dist_type == "map_pickup":
+                rotated_to_chests += 1
+            elif dist_type == "enemy_drop":
+                rotated_to_enemies += 1
+
+        # Check limitations
+        self.assertLessEqual(shop_count, 10, "Total shop items must not exceed max_total_shop_rows limit!")
+        self.assertLessEqual(enia_count, 3, "Finger Reader Enia must not exceed max_enia_rows limit!")
+        for merch_id, cnt in merchant_counts.items():
+            self.assertLessEqual(cnt, 2, f"Merchant {merch_id} must not exceed max_shop_per_merchant limit!")
+
+        # Check overflow rotation
+        self.assertGreater(rotated_to_chests, 5, "Overflowed items must rotate into chest pools!")
+        self.assertGreater(rotated_to_enemies, 10, "Overflowed items must rotate into enemy drop pools!")
+
 
 if __name__ == "__main__":
     unittest.main()
