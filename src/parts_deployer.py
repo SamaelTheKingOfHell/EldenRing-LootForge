@@ -68,16 +68,20 @@ class PartsDeployer:
                     )
                     continue
 
-                # Rename with standalone model ID
+                # Rename with standalone model ID and normalize to lowercase.
+                # Elden Ring resolves part files case-sensitively on Linux/Proton and
+                # expects the conventional all-lowercase filenames (e.g. bd_m_9001.partsbnd.dcx).
+                # Mixed-case input filenames (e.g. BD_M_4200.partsbnd.dcx) must be
+                # lowercased on output to prevent the game from failing to find the file.
                 target_name = part.file_name.replace(
                     part.target_model_id, ms.allocation.new_model_id, 1
-                )
+                ).lower()
                 target = parts_output / target_name
                 try:
                     shutil.copy2(str(source), str(target))
                     deployed += 1
                     self.last_deployed_files.append(str(target))
-                    set_deployed_files[target_name.lower()] = target
+                    set_deployed_files[target_name] = target
                     system_logger.debug(
                         f"Deployed: {part.file_name} -> {target_name}",
                         source="PartsDeployer"
@@ -88,21 +92,26 @@ class PartsDeployer:
                         source="PartsDeployer"
                     )
 
-            # Cross-mirror armor parts to ensure unisex body type compatibility (both Type A and Type B)
-            for target_name_lower, target_path in list(set_deployed_files.items()):
+            # Cross-mirror armor parts to ensure unisex body type compatibility (both Type A and Type B).
+            # If a mod only ships one gender variant, copy it to the opposing gender slot so
+            # the game finds both bd_m_{id} and bd_f_{id} (or hd/am/lg equivalents).
+            # This is the primary defence against invisible body parts on cross-gender wear.
+            # All filenames are already lowercase at this point (normalized on deploy above).
+            for target_name, target_path in list(set_deployed_files.items()):
                 m = ARMOR_FILE_RE.match(target_path.name)
                 if not m:
                     continue
                 prefix, gender, rest = m.groups()
                 opposing_gender = "f" if gender.lower() == "m" else "m"
-                opposing_target_name = f"{prefix.lower()}_{opposing_gender}_{rest}"
-                if opposing_target_name.lower() not in set_deployed_files:
+                # All components are already lowercase; build opposing name directly
+                opposing_target_name = f"{prefix.lower()}_{opposing_gender}_{rest.lower()}"
+                if opposing_target_name not in set_deployed_files:
                     opposing_target = parts_output / opposing_target_name
                     try:
                         shutil.copy2(str(target_path), str(opposing_target))
                         deployed += 1
                         self.last_deployed_files.append(str(opposing_target))
-                        set_deployed_files[opposing_target_name.lower()] = opposing_target
+                        set_deployed_files[opposing_target_name] = opposing_target
                         system_logger.info(
                             f"Cross-mirrored armor part for body type compatibility: {target_path.name} -> {opposing_target_name}",
                             source="PartsDeployer"

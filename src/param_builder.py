@@ -81,8 +81,21 @@ class ParamBuilder:
         equip_params: List[Dict[str, Any]] = []
         fmg_texts: List[Dict[str, Any]] = []
 
-        # Determine slots present in the mod set
+        # Determine slots and gender coverage present in the mod set
         slots_present = {part.slot for part in mod_set.parts}
+        genders_in_set = {p.gender_variant.lower() for p in mod_set.parts if not mod_set.is_weapon}
+        has_male_files = "m" in genders_in_set
+        has_female_files = "f" in genders_in_set
+        # If both genders are present the cross-mirror is redundant; if only one is present
+        # the cross-mirror in PartsDeployer/AssetRenumberer creates the missing file.
+        # We also emit a vanilla fallback model ID as a secondary safety net — if the
+        # cross-mirrored file somehow fails to reach the game (e.g. wrong Mod Engine path),
+        # EquipInjector uses this ID to point the missing gender to a vanilla model that already
+        # ships both bd_m_XXXX and bd_f_XXXX in the base game, preventing invisible body parts.
+        #
+        # Vanilla fallback: Commoner's Garb set (model 220) — ships all four slots
+        # with both gender variants in every Elden Ring version including DLC.
+        VANILLA_FALLBACK_MODEL_ID = 220
 
         for slot in slots_present:
             slot_offset = self.SLOT_ID_OFFSET.get(slot, 0)
@@ -105,6 +118,13 @@ class ParamBuilder:
 
             if not mod_set.is_weapon:
                 field_updates["equipModelGender"] = 0
+                # Emit gender coverage flags so EquipInjector knows which file variant
+                # the mod actually provides. When only one gender is present the injector
+                # can fall back to a vanilla model for the missing gender rather than
+                # leaving the body slot invisible.
+                field_updates["_lf_hasMaleFiles"] = 1 if has_male_files else 0
+                field_updates["_lf_hasFemaleFiles"] = 1 if has_female_files else 0
+                field_updates["_lf_fallbackModelId"] = VANILLA_FALLBACK_MODEL_ID
 
             model_field = self.SLOT_MODEL_FIELD.get(slot)
             if model_field:

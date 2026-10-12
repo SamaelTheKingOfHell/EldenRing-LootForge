@@ -54,22 +54,25 @@ class AssetRenumberer:
                 system_logger.warning(f"Source asset not found: {source_file}", source="AssetRenumberer")
                 continue
 
-            # Compute new filename by substituting target_model_id with new_model_id
+            # Compute new filename by substituting target_model_id with new_model_id.
+            # Normalize to lowercase: Elden Ring expects conventional lowercase part names
+            # (e.g. bd_m_9001.partsbnd.dcx); mixed-case inputs like BD_M_4000.partsbnd.dcx
+            # would be invisible to the game on case-sensitive filesystems.
             old_name = part.file_name
-            # Replace target_model_id suffix before .partsbnd.dcx
-            new_name = old_name.replace(part.target_model_id, new_model_id)
+            new_name = old_name.replace(part.target_model_id, new_model_id).lower()
             dest_file = self._parts_dir / new_name
 
             shutil.copy2(source_file, dest_file)
             staged_files.append(str(dest_file.relative_to(self._output_dir)))
-            staged_by_name[new_name.lower()] = dest_file
+            staged_by_name[new_name] = dest_file
 
             system_logger.debug(
                 f"Renumbered and staged: {old_name} -> {new_name}",
                 source="AssetRenumberer"
             )
 
-        # Cross-mirror armor parts to ensure unisex body type compatibility (both Type A and Type B)
+        # Cross-mirror armor parts to ensure unisex body type compatibility (both Type A and Type B).
+        # All filenames are already lowercase at this point.
         ARMOR_FILE_RE = re.compile(r"^(am|bd|hd|lg)_([mf])_(.+)$", re.IGNORECASE)
         for staged_name, staged_path in list(staged_by_name.items()):
             match = ARMOR_FILE_RE.match(staged_path.name)
@@ -77,13 +80,13 @@ class AssetRenumberer:
                 continue
             prefix, gender, rest = match.groups()
             opposing_gender = "f" if gender.lower() == "m" else "m"
-            opposing_name = f"{prefix.lower()}_{opposing_gender}_{rest}"
-            if opposing_name.lower() not in staged_by_name:
+            opposing_name = f"{prefix.lower()}_{opposing_gender}_{rest.lower()}"
+            if opposing_name not in staged_by_name:
                 opposing_dest = self._parts_dir / opposing_name
                 try:
                     shutil.copy2(staged_path, opposing_dest)
                     staged_files.append(str(opposing_dest.relative_to(self._output_dir)))
-                    staged_by_name[opposing_name.lower()] = opposing_dest
+                    staged_by_name[opposing_name] = opposing_dest
                     system_logger.info(
                         f"Cross-mirrored staged armor asset for unisex body compatibility: {staged_path.name} -> {opposing_name}",
                         source="AssetRenumberer"

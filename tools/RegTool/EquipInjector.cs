@@ -119,6 +119,9 @@ namespace LootForge.RegTool
                             foreach (var prop in fieldsElUpdate.EnumerateObject())
                             {
                                 string fieldName = prop.Name;
+                                // Skip private LootForge metadata fields
+                                if (fieldName.StartsWith("_lf_", StringComparison.OrdinalIgnoreCase))
+                                    continue;
                                 if (fieldName.EndsWith("ModelId", StringComparison.OrdinalIgnoreCase))
                                 {
                                     fieldName = "equipModelId";
@@ -232,9 +235,24 @@ namespace LootForge.RegTool
 
                 if (ep.TryGetProperty("field_updates", out var fieldsEl) && fieldsEl.ValueKind == JsonValueKind.Object)
                 {
+                    // Extract LootForge private fields (prefixed _lf_) before writing to param.
+                    // These carry gender coverage metadata and are not real EquipParamProtector fields.
+                    bool hasMaleFiles = true;
+                    bool hasFemaleFiles = true;
+                    int fallbackModelId = 220; // Commoner's Garb — ships all slots for both genders
+
+                    if (fieldsEl.TryGetProperty("_lf_hasMaleFiles", out var hm)) hasMaleFiles = hm.GetInt32() != 0;
+                    if (fieldsEl.TryGetProperty("_lf_hasFemaleFiles", out var hf)) hasFemaleFiles = hf.GetInt32() != 0;
+                    if (fieldsEl.TryGetProperty("_lf_fallbackModelId", out var fm)) fallbackModelId = fm.GetInt32();
+
                     foreach (var prop in fieldsEl.EnumerateObject())
                     {
                         string fieldName = prop.Name;
+
+                        // Skip private LootForge metadata fields — they are not real param fields
+                        if (fieldName.StartsWith("_lf_", StringComparison.OrdinalIgnoreCase))
+                            continue;
+
                         if (fieldName.EndsWith("ModelId", StringComparison.OrdinalIgnoreCase))
                         {
                             fieldName = "equipModelId";
@@ -245,6 +263,25 @@ namespace LootForge.RegTool
                         {
                             ParamHelper.SetCellValue(cell, prop.Value);
                         }
+                    }
+
+                    // Vanilla fallback model ID safety net:
+                    // When the mod only shipped one gender's mesh files, the cross-mirror in
+                    // PartsDeployer/AssetRenumberer should have created the missing gender file.
+                    // If that file somehow fails to land (wrong Mod Engine overlay path, etc.),
+                    // the game would render an invisible body. As a last resort, when one gender
+                    // is missing we set equipModelId to the vanilla fallback model ID for the
+                    // missing gender — the player sees vanilla Commoner gear instead of nothing.
+                    //
+                    // Implementation: we can't set different model IDs per-gender in one row,
+                    // so we only override equipModelId with the fallback when BOTH gender files
+                    // are absent (total failure). When the cross-mirror succeeded (which is
+                    // the normal case), the modded ID already points to both files correctly.
+                    if (isProtector && !hasMaleFiles && !hasFemaleFiles && fallbackModelId > 0)
+                    {
+                        // Total failure — no mesh files at all; use vanilla fallback
+                        ParamHelper.SetCellIfExists(newRow, "equipModelId", (ushort)fallbackModelId);
+                        Console.WriteLine($"[RegTool WARN] Mod has no mesh files at all for ID {newParamId}; using vanilla fallback model {fallbackModelId}");
                     }
                 }
 
