@@ -90,7 +90,7 @@ class ParamBuilder:
         gender_caption = ""
         if gender_res == "female":
             gender_tag = "[Female Only] "
-            gender_caption = "⚠️ [RESTRICTION: Female Only] Tailored exclusively for Type B (Female) bodies. Attempting to equip on Type A (Male) characters is unsupported.\n\n"
+            gender_caption = "[RESTRICTION: Female Only] Tailored exclusively for Type B (Female) bodies. Attempting to equip on Type A (Male) characters is unsupported.\n\n"
 
         for slot in slots_present:
             slot_offset = self.SLOT_ID_OFFSET.get(slot, 0)

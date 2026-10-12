@@ -110,7 +110,7 @@ class DiabloLootGenerator:
         base_name: str,
         rarity: RarityTier,
         affixes: List[AffixDefinition],
-        marker_tag: str = "✦ [LootForge]",
+        marker_tag: str = "[LootForge]",
         is_boss: bool = False
     ) -> str:
         """Formats dynamic Diablo item name: [Tag] [Rarity] Prefix BaseName Suffix."""
@@ -139,24 +139,24 @@ class DiabloLootGenerator:
     ) -> str:
         """Appends formatted rarity and affix breakdown to the bottom of item description."""
         lines = [base_caption.rstrip(), ""]
-        lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        lines.append("----------------------------------------")
         tier_title = f"GIGA {rarity.display_name.upper()}" if boss_name else rarity.display_name.upper()
-        lines.append(f"◆ RARITY: {tier_title} {rarity.stars}")
+        lines.append(f"RARITY: {tier_title} {rarity.stars}")
 
         if boss_name:
-            lines.append(f"⚔️ BOSS TROPHY: Claimed from {boss_name}")
+            lines.append(f"[BOSS TROPHY] Claimed from {boss_name}")
 
         if affixes:
             lines.append("----------------------------------------")
-            lines.append("✦ DIABLO AFFIXES:")
+            lines.append("DIABLO AFFIXES:")
             for aff in affixes:
                 aff_type_str = "Prefix" if aff.affix_type == AffixType.PREFIX else "Suffix"
-                lines.append(f"• [{aff_type_str}] {aff.name}: {aff.description}")
+                lines.append(f"- [{aff_type_str}] {aff.name}: {aff.description}")
         else:
             lines.append("----------------------------------------")
-            lines.append("✦ Standard Mundane Quality (No Magical Affixes)")
+            lines.append("- Standard Mundane Quality (No Magical Affixes)")
 
-        lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        lines.append("----------------------------------------")
         return "\n".join(lines)
 
     def generate_variants_for_spec(

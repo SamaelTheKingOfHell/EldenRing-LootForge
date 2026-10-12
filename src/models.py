@@ -137,14 +137,14 @@ class StandaloneAllocation:
         new_model_id="9001",
         new_equip_param_id=9001000,
         new_item_lot_id=9100001,
-        marker_tag="✦ [LootForge]"
+        marker_tag="[LootForge]"
     )
     ```
     """
     new_model_id: str
     new_equip_param_id: int
     new_item_lot_id: int
-    marker_tag: str = "✦ [LootForge]"
+    marker_tag: str = "[LootForge]"
 
 
 @dataclass

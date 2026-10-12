@@ -90,7 +90,7 @@ class TestRegulationManager(unittest.TestCase):
             new_model_id="9000",
             new_equip_param_id=9000000,
             new_item_lot_id=100400,  # Targeting Cleanrot Knight lot (100400)
-            marker_tag="✦ [LootForge]"
+            marker_tag="[LootForge]"
         )
         mod_set.loot_target = LootTarget(
             route_type=LootDistributionType.ENEMY_DROP,

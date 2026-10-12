@@ -68,7 +68,7 @@ class IdAllocator:
             new_model_id=str(candidate),
             new_equip_param_id=self._base_param_id + (offset * 1000),
             new_item_lot_id=self._base_item_lot_id + offset,
-            marker_tag="✦ [LootForge]"
+            marker_tag="[LootForge]"
         )
 
         self._set_to_allocation[set_id] = allocation

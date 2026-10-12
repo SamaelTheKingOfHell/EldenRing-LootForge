@@ -85,7 +85,7 @@ class TestModScanner(unittest.TestCase):
             new_model_id="9007",
             new_equip_param_id=9007000,
             new_item_lot_id=9100007,
-            marker_tag="✦ [LootForge]"
+            marker_tag="[LootForge]"
         )
         skirt_set.loot_target = LootTarget(
             route_type=LootDistributionType.ENEMY_DROP,
@@ -119,7 +119,7 @@ class TestModScanner(unittest.TestCase):
             new_model_id="9008",
             new_equip_param_id=9008000,
             new_item_lot_id=9100008,
-            marker_tag="✦ [LootForge]"
+            marker_tag="[LootForge]"
         )
         plate_spec = builder.build_patch_spec(plate_set)
         plate_fmg = plate_spec["fmg_texts"][0]

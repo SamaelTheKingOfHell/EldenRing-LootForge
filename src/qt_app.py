@@ -435,7 +435,7 @@ class LootForgeMainWindow(QMainWindow):
         cleaned = _re.sub(r'\s+', ' ', cleaned).strip()
         if cleaned == cleaned.lower():
             cleaned = cleaned.title()
-        return f"✦ {cleaned} [LootForge]"
+        return f"{cleaned} [LootForge]"
 
     def _scan_mods(self):
         try:

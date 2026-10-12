@@ -56,9 +56,9 @@ class TestDiabloLoot(unittest.TestCase):
             base_name="Moonveil",
             rarity=RarityTier.RARE,
             affixes=affixes,
-            marker_tag="✦ [LootForge]"
+            marker_tag="[LootForge]"
         )
-        self.assertIn("✦ [LootForge]", name)
+        self.assertIn("[LootForge]", name)
         self.assertIn("[Rare]", name)
         self.assertIn("Moonveil", name)
         for aff in affixes:
@@ -71,8 +71,8 @@ class TestDiabloLoot(unittest.TestCase):
         caption = self.generator.build_caption_with_affixes(base_desc, RarityTier.LEGENDARY, affixes)
 
         self.assertTrue(caption.startswith(base_desc))
-        self.assertIn("◆ RARITY: LEGENDARY", caption)
-        self.assertIn("✦ DIABLO AFFIXES:", caption)
+        self.assertIn("RARITY: LEGENDARY", caption)
+        self.assertIn("DIABLO AFFIXES:", caption)
         for aff in affixes:
             self.assertIn(aff.name, caption)
             self.assertIn(aff.description, caption)
@@ -89,7 +89,7 @@ class TestDiabloLoot(unittest.TestCase):
                 new_model_id="9000",
                 new_equip_param_id=9000000,
                 new_item_lot_id=9100000,
-                marker_tag="✦ [LootForge]"
+                marker_tag="[LootForge]"
             ),
             loot_target=LootTarget(
                 route_type=LootDistributionType.ENEMY_DROP,
@@ -108,7 +108,7 @@ class TestDiabloLoot(unittest.TestCase):
         for v in variants:
             fmg = v["fmg_texts"][0]
             self.assertIn("RARITY:", fmg["caption"])
-            self.assertIn("✦ [LootForge]", fmg["name"])
+            self.assertIn("[LootForge]", fmg["name"])
 
     def test_variant_generation_weapon(self):
         """Verifies weapon variant generation modifies weapon stats and attaches passives."""
@@ -123,7 +123,7 @@ class TestDiabloLoot(unittest.TestCase):
                 new_model_id="9001",
                 new_equip_param_id=9001000,
                 new_item_lot_id=9100001,
-                marker_tag="✦ [LootForge]"
+                marker_tag="[LootForge]"
             ),
             loot_target=LootTarget(
                 route_type=LootDistributionType.ENEMY_DROP,
@@ -174,7 +174,7 @@ class TestDiabloLoot(unittest.TestCase):
                 new_model_id="9002",
                 new_equip_param_id=9002000,
                 new_item_lot_id=9100002,
-                marker_tag="✦ [LootForge]"
+                marker_tag="[LootForge]"
             ),
             loot_target=LootTarget(
                 route_type=LootDistributionType.ENEMY_DROP,

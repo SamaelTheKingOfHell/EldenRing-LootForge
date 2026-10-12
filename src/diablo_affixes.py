@@ -12,11 +12,11 @@ from typing import Dict, Any, Optional, List
 
 class RarityTier(Enum):
     """Diablo rarity tiers with corresponding star ratings and affix counts."""
-    COMMON = ("Common", "★☆☆☆☆", 0, 0)
-    MAGIC = ("Magic", "★★☆☆☆", 1, 1)
-    RARE = ("Rare", "★★★☆☆", 1, 2)
-    LEGENDARY = ("Legendary", "★★★★☆", 2, 2)
-    MYTHIC = ("Mythic", "★★★★★", 2, 3)
+    COMMON = ("Common", "[*----]", 0, 0)
+    MAGIC = ("Magic", "[**---]", 1, 1)
+    RARE = ("Rare", "[***--]", 1, 2)
+    LEGENDARY = ("Legendary", "[****-]", 2, 2)
+    MYTHIC = ("Mythic", "[*****]", 2, 3)
 
     def __init__(self, display_name: str, stars: str, min_affixes: int, max_affixes: int):
         self.display_name = display_name

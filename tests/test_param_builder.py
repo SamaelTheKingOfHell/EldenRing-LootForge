@@ -41,7 +41,7 @@ class TestParamBuilder(unittest.TestCase):
                 new_model_id="9001",
                 new_equip_param_id=9001000,
                 new_item_lot_id=9100001,
-                marker_tag="✦ [LootForge]"
+                marker_tag="[LootForge]"
             ),
             loot_target=LootTarget(
                 route_type=LootDistributionType.BOSS_REMEMBRANCE,
@@ -79,7 +79,7 @@ class TestParamBuilder(unittest.TestCase):
                 new_model_id="9002",
                 new_equip_param_id=9002000,
                 new_item_lot_id=9100002,
-                marker_tag="✦ [LootForge]"
+                marker_tag="[LootForge]"
             ),
             loot_target=LootTarget(
                 route_type=LootDistributionType.ENEMY_DROP,
@@ -113,7 +113,7 @@ class TestParamBuilder(unittest.TestCase):
                 new_model_id="9002",
                 new_equip_param_id=9002000,
                 new_item_lot_id=9100002,
-                marker_tag="✦ [LootForge]"
+                marker_tag="[LootForge]"
             ),
             loot_target=LootTarget(
                 route_type=LootDistributionType.ENEMY_DROP,
