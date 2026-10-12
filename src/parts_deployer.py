@@ -22,6 +22,9 @@ class PartsDeployer:
         and renumbered asset files matching the allocated model IDs.
     """
 
+    def __init__(self):
+        self.last_deployed_files: List[str] = []
+
     def deploy_parts(
         self,
         mod_sets: List[DetectedModSet],
@@ -42,6 +45,7 @@ class PartsDeployer:
         parts_output = Path(output_dir) / "parts"
         parts_output.mkdir(parents=True, exist_ok=True)
 
+        self.last_deployed_files = []
         deployed = 0
         for ms in mod_sets:
             if not getattr(ms, "allocation", None) or not getattr(ms, "is_enabled", True):
@@ -68,6 +72,7 @@ class PartsDeployer:
                 try:
                     shutil.copy2(str(source), str(target))
                     deployed += 1
+                    self.last_deployed_files.append(str(target))
                     system_logger.debug(
                         f"Deployed: {part.file_name} -> {target_name}",
                         source="PartsDeployer"

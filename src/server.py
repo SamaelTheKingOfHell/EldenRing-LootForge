@@ -276,6 +276,22 @@ class LootForgeRequestHandler(SimpleHTTPRequestHandler):
                         except Exception as be:
                             system_logger.warning(f"Auto-backup notice: {be}", source="Forge")
 
+                    # Pre-backup or track existing msg files in target directory
+                    created_msg_files = []
+                    backed_up_files = {}
+                    for lang in ["engUS", "engus"]:
+                        lang_dir = target_reg.parent / "msg" / lang
+                        for fname in ["item.msgbnd.dcx", "item_dlc02.msgbnd.dcx", "item_dlc01.msgbnd.dcx"]:
+                            mf = lang_dir / fname
+                            if mf.exists():
+                                try:
+                                    bak_rec = self.backup_manager.create_file_backup(str(mf), category="msg")
+                                    backed_up_files[str(mf)] = bak_rec.backup_file_name
+                                except Exception as me:
+                                    system_logger.warning(f"Msg backup notice ({mf}): {me}", source="Forge")
+                            else:
+                                created_msg_files.append(str(mf))
+
                     reg_result = self.regulation_manager.execute_patch(
                         all_specs, source_reg, target_reg, game_dir=self.config.game_directory
                     )
@@ -283,6 +299,7 @@ class LootForgeRequestHandler(SimpleHTTPRequestHandler):
                     self.config.save()
 
                     # Deploy custom parts files (renamed models) to target regulation directory
+                    parts_deployed = 0
                     try:
                         input_dir = Path(self.config.input_directory)
                         if not input_dir.is_absolute():
@@ -295,6 +312,14 @@ class LootForgeRequestHandler(SimpleHTTPRequestHandler):
                         system_logger.info(f"Deployed {parts_deployed} parts files to {target_reg.parent / 'parts'}", source="Forge")
                     except Exception as pe:
                         system_logger.warning(f"Parts deployment notice: {pe}", source="Forge")
+
+                    deployed_parts = getattr(self.regulation_manager, "last_deployed_files", [])
+                    self.manifest_store.record_deployment(
+                        target_regulation_path=str(target_reg),
+                        deployed_files=deployed_parts,
+                        created_msg_files=created_msg_files,
+                        backed_up_files=backed_up_files
+                    )
 
                 # Include FMG verification in response
                 if reg_result:
@@ -339,21 +364,35 @@ class LootForgeRequestHandler(SimpleHTTPRequestHandler):
             try:
                 reg_path = body.get("path") or self.config.active_regulation_path or os.path.join(self.config.game_directory, "regulation.bin")
                 self.backup_manager.restore_latest_backup(reg_path)
-                self._send_json({"success": True, "message": "Restored latest regulation backup."})
+                target_p = Path(reg_path)
+                for lang in ["engUS", "engus"]:
+                    for fname in ["item.msgbnd.dcx", "item_dlc02.msgbnd.dcx", "item_dlc01.msgbnd.dcx"]:
+                        mf = target_p.parent / "msg" / lang / fname
+                        if self.backup_manager.list_backups_for_file(fname):
+                            try:
+                                self.backup_manager.restore_latest_backup_for_file(str(mf))
+                            except Exception:
+                                pass
+                self._send_json({"success": True, "message": "Restored latest regulation and message backups."})
             except Exception as e:
                 system_logger.error(f"Restore error: {e}", source="BackupManager")
                 self._send_json({"error": str(e)}, status=500)
 
         elif path == "/api/uninstall":
             try:
-                # Remove staged files recorded in manifest
-                all_records = self.manifest_store.get_all_records()
-                for rec in all_records:
-                    self.asset_renumberer.cleanup_files(rec.staged_files)
-
-                self.manifest_store.clear()
-                system_logger.info("Clean uninstall completed. All staged assets purged.", source="Uninstall")
-                self._send_json({"success": True, "message": "Uninstalled all injected mods cleanly."})
+                active_reg = body.get("path") or self.config.active_regulation_path or ""
+                result = self.regulation_manager.rollback_all(
+                    backup_manager=self.backup_manager,
+                    manifest_store=self.manifest_store,
+                    target_reg_path=active_reg,
+                    output_dir=self.config.output_directory,
+                    asset_renumberer=self.asset_renumberer
+                )
+                system_logger.info(
+                    f"Clean uninstall completed. Restored: {len(result['restored_files'])}, Removed: {len(result['removed_files'])}",
+                    source="Uninstall"
+                )
+                self._send_json({"success": result["success"], "result": result, "message": "All injected mods cleanly uninstalled and rolled back."})
             except Exception as e:
                 system_logger.error(f"Uninstall error: {e}", source="Uninstall")
                 self._send_json({"error": str(e)}, status=500)

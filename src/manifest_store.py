@@ -32,6 +32,10 @@ class ManifestStore:
     def __init__(self, manifest_path: str = "lootforge_manifest.json"):
         self._path = Path(manifest_path)
         self._records: Dict[str, ManifestRecord] = {}
+        self.target_regulation_path: Optional[str] = None
+        self.deployed_files: List[str] = []
+        self.created_msg_files: List[str] = []
+        self.backed_up_files: Dict[str, str] = {}
         self._load()
 
     def _load(self) -> None:
@@ -42,6 +46,11 @@ class ManifestStore:
         try:
             with open(self._path, "r", encoding="utf-8") as f:
                 data = json.load(f)
+
+            self.target_regulation_path = data.get("target_regulation_path")
+            self.deployed_files = data.get("deployed_files", [])
+            self.created_msg_files = data.get("created_msg_files", [])
+            self.backed_up_files = data.get("backed_up_files", {})
 
             for item in data.get("injected_sets", []):
                 record = ManifestRecord(
@@ -65,8 +74,12 @@ class ManifestStore:
         """Saves current ledger state to disk."""
         try:
             payload = {
-                "version": "1.0.0",
+                "version": "1.1.0",
                 "last_updated": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "target_regulation_path": self.target_regulation_path,
+                "deployed_files": self.deployed_files,
+                "created_msg_files": self.created_msg_files,
+                "backed_up_files": self.backed_up_files,
                 "injected_sets": [
                     {
                         "set_id": r.set_id,
@@ -87,6 +100,27 @@ class ManifestStore:
             system_logger.debug(f"Manifest written to {self._path}", source="ManifestStore")
         except Exception as e:
             system_logger.error(f"Failed to save manifest {self._path}: {e}", source="ManifestStore")
+
+    def record_deployment(
+        self,
+        target_regulation_path: str,
+        deployed_files: Optional[List[str]] = None,
+        created_msg_files: Optional[List[str]] = None,
+        backed_up_files: Optional[Dict[str, str]] = None
+    ) -> None:
+        """Records deployment environment targets for complete, clean rollbacks."""
+        self.target_regulation_path = target_regulation_path
+        if deployed_files:
+            for df in deployed_files:
+                if df not in self.deployed_files:
+                    self.deployed_files.append(df)
+        if created_msg_files:
+            for cm in created_msg_files:
+                if cm not in self.created_msg_files:
+                    self.created_msg_files.append(cm)
+        if backed_up_files:
+            self.backed_up_files.update(backed_up_files)
+        self.save()
 
     def record_set(self, mod_set: DetectedModSet, staged_files: List[str]) -> ManifestRecord:
         """Adds or updates an injected mod set record."""
@@ -121,6 +155,10 @@ class ManifestStore:
         return list(self._records.values())
 
     def clear(self) -> None:
-        """Clears all ledger entries."""
+        """Clears all ledger entries and deployment metadata."""
         self._records.clear()
+        self.target_regulation_path = None
+        self.deployed_files.clear()
+        self.created_msg_files.clear()
+        self.backed_up_files.clear()
         self.save()

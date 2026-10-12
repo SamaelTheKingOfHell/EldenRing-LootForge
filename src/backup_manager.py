@@ -45,16 +45,16 @@ class BackupManager:
                 hasher.update(chunk)
         return hasher.hexdigest()
 
-    def create_backup(self, regulation_bin_path: str) -> BackupRecord:
+    def create_file_backup(self, file_path: str, category: str = "generic") -> BackupRecord:
         """
-        Creates a timestamped snapshot of the target regulation.bin file.
+        Creates a timestamped snapshot of any specified target file (regulation.bin, item.msgbnd.dcx, etc.).
         """
-        source = Path(regulation_bin_path)
+        source = Path(file_path)
         if not source.exists():
-            raise FileNotFoundError(f"Source regulation.bin not found at {regulation_bin_path}")
+            raise FileNotFoundError(f"Source file not found at {file_path}")
 
         timestamp_str = time.strftime("%Y%m%d_%H%M%S")
-        backup_name = f"regulation.bin.bak_{timestamp_str}"
+        backup_name = f"{source.name}.bak_{timestamp_str}"
         dest = self._backup_dir / backup_name
 
         shutil.copy2(source, dest)
@@ -62,7 +62,7 @@ class BackupManager:
         size = dest.stat().st_size
 
         system_logger.info(
-            f"Created regulation backup: {backup_name} ({size} bytes, SHA-256: {checksum[:12]}...)",
+            f"Created {category} backup: {backup_name} ({size} bytes, SHA-256: {checksum[:12]}...)",
             source="BackupManager"
         )
 
@@ -73,12 +73,18 @@ class BackupManager:
             sha256_checksum=checksum
         )
 
-    def list_backups(self) -> List[BackupRecord]:
-        """Lists all existing regulation backups ordered newest to oldest."""
+    def create_backup(self, regulation_bin_path: str) -> BackupRecord:
+        """
+        Creates a timestamped snapshot of the target regulation.bin file.
+        """
+        return self.create_file_backup(regulation_bin_path, category="regulation")
+
+    def list_backups_for_file(self, file_name: str) -> List[BackupRecord]:
+        """Lists all existing backups for a specific filename ordered newest to oldest."""
         backups: List[BackupRecord] = []
-        for file in sorted(self._backup_dir.glob("regulation.bin.bak_*"), reverse=True):
+        pattern = f"{file_name}.bak_*"
+        for file in sorted(self._backup_dir.glob(pattern), reverse=True):
             try:
-                # Extract timestamp from filename
                 parts = file.name.split(".bak_")
                 ts = parts[1] if len(parts) > 1 else "unknown"
                 size = file.stat().st_size
@@ -93,26 +99,44 @@ class BackupManager:
                 system_logger.warning(f"Error reading backup file {file.name}: {e}", source="BackupManager")
         return backups
 
+    def list_backups(self) -> List[BackupRecord]:
+        """Lists all existing regulation backups ordered newest to oldest."""
+        return self.list_backups_for_file("regulation.bin")
+
     def restore_backup(self, backup_name: str, target_regulation_bin_path: str) -> bool:
         """
         Restores a specific backup file to the target regulation.bin path.
+        """
+        return self.restore_backup_file(backup_name, target_regulation_bin_path)
+
+    def restore_backup_file(self, backup_name: str, target_file_path: str) -> bool:
+        """
+        Restores a specific backup file to the specified target path.
         """
         backup_path = self._backup_dir / backup_name
         if not backup_path.exists():
             raise FileNotFoundError(f"Backup file not found: {backup_path}")
 
-        target = Path(target_regulation_bin_path)
+        target = Path(target_file_path)
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(backup_path, target)
 
         system_logger.info(
-            f"Successfully restored regulation.bin from backup {backup_name}",
+            f"Successfully restored {target.name} from backup {backup_name}",
             source="BackupManager"
         )
         return True
 
+    def restore_latest_backup_for_file(self, target_file_path: str) -> bool:
+        """Restores the most recent backup for a given file name."""
+        target_name = Path(target_file_path).name
+        backups = self.list_backups_for_file(target_name)
+        if not backups:
+            raise FileNotFoundError(f"No backups found for {target_name} in backup directory.")
+        return self.restore_backup_file(backups[0].backup_file_name, target_file_path)
+
     def restore_latest_backup(self, target_regulation_bin_path: str) -> bool:
-        """Restores the most recent backup."""
+        """Restores the most recent regulation.bin backup."""
         backups = self.list_backups()
         if not backups:
             raise FileNotFoundError("No regulation.bin backups found in backup directory.")

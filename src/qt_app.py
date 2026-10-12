@@ -515,11 +515,20 @@ class LootForgeMainWindow(QMainWindow):
 
     def _restore_backup(self):
         reg_path = self.active_reg_input.text().strip() or os.path.join(self.config.game_directory, "regulation.bin")
-        reply = QMessageBox.question(self, "Confirm Restore", "Restore pristine regulation.bin from the latest backup?")
+        reply = QMessageBox.question(self, "Confirm Restore", "Restore pristine regulation.bin and message files from the latest backups?")
         if reply == QMessageBox.StandardButton.Yes:
             try:
                 self.backup_manager.restore_latest_backup(reg_path)
-                QMessageBox.information(self, "Restore Complete", "Pristine regulation.bin restored successfully.")
+                target_p = Path(reg_path)
+                for lang in ["engUS", "engus"]:
+                    for fname in ["item.msgbnd.dcx", "item_dlc02.msgbnd.dcx", "item_dlc01.msgbnd.dcx"]:
+                        mf = target_p.parent / "msg" / lang / fname
+                        if self.backup_manager.list_backups_for_file(fname):
+                            try:
+                                self.backup_manager.restore_latest_backup_for_file(str(mf))
+                            except Exception:
+                                pass
+                QMessageBox.information(self, "Restore Complete", "Pristine regulation.bin and message files restored successfully.")
             except Exception as e:
                 QMessageBox.critical(self, "Restore Error", f"Restore failed: {e}")
 
@@ -548,6 +557,19 @@ class LootForgeMainWindow(QMainWindow):
         try:
             if target_reg.exists():
                 self.backup_manager.create_backup(str(target_reg))
+
+            # Pre-backup or track existing msg files in target directory
+            created_msg_files = []
+            backed_up_files = {}
+            for lang in ["engUS", "engus"]:
+                lang_dir = target_reg.parent / "msg" / lang
+                for fname in ["item.msgbnd.dcx", "item_dlc02.msgbnd.dcx", "item_dlc01.msgbnd.dcx"]:
+                    mf = lang_dir / fname
+                    if mf.exists():
+                        bak_rec = self.backup_manager.create_file_backup(str(mf), category="msg")
+                        backed_up_files[str(mf)] = bak_rec.backup_file_name
+                    else:
+                        created_msg_files.append(str(mf))
 
             patch_specs = []
             injected_count = 0
@@ -613,6 +635,14 @@ class LootForgeMainWindow(QMainWindow):
                 mod_sets=self.scanned_sets, input_base_dir=input_dir, output_dir=output_dir
             )
 
+            deployed_parts = getattr(self.regulation_manager, "last_deployed_files", [])
+            self.manifest_store.record_deployment(
+                target_regulation_path=str(target_reg),
+                deployed_files=deployed_parts,
+                created_msg_files=created_msg_files,
+                backed_up_files=backed_up_files
+            )
+
             self.active_reg_input.setText(str(target_reg))
             self.config.active_regulation_path = str(target_reg)
             self.config.save(self.config_path)
@@ -632,16 +662,31 @@ class LootForgeMainWindow(QMainWindow):
             QMessageBox.critical(self, "Forge Error", f"Forge failed: {e}")
 
     def _uninstall_mods(self):
-        reply = QMessageBox.question(self, "Confirm Rollback", "Uninstall all staged standalone mods and revert manifest?")
+        reply = QMessageBox.question(
+            self,
+            "Confirm Rollback",
+            "Comprehensively roll back all injected standalone mods, restore original regulation.bin and msg files, and remove deployed parts?"
+        )
         if reply == QMessageBox.StandardButton.Yes:
             try:
-                for rec in self.manifest_store.get_all_records():
-                    self.asset_renumberer.cleanup_files(rec.staged_files)
-                self.manifest_store.clear()
-                QMessageBox.information(self, "Rollback Complete", "All injected mods have been cleanly uninstalled.")
+                active_input = self.active_reg_input.text().strip()
+                result = self.regulation_manager.rollback_all(
+                    backup_manager=self.backup_manager,
+                    manifest_store=self.manifest_store,
+                    target_reg_path=active_input,
+                    output_dir=self.config.output_directory,
+                    asset_renumberer=self.asset_renumberer
+                )
+                restored_cnt = len(result["restored_files"])
+                removed_cnt = len(result["removed_files"])
+                details = f"Restored {restored_cnt} file(s) and removed {removed_cnt} staged/deployed file(s)."
+                if result["errors"]:
+                    details += f"\n\nWarnings/Errors:\n" + "\n".join(result["errors"])
+
+                QMessageBox.information(self, "Rollback Complete", f"Rollback finished cleanly!\n\n{details}")
                 self._scan_mods()
             except Exception as e:
-                QMessageBox.critical(self, "Rollback Error", f"Uninstall failed: {e}")
+                QMessageBox.critical(self, "Rollback Error", f"Uninstall/rollback failed: {e}")
 
     def _poll_logs(self):
         logs = system_logger.get_recent_logs(limit=50)
