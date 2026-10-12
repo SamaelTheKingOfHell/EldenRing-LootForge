@@ -35,7 +35,7 @@ namespace LootForge.RegTool
 
         public static string FormatLootForgeItemName(string rawName)
         {
-            if (string.IsNullOrWhiteSpace(rawName)) return "\u2726 [LootForge] Relic";
+            if (string.IsNullOrWhiteSpace(rawName)) return "[LootForge] Relic";
             string cleaned = rawName.Trim();
             while (cleaned.StartsWith("\u2726") || cleaned.StartsWith("▪") || cleaned.StartsWith("★") || cleaned.StartsWith("*"))
             {
@@ -49,7 +49,7 @@ namespace LootForge.RegTool
                     cleaned = cleaned.Substring(1).Trim();
                 }
             }
-            return $"\u2726 [LootForge] {cleaned}";
+            return $"[LootForge] {cleaned}";
         }
 
         public static int InjectFmgEntriesIntoBnd(
@@ -152,7 +152,7 @@ namespace LootForge.RegTool
 
                 if (!IsValidFmgText(nameText))
                 {
-                    nameText = $"\u2726 [LootForge] {(spec.IsWeapon ? "Weapon" : "Armor")} {spec.ItemId}";
+                    nameText = $"[LootForge] {(spec.IsWeapon ? "Weapon" : "Armor")} {spec.ItemId}";
                 }
 
                 nameText = FormatLootForgeItemName(nameText);

@@ -74,6 +74,14 @@ class VanillaKnowledgeBase:
         padded = model_id.zfill(4)
         return self._weapons.get(model_id) or self._weapons.get(padded) or self._weapons.get(cleaned)
 
+    def list_all_vanilla_protectors(self) -> Dict[str, Dict[str, Any]]:
+        """Returns all cataloged vanilla armor sets."""
+        return dict(self._protectors)
+
+    def list_all_vanilla_weapons(self) -> Dict[str, Dict[str, Any]]:
+        """Returns all cataloged vanilla weapons."""
+        return dict(self._weapons)
+
     def get_default_loot_target(self, model_id: str, is_weapon: bool = False) -> LootTarget:
         """
         Calculates the most thematic loot drop target for a model ID.

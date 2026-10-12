@@ -55,7 +55,9 @@ class LootForgeConfig:
         item_spoiled_states: Optional[Dict[str, bool]] = None,
         diablo_loot_enabled: bool = False,
         diablo_variants_per_item: int = 3,
-        diablo_seed: Optional[int] = None
+        diablo_seed: Optional[int] = None,
+        diablo_inject_vanilla_stats: bool = False,
+        diablo_use_vanilla_base_items: bool = False
     ):
         self.game_directory = game_directory
         self.input_directory = input_directory
@@ -82,6 +84,8 @@ class LootForgeConfig:
         self.diablo_loot_enabled = diablo_loot_enabled
         self.diablo_variants_per_item = diablo_variants_per_item
         self.diablo_seed = diablo_seed
+        self.diablo_inject_vanilla_stats = diablo_inject_vanilla_stats
+        self.diablo_use_vanilla_base_items = diablo_use_vanilla_base_items
 
         # Auto-discover game directory if not specified
         if not self.game_directory:
@@ -192,6 +196,8 @@ class LootForgeConfig:
             "diablo_loot_enabled": self.diablo_loot_enabled,
             "diablo_variants_per_item": self.diablo_variants_per_item,
             "diablo_seed": self.diablo_seed,
+            "diablo_inject_vanilla_stats": self.diablo_inject_vanilla_stats,
+            "diablo_use_vanilla_base_items": self.diablo_use_vanilla_base_items,
             "is_windows": self.is_windows,
             "is_steam_deck": self.is_steam_deck
         }
@@ -242,7 +248,9 @@ class LootForgeConfig:
                 item_spoiled_states=data.get("item_spoiled_states", {}),
                 diablo_loot_enabled=bool(data.get("diablo_loot_enabled", False)),
                 diablo_variants_per_item=int(data.get("diablo_variants_per_item", 3)),
-                diablo_seed=data.get("diablo_seed", None)
+                diablo_seed=data.get("diablo_seed", None),
+                diablo_inject_vanilla_stats=bool(data.get("diablo_inject_vanilla_stats", False)),
+                diablo_use_vanilla_base_items=bool(data.get("diablo_use_vanilla_base_items", False))
             )
         except Exception as e:
             system_logger.warning(f"Error reading {file_path}; using defaults: {e}", source="Config")

@@ -203,6 +203,57 @@ class TestDiabloLoot(unittest.TestCase):
             self.assertIn("Giga", fmg["name"])
             self.assertIn("BOSS TROPHY", fmg["caption"])
 
+    def test_vanilla_stat_injections(self):
+        """Verifies procedural Diablo stat infusions generated directly for vanilla items."""
+        from src.knowledge_base import VanillaKnowledgeBase
+        kb = VanillaKnowledgeBase.from_data_dir("data")
+
+        specs = self.generator.generate_vanilla_stat_injections(knowledge_base=kb)
+        self.assertGreater(len(specs), 20, "Must generate stat injection specs for vanilla items!")
+
+        for spec in specs:
+            ep = spec["equip_params"][0]
+            self.assertTrue(ep.get("update_existing"), "Must flag update_existing=True for vanilla rows!")
+            self.assertIn("field_updates", ep)
+            self.assertIn("row_name", ep)
+            self.assertIn("[Vanilla Infused]", ep["row_name"])
+
+            fmg = spec["fmg_texts"][0]
+            self.assertIn("RARITY:", fmg["caption"])
+            self.assertIn("Origin: Vanilla Elden Ring", fmg["info"])
+
+    def test_vanilla_base_distribution(self):
+        """Verifies using vanilla items as base items to create standalone distributed relics."""
+        from src.knowledge_base import VanillaKnowledgeBase
+        from src.id_allocator import IdAllocator
+        kb = VanillaKnowledgeBase.from_data_dir("data")
+        allocator = IdAllocator(base_param_id=9000000, base_item_lot_id=9100000)
+
+        specs = self.generator.generate_vanilla_base_distribution_specs(
+            knowledge_base=kb, id_allocator=allocator, variants_per_item=3
+        )
+        self.assertGreater(len(specs), 30, "Must generate distributed variants from vanilla base items!")
+
+        # Verify standalone param IDs and loot distribution
+        for spec in specs:
+            ep = spec["equip_params"][0]
+            self.assertGreaterEqual(ep["new_param_id"], 9000000)
+            self.assertIn("loot_distribution", spec)
+            self.assertIsNotNone(spec["loot_distribution"])
+            fmg = spec["fmg_texts"][0]
+            self.assertIn("[LootForge]", fmg["name"])
+
+    def test_config_vanilla_booleans(self):
+        """Verifies serialization and deserialization of the new vanilla booleans."""
+        from src.config import LootForgeConfig
+        cfg = LootForgeConfig()
+        self.assertFalse(cfg.diablo_inject_vanilla_stats)
+        self.assertFalse(cfg.diablo_use_vanilla_base_items)
+
+        cfg_dict = cfg.to_dict()
+        self.assertIn("diablo_inject_vanilla_stats", cfg_dict)
+        self.assertIn("diablo_use_vanilla_base_items", cfg_dict)
+
 
 if __name__ == "__main__":
     unittest.main()

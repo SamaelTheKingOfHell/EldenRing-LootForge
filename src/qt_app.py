@@ -524,8 +524,8 @@ class LootForgeMainWindow(QMainWindow):
                 QMessageBox.critical(self, "Restore Error", f"Restore failed: {e}")
 
     def _forge_mods(self):
-        if not self.scanned_sets:
-            QMessageBox.warning(self, "No Mods", "No mod sets detected in input_mods to forge.")
+        if not self.scanned_sets and not self.config.diablo_use_vanilla_base_items and not self.config.diablo_inject_vanilla_stats:
+            QMessageBox.warning(self, "No Mods", "No mod sets detected in input_mods, and vanilla item injection is not enabled.")
             return
 
         self._recalculate_distribution()
@@ -578,6 +578,28 @@ class LootForgeMainWindow(QMainWindow):
 
                 self.manifest_store.record_set(s, staged)
                 injected_count += 1
+
+            # Inject vanilla base items for distribution if enabled
+            if self.config.diablo_use_vanilla_base_items:
+                from src.diablo_generator import DiabloLootGenerator
+                diablo_gen = DiabloLootGenerator(seed=self.config.diablo_seed, knowledge_base=self.knowledge_base)
+                vanilla_dist_specs = diablo_gen.generate_vanilla_base_distribution_specs(
+                    knowledge_base=self.knowledge_base,
+                    id_allocator=self.id_allocator,
+                    variants_per_item=self.config.diablo_variants_per_item if self.config.diablo_loot_enabled else 1
+                )
+                patch_specs.extend(vanilla_dist_specs)
+                diablo_total_variants += len(vanilla_dist_specs)
+                injected_count += len(vanilla_dist_specs)
+                system_logger.info(f"Generated {len(vanilla_dist_specs)} procedural relics from vanilla base items.", source="QtApp")
+
+            # Inject stats into vanilla item loots if enabled
+            if self.config.diablo_inject_vanilla_stats:
+                from src.diablo_generator import DiabloLootGenerator
+                diablo_gen = DiabloLootGenerator(seed=self.config.diablo_seed, knowledge_base=self.knowledge_base)
+                vanilla_stat_specs = diablo_gen.generate_vanilla_stat_injections(knowledge_base=self.knowledge_base)
+                patch_specs.extend(vanilla_stat_specs)
+                system_logger.info(f"Injected Diablo stats into {len(vanilla_stat_specs)} vanilla item loots.", source="QtApp")
 
             patch_result = self.regulation_manager.execute_patch(
                 specs=patch_specs, source_reg=source_reg, target_reg=target_reg, game_dir=self.config.game_directory

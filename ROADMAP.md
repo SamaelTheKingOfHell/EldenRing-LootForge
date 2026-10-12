@@ -89,3 +89,11 @@ This roadmap defines the implementation phases for the cross-platform Standalone
   - Exposed Diablo procedural loot toggle, scalable variants count (1 to 1,000 instances), and optional seed controls directly in UI.
   - Automatically invokes procedural variant generation during `_forge_mods()` with synchronized `awarded_items` for authentic in-game discovery.
 
+## Phase 9: Vanilla Item Infusion & Base Item Distribution
+- [x] **Vanilla Item Stat Infusions (`diablo_inject_vanilla_stats`)**:
+  - Direct procedural Diablo stat/affix injection into base vanilla `EquipParamWeapon` and `EquipParamProtector` rows with `update_existing` support in RegTool.
+  - Dynamically titles and appends Diablo rarity and affix breakdowns to vanilla item lore descriptions in FMGs.
+- [x] **Vanilla Items as Base Distribution Items (`diablo_use_vanilla_base_items`)**:
+  - Uses cataloged vanilla weapons and armor sets as base items to create standalone procedural relics without requiring replacement mods.
+  - Distributes variants organically across bosses, merchants, chests, and enemies.
+

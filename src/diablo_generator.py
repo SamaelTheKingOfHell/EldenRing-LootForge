@@ -285,3 +285,258 @@ class DiabloLootGenerator:
             variant_specs.append(spec_copy)
 
         return variant_specs
+
+    def generate_vanilla_stat_injections(
+        self,
+        knowledge_base: Optional[Any] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Generates procedural Diablo-style stat and affix infusions directly for vanilla items.
+        Injects into existing vanilla EquipParamWeapon and EquipParamProtector rows,
+        and enriches their FMG text descriptions with Diablo rarity and affix breakdowns.
+        """
+        kb = knowledge_base or self._knowledge_base
+        if not kb:
+            return []
+
+        specs: List[Dict[str, Any]] = []
+
+        # 1. Vanilla weapons
+        weapons = kb.list_all_vanilla_weapons() if hasattr(kb, "list_all_vanilla_weapons") else getattr(kb, "_weapons", {})
+        for model_id, w_info in weapons.items():
+            base_param_id = w_info.get("baseParamId")
+            if not base_param_id:
+                continue
+
+            rarity = self.roll_rarity(is_boss=False)
+            affixes = self.roll_affixes(rarity, is_weapon=True, is_boss=False)
+
+            field_updates: Dict[str, Any] = {}
+            sp_effect_slot = 0
+            for aff in affixes:
+                for field_name, delta in aff.field_modifiers.items():
+                    field_updates[field_name] = field_updates.get(field_name, 0) + delta
+
+                if aff.sp_effect_id and sp_effect_slot < 3:
+                    field_updates[f"spEffectId{sp_effect_slot}"] = aff.sp_effect_id
+                    sp_effect_slot += 1
+
+            clean_name = w_info.get("name", "Weapon")
+            clean_desc = w_info.get("description", "")
+            fmg_name = f"[{rarity.display_name}] {clean_name}" if rarity != RarityTier.COMMON else clean_name
+            fmg_caption = self.build_caption_with_affixes(clean_desc, rarity, affixes)
+
+            specs.append({
+                "set_id": f"vanilla_weapon_inject_{base_param_id}",
+                "equip_params": [{
+                    "param_table": "EquipParamWeapon",
+                    "new_param_id": base_param_id,
+                    "update_existing": True,
+                    "field_updates": field_updates,
+                    "row_name": f"[Vanilla Infused] {clean_name}"
+                }],
+                "fmg_texts": [{
+                    "item_id": base_param_id,
+                    "is_weapon": True,
+                    "name": fmg_name,
+                    "caption": fmg_caption,
+                    "info": f"Origin: Vanilla Elden Ring (Diablo Infused)"
+                }],
+                "loot_distribution": None
+            })
+
+        # 2. Vanilla protectors (armor sets: head, body, arms, legs)
+        protectors = kb.list_all_vanilla_protectors() if hasattr(kb, "list_all_vanilla_protectors") else getattr(kb, "_protectors", {})
+        for model_id, p_info in protectors.items():
+            base_param_id = p_info.get("baseParamId")
+            if not base_param_id:
+                continue
+
+            clean_set_name = p_info.get("name", "Armor Set")
+            clean_desc = p_info.get("description", "")
+
+            rarity = self.roll_rarity(is_boss=False)
+            affixes = self.roll_affixes(rarity, is_weapon=False, is_boss=False)
+
+            field_updates: Dict[str, Any] = {}
+            sp_effect_slot = 0
+            for aff in affixes:
+                for field_name, delta in aff.field_modifiers.items():
+                    field_updates[field_name] = field_updates.get(field_name, 0) + delta
+
+                if aff.sp_effect_id and sp_effect_slot < 3:
+                    key = "residentSpEffectId" if sp_effect_slot == 0 else f"residentSpEffectId{sp_effect_slot + 1}"
+                    field_updates[key] = aff.sp_effect_id
+                    sp_effect_slot += 1
+
+            fmg_caption = self.build_caption_with_affixes(clean_desc, rarity, affixes)
+
+            for slot_offset, slot_name in [(0, "Helm"), (100, "Armor"), (200, "Gauntlets"), (300, "Greaves")]:
+                piece_id = base_param_id + slot_offset
+                piece_name = f"[{rarity.display_name}] {clean_set_name} ({slot_name})" if rarity != RarityTier.COMMON else f"{clean_set_name} ({slot_name})"
+
+                specs.append({
+                    "set_id": f"vanilla_protector_inject_{piece_id}",
+                    "equip_params": [{
+                        "param_table": "EquipParamProtector",
+                        "new_param_id": piece_id,
+                        "update_existing": True,
+                        "field_updates": dict(field_updates),
+                        "row_name": f"[Vanilla Infused] {clean_set_name} ({slot_name})"
+                    }],
+                    "fmg_texts": [{
+                        "item_id": piece_id,
+                        "is_weapon": False,
+                        "name": piece_name,
+                        "caption": fmg_caption,
+                        "info": f"Origin: Vanilla Elden Ring (Diablo Infused)"
+                    }],
+                    "loot_distribution": None
+                })
+
+        return specs
+
+    def generate_vanilla_base_distribution_specs(
+        self,
+        knowledge_base: Optional[Any] = None,
+        id_allocator: Optional[Any] = None,
+        variants_per_item: int = 3
+    ) -> List[Dict[str, Any]]:
+        """
+        Uses cataloged vanilla weapons and armor sets as base items to create
+        standalone procedural relics and distribute them across bosses, merchants, chests, and enemies.
+        """
+        kb = knowledge_base or self._knowledge_base
+        if not kb or not id_allocator:
+            return []
+
+        all_specs: List[Dict[str, Any]] = []
+
+        # 1. Vanilla weapons
+        weapons = kb.list_all_vanilla_weapons() if hasattr(kb, "list_all_vanilla_weapons") else getattr(kb, "_weapons", {})
+        for model_id, w_info in weapons.items():
+            base_clone_id = w_info.get("baseParamId")
+            if not base_clone_id:
+                continue
+
+            set_id = f"vanilla_base_weapon_{model_id}"
+            alloc = id_allocator.allocate(set_id)
+            clean_name = w_info.get("name", "Weapon")
+            clean_desc = w_info.get("description", "A classic weapon of the Lands Between.")
+
+            base_spec = {
+                "set_id": set_id,
+                "equip_params": [{
+                    "param_table": "EquipParamWeapon",
+                    "new_param_id": alloc.new_equip_param_id,
+                    "base_clone_id": base_clone_id,
+                    "target_model_id": int(model_id) if model_id.isdigit() else 0,
+                    "slot": "weapon",
+                    "slot_offset": 0,
+                    "row_name": f"[LootForge] {clean_name}",
+                    "field_updates": {
+                        "sortId": alloc.new_equip_param_id,
+                        "isDeposit": 1,
+                        "equipModelId": int(model_id) if model_id.isdigit() else 0
+                    }
+                }],
+                "fmg_texts": [{
+                    "item_id": alloc.new_equip_param_id,
+                    "vanilla_source_id": base_clone_id,
+                    "target_model_id": int(model_id) if model_id.isdigit() else 0,
+                    "slot": "weapon",
+                    "slot_offset": 0,
+                    "is_weapon": True,
+                    "name": f"[LootForge] {clean_name}",
+                    "caption": f"Standalone relic forged by LootForge from vanilla {clean_name}.\n\n{clean_desc}",
+                    "info": f"Origin: Vanilla {clean_name}"
+                }],
+                "loot_distribution": {
+                    "type": "enemy_drop",
+                    "lot_id": alloc.new_item_lot_id,
+                    "target_id": str(alloc.new_item_lot_id),
+                    "drop_rate_percent": 20.0,
+                    "awarded_items": [alloc.new_equip_param_id]
+                }
+            }
+
+            if variants_per_item > 1:
+                variants = self.generate_variants_for_spec(base_spec, variants_per_item=variants_per_item, knowledge_base=kb)
+                all_specs.extend(variants)
+            else:
+                all_specs.append(base_spec)
+
+        # 2. Vanilla protectors (armor sets)
+        protectors = kb.list_all_vanilla_protectors() if hasattr(kb, "list_all_vanilla_protectors") else getattr(kb, "_protectors", {})
+        for model_id, p_info in protectors.items():
+            base_clone_id = p_info.get("baseParamId")
+            if not base_clone_id:
+                continue
+
+            set_id = f"vanilla_base_armor_{model_id}"
+            alloc = id_allocator.allocate(set_id)
+            clean_set_name = p_info.get("name", "Armor Set")
+            clean_desc = p_info.get("description", "Authentic armor of the Lands Between.")
+
+            equip_params = []
+            fmg_texts = []
+            awarded_ids = []
+
+            for slot_offset, slot_name, slot_key, field_name in [
+                (0, "Helm", "head", "headEquipModelId"),
+                (100, "Armor", "body", "bodyEquipModelId"),
+                (200, "Gauntlets", "arms", "armEquipModelId"),
+                (300, "Greaves", "legs", "legEquipModelId")
+            ]:
+                item_id = alloc.new_equip_param_id + slot_offset
+                awarded_ids.append(item_id)
+                model_int = int(model_id) if model_id.isdigit() else 0
+
+                equip_params.append({
+                    "param_table": "EquipParamProtector",
+                    "new_param_id": item_id,
+                    "base_clone_id": base_clone_id + slot_offset,
+                    "target_model_id": model_int,
+                    "slot": slot_key,
+                    "slot_offset": slot_offset,
+                    "row_name": f"[LootForge] {clean_set_name} ({slot_name})",
+                    "field_updates": {
+                        "sortId": item_id,
+                        "isDeposit": 1,
+                        field_name: model_int,
+                        "equipModelId": model_int
+                    }
+                })
+
+                fmg_texts.append({
+                    "item_id": item_id,
+                    "vanilla_source_id": base_clone_id + slot_offset,
+                    "target_model_id": model_int,
+                    "slot": slot_key,
+                    "slot_offset": slot_offset,
+                    "is_weapon": False,
+                    "name": f"[LootForge] {clean_set_name} ({slot_name})",
+                    "caption": f"Standalone relic forged by LootForge from vanilla {clean_set_name}.\n\n{clean_desc}",
+                    "info": f"Origin: Vanilla {clean_set_name}"
+                })
+
+            base_spec = {
+                "set_id": set_id,
+                "equip_params": equip_params,
+                "fmg_texts": fmg_texts,
+                "loot_distribution": {
+                    "type": "enemy_drop",
+                    "lot_id": alloc.new_item_lot_id,
+                    "target_id": str(alloc.new_item_lot_id),
+                    "drop_rate_percent": 20.0,
+                    "awarded_items": awarded_ids
+                }
+            }
+
+            if variants_per_item > 1:
+                variants = self.generate_variants_for_spec(base_spec, variants_per_item=variants_per_item, knowledge_base=kb)
+                all_specs.extend(variants)
+            else:
+                all_specs.append(base_spec)
+
+        return all_specs

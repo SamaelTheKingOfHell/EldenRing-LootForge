@@ -108,9 +108,31 @@ namespace LootForge.RegTool
                     _rowMapByTable[tableName] = rowMap;
                 }
 
-                // If already present in table, skip duplicate
-                if (rowMap.ContainsKey(newParamId))
+                // If already present in table, check if update_existing is requested
+                if (rowMap.TryGetValue(newParamId, out var existingRow))
                 {
+                    bool updateExisting = ep.TryGetProperty("update_existing", out var ue) && ue.GetBoolean();
+                    if (updateExisting)
+                    {
+                        if (ep.TryGetProperty("field_updates", out var fieldsElUpdate) && fieldsElUpdate.ValueKind == JsonValueKind.Object)
+                        {
+                            foreach (var prop in fieldsElUpdate.EnumerateObject())
+                            {
+                                string fieldName = prop.Name;
+                                if (fieldName.EndsWith("ModelId", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    fieldName = "equipModelId";
+                                }
+
+                                var cell = existingRow.Cells.FirstOrDefault(c => string.Equals(c.Def.InternalName, fieldName, StringComparison.OrdinalIgnoreCase));
+                                if (cell != null)
+                                {
+                                    ParamHelper.SetCellValue(cell, prop.Value);
+                                }
+                            }
+                        }
+                        injectedEquipCount++;
+                    }
                     continue;
                 }
 

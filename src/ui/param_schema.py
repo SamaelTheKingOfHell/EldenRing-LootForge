@@ -136,6 +136,22 @@ def get_generator_param_descriptors() -> List[ParamDescriptor]:
             max_value=2147483647,
             step=1
         ),
+        ParamDescriptor(
+            key="diablo_inject_vanilla_stats",
+            label="Inject Stats into Vanilla Item Loots",
+            param_type=ParamType.BOOL,
+            purpose=ParamPurpose.DIABLO_ARPG,
+            description="Directly infuses Diablo stats, element scalings, SpEffect passives, and affix lore into vanilla base weapons and armors.",
+            default=False
+        ),
+        ParamDescriptor(
+            key="diablo_use_vanilla_base_items",
+            label="Use Vanilla Items as Base Items for Distribution",
+            param_type=ParamType.BOOL,
+            purpose=ParamPurpose.DIABLO_ARPG,
+            description="Uses vanilla weapons and armor sets as base items to generate standalone procedural relics and distribute them across bosses, merchants, chests, and enemy drops.",
+            default=False
+        ),
 
         # --- Group 3: Paths & Installation ---
         ParamDescriptor(
