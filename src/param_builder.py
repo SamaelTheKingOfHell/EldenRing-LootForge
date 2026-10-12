@@ -84,14 +84,6 @@ class ParamBuilder:
         # Determine slots present in the mod set
         slots_present = {part.slot for part in mod_set.parts}
 
-        # Determine gender restriction (only female-exclusive sets are restricted)
-        gender_res = getattr(mod_set, "gender_restriction", None)
-        gender_tag = ""
-        gender_caption = ""
-        if gender_res == "female":
-            gender_tag = "[Female Only] "
-            gender_caption = "[RESTRICTION: Female Only] Tailored exclusively for Type B (Female) bodies. Attempting to equip on Type A (Male) characters is unsupported.\n\n"
-
         for slot in slots_present:
             slot_offset = self.SLOT_ID_OFFSET.get(slot, 0)
             item_id = base_param_id + slot_offset
@@ -101,18 +93,18 @@ class ParamBuilder:
             multiplier, vanilla_offset = self.VANILLA_CLONE_OFFSETS.get(slot, (100, 0))
             base_clone_id = int(mod_set.target_model_id) * multiplier + vanilla_offset
 
-            # Item display name with marker tag (only female-exclusive gear gets restriction tag)
+            # Item display name with marker tag
             cleaned_title = _clean_mod_folder_name(mod_set.folder_or_archive_name)
-            item_display_name = f"{alloc.marker_tag} {gender_tag}{cleaned_title} ({slot_name})".strip()
+            item_display_name = f"{alloc.marker_tag} {cleaned_title} ({slot_name})".strip()
 
-            # Field updates for EquipParam
+            # Field updates for EquipParam (equipModelGender = 0: unisex for both Type A and Type B)
             field_updates: Dict[str, Any] = {
                 "sortId": item_id,
                 "isDeposit": 1,
             }
 
-            if not mod_set.is_weapon and gender_res == "female":
-                field_updates["equipModelGender"] = 2
+            if not mod_set.is_weapon:
+                field_updates["equipModelGender"] = 0
 
             model_field = self.SLOT_MODEL_FIELD.get(slot)
             if model_field:
@@ -139,7 +131,7 @@ class ParamBuilder:
                 "slot_offset": vanilla_offset,
                 "is_weapon": mod_set.is_weapon,
                 "name": item_display_name,
-                "caption": f"{gender_caption}Standalone relic forged by LootForge. Preserves authentic vanilla gear while offering unique drops.",
+                "caption": "Standalone relic forged by LootForge. Preserves authentic vanilla gear while offering unique drops.",
                 "info": f"Origin: {mod_set.folder_or_archive_name}"
             })
 

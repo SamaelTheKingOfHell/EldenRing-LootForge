@@ -97,3 +97,13 @@ This roadmap defines the implementation phases for the cross-platform Standalone
   - Uses cataloged vanilla weapons and armor sets as base items to create standalone procedural relics without requiring replacement mods.
   - Distributes variants organically across bosses, merchants, chests, and enemies.
 
+## Phase 10: Cross-Gender Mesh Mirroring & Unisex Armor Support
+- [x] **Automatic Cross-Gender Armor Mirroring (`src/parts_deployer.py` & `src/asset_renumberer.py`)**:
+  - Mirrors single-gender model files (`_m_` <-> `_f_`) across all armor slots (`am_`, `bd_`, `hd_`, `lg_`), ensuring both Type A (Male) and Type B (Female) body types render custom armor without invisible limbs or floating heads.
+  - Preserves authentic meshes when mod author supplies both variants without overwriting.
+  - Seamlessly tracks mirrored files in manifest and deployment ledgers for clean 1-click rollback.
+- [x] **Universal Unisex Parameter Enforcement (`src/param_builder.py` & `tools/RegTool/EquipInjector.cs`)**:
+  - Explicitly sets `equipModelGender = 0` on all forged and cloned `EquipParamProtector` rows, eliminating equip lockouts.
+  - Cleansed title and lore descriptions of gender-restriction tags.
+
+

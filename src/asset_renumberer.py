@@ -6,8 +6,9 @@ standalone IDs, ensuring original vanilla game assets remain untouched.
 """
 
 import shutil
+import re
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 from src.models import DetectedModSet
 from src.logger import system_logger
 
@@ -37,6 +38,7 @@ class AssetRenumberer:
         """
         Copies each part file of the mod set to the output parts directory,
         renaming the model ID token to the allocated standalone ID.
+        Ensures cross-gender compatibility by mirroring single-gender meshes.
         """
         if not mod_set.allocation:
             raise ValueError(f"ModSet '{mod_set.set_id}' has no allocated standalone IDs.")
@@ -44,6 +46,7 @@ class AssetRenumberer:
         new_model_id = mod_set.allocation.new_model_id
         input_root = Path(input_base)
         staged_files: List[str] = []
+        staged_by_name: Dict[str, Path] = {}
 
         for part in mod_set.parts:
             source_file = input_root / part.relative_path
@@ -59,11 +62,37 @@ class AssetRenumberer:
 
             shutil.copy2(source_file, dest_file)
             staged_files.append(str(dest_file.relative_to(self._output_dir)))
+            staged_by_name[new_name.lower()] = dest_file
 
             system_logger.debug(
                 f"Renumbered and staged: {old_name} -> {new_name}",
                 source="AssetRenumberer"
             )
+
+        # Cross-mirror armor parts to ensure unisex body type compatibility (both Type A and Type B)
+        ARMOR_FILE_RE = re.compile(r"^(am|bd|hd|lg)_([mf])_(.+)$", re.IGNORECASE)
+        for staged_name, staged_path in list(staged_by_name.items()):
+            match = ARMOR_FILE_RE.match(staged_path.name)
+            if not match:
+                continue
+            prefix, gender, rest = match.groups()
+            opposing_gender = "f" if gender.lower() == "m" else "m"
+            opposing_name = f"{prefix.lower()}_{opposing_gender}_{rest}"
+            if opposing_name.lower() not in staged_by_name:
+                opposing_dest = self._parts_dir / opposing_name
+                try:
+                    shutil.copy2(staged_path, opposing_dest)
+                    staged_files.append(str(opposing_dest.relative_to(self._output_dir)))
+                    staged_by_name[opposing_name.lower()] = opposing_dest
+                    system_logger.info(
+                        f"Cross-mirrored staged armor asset for unisex body compatibility: {staged_path.name} -> {opposing_name}",
+                        source="AssetRenumberer"
+                    )
+                except Exception as ex:
+                    system_logger.error(
+                        f"Failed to cross-mirror staged asset {opposing_name}: {ex}",
+                        source="AssetRenumberer"
+                    )
 
         system_logger.info(
             f"Staged {len(staged_files)} part file(s) for '{mod_set.set_id}' as Model ID {new_model_id}",

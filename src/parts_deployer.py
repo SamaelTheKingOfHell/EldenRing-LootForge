@@ -7,8 +7,9 @@ Adheres to [CS-MODULAR] and [CS-GRANULARITY].
 """
 
 import shutil
+import re
 from pathlib import Path
-from typing import List
+from typing import List, Dict
 from src.models import DetectedModSet
 from src.logger import system_logger
 
@@ -47,10 +48,13 @@ class PartsDeployer:
 
         self.last_deployed_files = []
         deployed = 0
+        ARMOR_FILE_RE = re.compile(r"^(am|bd|hd|lg)_([mf])_(.+)$", re.IGNORECASE)
+
         for ms in mod_sets:
             if not getattr(ms, "allocation", None) or not getattr(ms, "is_enabled", True):
                 continue
 
+            set_deployed_files: Dict[str, Path] = {}
             for part in ms.parts:
                 source = input_base_dir / ms.folder_or_archive_name / part.relative_path
                 if not source.exists():
@@ -73,6 +77,7 @@ class PartsDeployer:
                     shutil.copy2(str(source), str(target))
                     deployed += 1
                     self.last_deployed_files.append(str(target))
+                    set_deployed_files[target_name.lower()] = target
                     system_logger.debug(
                         f"Deployed: {part.file_name} -> {target_name}",
                         source="PartsDeployer"
@@ -82,6 +87,31 @@ class PartsDeployer:
                         f"Failed to deploy part {part.file_name}: {ex}",
                         source="PartsDeployer"
                     )
+
+            # Cross-mirror armor parts to ensure unisex body type compatibility (both Type A and Type B)
+            for target_name_lower, target_path in list(set_deployed_files.items()):
+                m = ARMOR_FILE_RE.match(target_path.name)
+                if not m:
+                    continue
+                prefix, gender, rest = m.groups()
+                opposing_gender = "f" if gender.lower() == "m" else "m"
+                opposing_target_name = f"{prefix.lower()}_{opposing_gender}_{rest}"
+                if opposing_target_name.lower() not in set_deployed_files:
+                    opposing_target = parts_output / opposing_target_name
+                    try:
+                        shutil.copy2(str(target_path), str(opposing_target))
+                        deployed += 1
+                        self.last_deployed_files.append(str(opposing_target))
+                        set_deployed_files[opposing_target_name.lower()] = opposing_target
+                        system_logger.info(
+                            f"Cross-mirrored armor part for body type compatibility: {target_path.name} -> {opposing_target_name}",
+                            source="PartsDeployer"
+                        )
+                    except Exception as ex:
+                        system_logger.error(
+                            f"Failed to cross-mirror part {opposing_target_name}: {ex}",
+                            source="PartsDeployer"
+                        )
 
         system_logger.info(
             f"Deployed {deployed} parts file(s) to {parts_output}",

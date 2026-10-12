@@ -251,6 +251,9 @@ namespace LootForge.RegTool
                 // Ensure icon is never 0 or placeholder 3141/3142 (inherit authentic icons from baseRow)
                 if (isProtector)
                 {
+                    // Ensure all standalone forged armor pieces are unisex (equipModelGender = 0: usable by both Type A and Type B)
+                    ParamHelper.SetCellIfExists(newRow, "equipModelGender", (byte)0);
+
                     int iconM = ParamHelper.GetCellInt(newRow, "iconIdM");
                     int iconF = ParamHelper.GetCellInt(newRow, "iconIdF");
                     int baseIconM = ParamHelper.GetCellInt(baseRow, "iconIdM");

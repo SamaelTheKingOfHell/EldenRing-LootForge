@@ -14,14 +14,14 @@ This directory contains the core Python engine implementation for LootForge, org
 | `id_allocator.py` | `IdAllocator` | Safe namespace allocation for standalone model IDs and param IDs. |
 | `backup_manager.py` | `BackupManager` | Pre-write timestamped snapshots of `regulation.bin` and 1-click restore. |
 | `scanner.py` | `ModScanner` | Discovers replacement partsbnd files, parses IDs, and groups sets. |
-| `asset_renumberer.py` | `AssetRenumberer` | Stages and renumbers `.partsbnd.dcx` files to standalone IDs without overwriting originals. |
-| `param_builder.py` | `ParamBuilder` | Builds patch records for `EquipParam`, `ItemLotParam`, `ShopLineupParam`, and FMG text. |
+| `asset_renumberer.py` | `AssetRenumberer` | Stages and renumbers `.partsbnd.dcx` files to standalone IDs with cross-gender mesh mirroring. |
+| `param_builder.py` | `ParamBuilder` | Builds patch records for `EquipParam`, `ItemLotParam`, `ShopLineupParam`, and FMG text with unisex protector support. |
 | `manifest_store.py` | `ManifestStore` | Ledger tracking injected items for auditability and clean 1-click rollbacks. |
 | `loot_distributor.py` | `LootDistributor` | Calculates drop rates, set invariance, boss rotation, and color statuses. |
 | `diablo_affixes.py` | Diablo Affix Engine | Rarity tiers, affix definitions, stat deltas, and Elden Ring SpEffect passives. |
 | `diablo_generator.py` | `DiabloLootGenerator` | Procedural multi-tier variant generator, affix roll engine, and dynamic lore injector. |
 | `regulation_manager.py` | `RegulationManager` | Non-destructive regulation.bin decryptor, param patcher, and AES-256 encryptor. |
-| `parts_deployer.py` | `PartsDeployer` | Standalone .partsbnd.dcx model deployment and renaming service. |
+| `parts_deployer.py` | `PartsDeployer` | Standalone .partsbnd.dcx model deployment and cross-gender mesh mirroring service. |
 | `ui/` | UI Components | Themed styles (`theme.py`), modular parameter schema, widget factory, and modals. |
 | `qt_app.py` | `LootForgeMainWindow` | Full Qt desktop GUI with schema-driven settings, Diablo ARPG card, and loot modal launcher. |
 | `server.py` | `LootForgeServer` | Lightweight cross-platform local HTTP server serving UI and REST APIs. |
