@@ -1,0 +1,202 @@
+"""
+Vanilla gear stat and affix injector for LootForge.
+Generates in-place procedural stat modifications and FMG text for vanilla items.
+Complies with [CS-MODULAR] and [CS-GRANULARITY] (<= 300 lines).
+"""
+
+from typing import List, Dict, Any, Optional
+from src.diablo_affixes import RarityTier, WeaponSkill
+
+
+class VanillaStatInjector:
+    """
+    Generates procedural Diablo-style stat and affix infusions directly for vanilla items.
+    """
+
+    @staticmethod
+    def generate_injections(generator: Any, knowledge_base: Optional[Any] = None) -> List[Dict[str, Any]]:
+        kb = knowledge_base or generator._knowledge_base
+        if not kb:
+            return []
+
+        specs: List[Dict[str, Any]] = []
+
+        # 1. Vanilla weapons
+        weapons = kb.list_all_vanilla_weapons() if hasattr(kb, "list_all_vanilla_weapons") else getattr(kb, "_weapons", {})
+        for model_id, w_info in weapons.items():
+            base_param_id = w_info.get("baseParamId")
+            if not base_param_id:
+                continue
+
+            rarity = generator.roll_rarity(is_boss=False)
+            affixes = generator.roll_affixes(rarity, is_weapon=True, is_boss=False)
+
+            field_updates: Dict[str, Any] = {}
+            rolled_skill: Optional[WeaponSkill] = None
+            w_tier = kb.get_progression_tier(w_info) if (kb and hasattr(kb, "get_progression_tier")) else None
+            if generator.randomize_weapon_skills:
+                rolled_skill = generator.roll_weapon_skill(tier=w_tier)
+                field_updates["swordArtsParamId"] = rolled_skill.id
+
+            generator.apply_affixes_to_equipment(field_updates, affixes, is_weapon=True)
+
+            pricing = generator.pricing_engine.calculate_item_prices(
+                slot="weapon",
+                tier=w_tier or 1,
+                rarity=rarity,
+                affixes=affixes,
+                weapon_skill=rolled_skill,
+                is_weapon=True,
+                is_boss=False
+            )
+            field_updates["sellValue"] = pricing["sell_price"]
+            field_updates["saleValue"] = pricing["buy_price"]
+
+            clean_name = w_info.get("name", "Weapon")
+            clean_desc = w_info.get("description", "")
+            fmg_name = f"[{rarity.display_name}] {clean_name}" if rarity != RarityTier.COMMON else clean_name
+            fmg_caption = generator.build_caption_with_affixes(clean_desc, rarity, affixes, skill=rolled_skill, pricing=pricing)
+
+            specs.append({
+                "set_id": f"vanilla_weapon_inject_{base_param_id}",
+                "equip_params": [{
+                    "param_table": "EquipParamWeapon",
+                    "new_param_id": base_param_id,
+                    "update_existing": True,
+                    "field_updates": field_updates,
+                    "row_name": f"[Vanilla Infused] {clean_name}"
+                }],
+                "fmg_texts": [{
+                    "item_id": base_param_id,
+                    "is_weapon": True,
+                    "name": fmg_name,
+                    "caption": fmg_caption,
+                    "info": "Origin: Vanilla Elden Ring (Diablo Infused)"
+                }],
+                "loot_distribution": None
+            })
+
+        # 2. Vanilla protectors (armor sets: head, body, arms, legs)
+        protectors = kb.list_all_vanilla_protectors() if hasattr(kb, "list_all_vanilla_protectors") else getattr(kb, "_protectors", {})
+        for model_id, p_info in protectors.items():
+            base_param_id = p_info.get("baseParamId")
+            if not base_param_id:
+                continue
+
+            clean_set_name = p_info.get("name", "Armor Set")
+            clean_desc = p_info.get("description", "")
+            p_tier = kb.get_progression_tier(p_info) if (kb and hasattr(kb, "get_progression_tier")) else None
+
+            rarity = generator.roll_rarity(is_boss=False)
+            affixes = generator.roll_affixes(rarity, is_weapon=False, is_boss=False)
+
+            field_updates: Dict[str, Any] = {}
+            generator.apply_affixes_to_equipment(field_updates, affixes, is_weapon=False)
+
+            explicit_pieces = p_info.get("pieces")
+            if explicit_pieces and isinstance(explicit_pieces, dict):
+                pieces_to_process = [(pid, sname) for sname, pid in explicit_pieces.items()]
+            elif base_param_id % 10000 == 0:
+                pieces_to_process = [
+                    (base_param_id + slot_offset, slot_name)
+                    for slot_offset, slot_name in [(0, "Helm"), (100, "Armor"), (200, "Gauntlets"), (300, "Greaves")]
+                ]
+            else:
+                pieces_to_process = [(base_param_id, "Armor")]
+
+            for piece_id, slot_name in pieces_to_process:
+                slot_key = {
+                    "Helm": "head",
+                    "Armor": "body",
+                    "Gauntlets": "arms",
+                    "Greaves": "legs"
+                }.get(slot_name, slot_name.lower())
+
+                piece_pricing = generator.pricing_engine.calculate_item_prices(
+                    slot=slot_key,
+                    tier=p_tier or 1,
+                    rarity=rarity,
+                    affixes=affixes,
+                    is_weapon=False,
+                    is_boss=False
+                )
+                piece_field_updates = dict(field_updates)
+                piece_field_updates["sellValue"] = piece_pricing["sell_price"]
+                piece_field_updates["saleValue"] = piece_pricing["buy_price"]
+                piece_field_updates["basicPrice"] = piece_pricing["buy_price"]
+
+                piece_fmg_caption = generator.build_caption_with_affixes(clean_desc, rarity, affixes, pricing=piece_pricing)
+                piece_name = f"[{rarity.display_name}] {clean_set_name} ({slot_name})" if rarity != RarityTier.COMMON else f"{clean_set_name} ({slot_name})"
+
+                specs.append({
+                    "set_id": f"vanilla_protector_inject_{piece_id}",
+                    "equip_params": [{
+                        "param_table": "EquipParamProtector",
+                        "new_param_id": piece_id,
+                        "update_existing": True,
+                        "field_updates": piece_field_updates,
+                        "row_name": f"[Vanilla Infused] {clean_set_name} ({slot_name})"
+                    }],
+                    "fmg_texts": [{
+                        "item_id": piece_id,
+                        "is_weapon": False,
+                        "name": piece_name,
+                        "caption": piece_fmg_caption,
+                        "info": "Origin: Vanilla Elden Ring (Diablo Infused)"
+                    }],
+                    "loot_distribution": None
+                })
+
+        # 3. Vanilla accessories (talismans)
+        accessories = kb.list_all_vanilla_accessories() if hasattr(kb, "list_all_vanilla_accessories") else getattr(kb, "_accessories", {})
+        for model_id, a_info in accessories.items():
+            base_param_id = a_info.get("baseParamId")
+            if not base_param_id:
+                continue
+
+            clean_name = a_info.get("name", "Talisman")
+            clean_desc = a_info.get("description", "")
+            a_tier = kb.get_progression_tier(a_info) if (kb and hasattr(kb, "get_progression_tier")) else None
+
+            rarity = generator.roll_rarity(is_boss=False)
+            affixes = generator.roll_affixes(rarity, is_weapon=False, is_accessory=True, is_boss=False)
+
+            field_updates: Dict[str, Any] = {}
+            generator.apply_affixes_to_equipment(field_updates, affixes, is_weapon=False, is_accessory=True)
+
+            pricing = generator.pricing_engine.calculate_item_prices(
+                slot="accessory",
+                tier=a_tier or 1,
+                rarity=rarity,
+                affixes=affixes,
+                is_accessory=True,
+                is_boss=False
+            )
+            field_updates["sellValue"] = pricing["sell_price"]
+            field_updates["saleValue"] = pricing["buy_price"]
+            field_updates["basicPrice"] = pricing["buy_price"]
+
+            fmg_name = f"[{rarity.display_name}] {clean_name}" if rarity != RarityTier.COMMON else clean_name
+            fmg_caption = generator.build_caption_with_affixes(clean_desc, rarity, affixes, pricing=pricing)
+
+            specs.append({
+                "set_id": f"vanilla_accessory_inject_{base_param_id}",
+                "equip_params": [{
+                    "param_table": "EquipParamAccessory",
+                    "new_param_id": base_param_id,
+                    "update_existing": True,
+                    "field_updates": field_updates,
+                    "row_name": f"[Vanilla Infused] {clean_name}"
+                }],
+                "fmg_texts": [{
+                    "item_id": base_param_id,
+                    "is_weapon": False,
+                    "is_accessory": True,
+                    "name": fmg_name,
+                    "caption": fmg_caption,
+                    "info": "Origin: Vanilla Elden Ring (Diablo Infused)"
+                }],
+                "loot_distribution": None
+            })
+
+        return specs

@@ -131,7 +131,10 @@ class ParamBuilder:
                             base_clone_id = prot["baseParamId"] + vanilla_offset
 
             if base_clone_id is None:
-                base_clone_id = int(mod_set.target_model_id) * multiplier + vanilla_offset
+                if mod_set.target_model_id.isdigit():
+                    base_clone_id = int(mod_set.target_model_id) * multiplier + vanilla_offset
+                else:
+                    base_clone_id = 0
 
             # Item display name with marker tag
             cleaned_title = _clean_mod_folder_name(mod_set.folder_or_archive_name)

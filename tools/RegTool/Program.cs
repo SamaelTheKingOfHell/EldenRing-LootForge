@@ -58,6 +58,8 @@ namespace LootForge.RegTool
                         return UniversalSweeperService.ExecuteSweep(options);
                     case "extract-skills-movesets":
                         return SkillMovesetService.ExecuteExtractSkillsMovesets(options);
+                    case "diff-reg":
+                        return RegulationDiffService.ExecuteDiffReg(options);
                     default:
                         Console.Error.WriteLine($"Unknown command: '{command}'");
                         PrintUsage();

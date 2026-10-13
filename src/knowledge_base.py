@@ -205,15 +205,15 @@ class VanillaKnowledgeBase:
         )
 
     def list_all_vanilla_protectors(self) -> Dict[str, Dict[str, Any]]:
-        """Returns all cataloged vanilla armor sets."""
+        """Returns cataloged curated vanilla armor sets for loot distribution pool."""
         return dict(self._protectors) if self._protectors else dict(self._discovered_protectors)
 
     def list_all_vanilla_weapons(self) -> Dict[str, Dict[str, Any]]:
-        """Returns all cataloged vanilla weapons."""
+        """Returns cataloged curated vanilla weapons for loot distribution pool."""
         return dict(self._weapons) if self._weapons else dict(self._discovered_weapons)
 
     def list_all_vanilla_accessories(self, tier: Optional[ProgressionTier] = None) -> Dict[str, Dict[str, Any]]:
-        """Returns all cataloged vanilla accessories/talismans, optionally filtered by tier."""
+        """Returns cataloged curated vanilla accessories for loot distribution pool."""
         accs = self._accessories if self._accessories else self._discovered_accessories
         if tier is None:
             return dict(accs)
