@@ -187,6 +187,64 @@ class TestRegulationManager(unittest.TestCase):
         self.assertTrue(target_reg.exists())
         self.assertGreater(target_reg.stat().st_size, 1000000)
 
+    def test_patch_with_custom_skills_behaviors_and_attacks(self):
+        """Verify that RegTool successfully patches custom SwordArtsParam, BehaviorParam_PC, and AtkParam_Pc."""
+        if not self.real_reg or not self.real_reg.exists():
+            self.skipTest("No real backup regulation.bin available in backups/ for roundtrip test.")
+
+        target_reg = Path(self.test_dir) / "mod_skills" / "regulation.bin"
+
+        patch_spec = {
+            "equip_params": [
+                {
+                    "param_table": "EquipParamWeapon",
+                    "new_param_id": 9080000,
+                    "base_clone_id": 11000000,
+                    "target_model_id": 556,
+                    "row_name": "[LootForge] Kuro Hasu",
+                    "field_updates": {
+                        "swordArtsParamId": 22080,
+                        "behaviorVariationId": 900
+                    }
+                }
+            ],
+            "loot_distribution": {
+                "route_type": "shop_lineup",
+                "target_id": "remembrance_malenia",
+                "chance_or_cost": 50000,
+                "award_items": [{"id": 9080000, "name": "Kuro Hasu", "chance": 100.0}]
+            },
+            "custom_skills": [
+                {
+                    "skill_id": 22080,
+                    "name": "Moonglow Slash",
+                    "fields": {"swordArtsType": 10, "iconId": 21062}
+                }
+            ],
+            "custom_behaviors": [
+                {
+                    "id": 900010,
+                    "fields": {"variationId": 900, "behaviorJudgeId": 10, "refType": 1, "refId": 90010}
+                }
+            ],
+            "custom_attacks": [
+                {
+                    "id": 90010,
+                    "fields": {"atkPhys": 150}
+                }
+            ]
+        }
+
+        result = self.manager.execute_patch(
+            specs=[patch_spec],
+            source_reg=self.real_reg,
+            target_reg=target_reg
+        )
+
+        self.assertTrue(result["success"])
+        self.assertTrue(target_reg.exists())
+        self.assertGreater(target_reg.stat().st_size, 1000000)
+
 
 if __name__ == "__main__":
     unittest.main()

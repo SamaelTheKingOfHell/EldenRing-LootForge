@@ -77,7 +77,15 @@ namespace LootForge.RegTool
                     string xmlFile = Path.Combine(defsDir, $"{defName}.xml");
                     if (!File.Exists(xmlFile))
                     {
-                        throw new FileNotFoundException($"Paramdef XML not found: {xmlFile}");
+                        string? resolved = ResolveDefFile(defsDir, defName);
+                        if (resolved != null && File.Exists(resolved))
+                        {
+                            xmlFile = resolved;
+                        }
+                        else
+                        {
+                            throw new FileNotFoundException($"Paramdef XML not found: {xmlFile}");
+                        }
                     }
                     def = PARAMDEF.XmlDeserialize(xmlFile, false, false);
                     paramdefCache[defName] = def;
@@ -235,6 +243,56 @@ namespace LootForge.RegTool
             Console.WriteLine($" - Injected FMG text entries:  {injectedFmgCount}");
             Console.WriteLine($" - Output file size: {new FileInfo(outputPath).Length} bytes");
             return 0;
+        }
+
+        private static readonly Dictionary<string, string> ParamdefAliases = new(StringComparer.OrdinalIgnoreCase)
+        {
+            { "AtkParam_Pc", "AtkParam" },
+            { "AtkParam_Npc", "AtkParam" },
+            { "BehaviorParam_PC", "BehaviorParam" },
+            { "ItemLotParam_enemy", "ItemLotParam" },
+            { "ItemLotParam_map", "ItemLotParam" },
+            { "SpEffectParam", "SpEffect" },
+            { "SpEffectVfxParam", "SpEffectVfx" },
+        };
+
+        internal static string? ResolveDefFile(string defsDir, string defName)
+        {
+            if (ParamdefAliases.TryGetValue(defName, out var alias))
+            {
+                string path = Path.Combine(defsDir, $"{alias}.xml");
+                if (File.Exists(path)) return path;
+            }
+
+            foreach (var suffix in new[] { "_Pc", "_PC", "_enemy", "_map" })
+            {
+                if (defName.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+                {
+                    string candidate = defName.Substring(0, defName.Length - suffix.Length);
+                    string path = Path.Combine(defsDir, $"{candidate}.xml");
+                    if (File.Exists(path)) return path;
+                }
+            }
+
+            if (defName.EndsWith("Param", StringComparison.OrdinalIgnoreCase) && defName.Length > 5)
+            {
+                string candidate = defName.Substring(0, defName.Length - 5);
+                string path = Path.Combine(defsDir, $"{candidate}.xml");
+                if (File.Exists(path)) return path;
+            }
+
+            try
+            {
+                if (Directory.Exists(defsDir))
+                {
+                    var match = Directory.EnumerateFiles(defsDir, "*.xml", SearchOption.TopDirectoryOnly)
+                        .FirstOrDefault(f => Path.GetFileNameWithoutExtension(f).Equals(defName, StringComparison.OrdinalIgnoreCase));
+                    if (match != null) return match;
+                }
+            }
+            catch { }
+
+            return null;
         }
     }
 }

@@ -148,7 +148,7 @@ namespace LootForge.RegTool
             // 5. Purge LootForge rows in SpEffectParam
             try
             {
-                var (spEffectParam, _) = getOrLoadParam("SpEffectParam", "SpEffectParam");
+                var (spEffectParam, _) = getOrLoadParam("SpEffectParam", "SpEffect");
                 spEffectParam.Rows.RemoveAll(r =>
                     (r.ID >= 9000000 && r.ID < 10000000) ||
                     (r.Name != null && r.Name.Contains("[LootForge]")));

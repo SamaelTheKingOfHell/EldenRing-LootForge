@@ -307,7 +307,7 @@ namespace LootForge.RegTool
             // 3. Inject AtkParam_Pc
             if (customAttacksEl.ValueKind == JsonValueKind.Array)
             {
-                var (atkParam, _) = getOrLoadParam("AtkParam_Pc", "AtkParam_Pc");
+                var (atkParam, _) = getOrLoadParam("AtkParam_Pc", "AtkParam");
                 foreach (var aEl in customAttacksEl.EnumerateArray())
                 {
                     int atkId = aEl.GetProperty("id").GetInt32();
@@ -359,7 +359,7 @@ namespace LootForge.RegTool
 
             try
             {
-                var (atkParam, _) = getOrLoadParam("AtkParam_Pc", "AtkParam_Pc");
+                var (atkParam, _) = getOrLoadParam("AtkParam_Pc", "AtkParam");
                 atkParam.Rows.RemoveAll(r => (r.Name != null && r.Name.Contains("[LootForge]")) || (r.ID >= 9000000 && r.ID < 9100000));
             }
             catch { }

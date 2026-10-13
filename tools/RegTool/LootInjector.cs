@@ -422,7 +422,7 @@ namespace LootForge.RegTool
             Dictionary<int, bool> itemIdToIsAccessory,
             ref int injectedLootCount)
         {
-            var (itemLotParam, _) = getOrLoadParam("ItemLotParam_enemy", "ItemLotParam_enemy");
+            var (itemLotParam, _) = getOrLoadParam("ItemLotParam_enemy", "ItemLotParam");
             int[] fallbackLots = new[] { 301000000, 380000000, 431100000, 430000000 };
             PARAM.Row? targetRow = null;
             foreach (int lotId in fallbackLots)
