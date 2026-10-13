@@ -62,7 +62,10 @@ class ManifestStore:
                     target_vanilla_name=item["target_vanilla_name"],
                     loot_route=item["loot_route"],
                     loot_target_name=item["loot_target_name"],
-                    staged_files=item.get("staged_files", [])
+                    staged_files=item.get("staged_files", []),
+                    custom_skill_name=item.get("custom_skill_name"),
+                    custom_skill_id=item.get("custom_skill_id"),
+                    has_custom_moveset=item.get("has_custom_moveset", False)
                 )
                 self._records[record.set_id] = record
 
@@ -90,7 +93,10 @@ class ManifestStore:
                         "target_vanilla_name": r.target_vanilla_name,
                         "loot_route": r.loot_route,
                         "loot_target_name": r.loot_target_name,
-                        "staged_files": r.staged_files
+                        "staged_files": r.staged_files,
+                        "custom_skill_name": r.custom_skill_name,
+                        "custom_skill_id": r.custom_skill_id,
+                        "has_custom_moveset": r.has_custom_moveset
                     }
                     for r in self._records.values()
                 ]
@@ -127,6 +133,16 @@ class ManifestStore:
         if not mod_set.allocation or not mod_set.loot_target:
             raise ValueError(f"Cannot record set '{mod_set.set_id}' without allocation and loot target.")
 
+        custom_skill_name = None
+        custom_skill_id = None
+        has_custom_moveset = False
+        if getattr(mod_set, "import_custom_moveset", True) and mod_set.skill_moveset:
+            sm = mod_set.skill_moveset
+            if sm.has_custom_skill and sm.skill_name:
+                custom_skill_name = sm.skill_name
+                custom_skill_id = sm.skill_id
+            has_custom_moveset = sm.has_custom_moveset
+
         rec = ManifestRecord(
             set_id=mod_set.set_id,
             created_timestamp=time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -136,7 +152,10 @@ class ManifestStore:
             target_vanilla_name=mod_set.target_vanilla_name,
             loot_route=mod_set.loot_target.route_type.value,
             loot_target_name=mod_set.loot_target.display_name,
-            staged_files=staged_files
+            staged_files=staged_files,
+            custom_skill_name=custom_skill_name,
+            custom_skill_id=custom_skill_id,
+            has_custom_moveset=has_custom_moveset
         )
         self._records[mod_set.set_id] = rec
         self.save()

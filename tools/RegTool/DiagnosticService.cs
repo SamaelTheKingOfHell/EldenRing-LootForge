@@ -136,7 +136,9 @@ namespace LootForge.RegTool
                 var file = bnd.Files.FirstOrDefault(f => f.Name.EndsWith($"{tableName}.param", StringComparison.OrdinalIgnoreCase));
                 if (file == null) return;
                 var param = PARAM.Read(file.Bytes);
-                string defBaseName = tableName.StartsWith("ItemLotParam", StringComparison.OrdinalIgnoreCase) ? "ItemLotParam" : tableName;
+                string defBaseName = tableName.StartsWith("ItemLotParam", StringComparison.OrdinalIgnoreCase) ? "ItemLotParam"
+                    : tableName.StartsWith("BehaviorParam", StringComparison.OrdinalIgnoreCase) ? "BehaviorParam"
+                    : tableName;
                 string xmlFile = Path.Combine(defsDir, $"{defBaseName}.xml");
                 if (File.Exists(xmlFile))
                 {
@@ -206,12 +208,19 @@ namespace LootForge.RegTool
                 }
                 else if (tableName == "EquipParamWeapon")
                 {
-                    var interesting = param.Rows.Where(r => r.ID >= 9000000 || (r.Name != null && r.Name.Contains("LootForge"))).ToList();
-                    Console.WriteLine($"Found {interesting.Count} matching rows in EquipParamWeapon:");
-                    foreach (var r in interesting)
+                    var interesting = param.Rows.Where(r => r.ID == 220570000 || r.ID == 221800000 || r.ID == 220410000).ToList();
+                    Console.WriteLine($"Found {interesting.Count} matching custom weapons in EquipParamWeapon:");
+                    foreach (var r in interesting.Take(15))
                     {
                         int icon = ParamHelper.GetCellInt(r, "iconId");
-                        Console.WriteLine($"  ID={r.ID} Name='{r.Name}' icon={icon}");
+                        int model = ParamHelper.GetCellInt(r, "equipModelId");
+                        int skill = ParamHelper.GetCellInt(r, "swordArtsParamId");
+                        int behVar = ParamHelper.GetCellInt(r, "behaviorVariationId");
+                        int wepMot = ParamHelper.GetCellInt(r, "wepmotionCategory");
+                        int mot1h = ParamHelper.GetCellInt(r, "wepmotionOneHandId");
+                        int mot2h = ParamHelper.GetCellInt(r, "wepmotionBothHandId");
+                        int spAtk = ParamHelper.GetCellInt(r, "spAtkCategory");
+                        Console.WriteLine($"  ID={r.ID} Name='{r.Name}' model={model} icon={icon} skill={skill} behVar={behVar} motCat={wepMot} mot1h={mot1h} mot2h={mot2h} spAtk={spAtk}");
                     }
                 }
                 else if (tableName == "ItemLotParam_enemy")
@@ -249,11 +258,37 @@ namespace LootForge.RegTool
                         Console.WriteLine($"  ID={r.ID} Name='{r.Name}' itemLotId_enemy={lot}");
                     }
                 }
+                else if (tableName == "SwordArtsParam")
+                {
+                    var customSkills = param.Rows.Where(r => r.ID == 4110 || r.ID >= 1000).ToList();
+                    Console.WriteLine($"Found {customSkills.Count} interesting rows in SwordArtsParam:");
+                    foreach (var r in customSkills)
+                    {
+                        int type = ParamHelper.GetCellInt(r, "swordArtsType");
+                        int icon = ParamHelper.GetCellInt(r, "iconId");
+                        Console.WriteLine($"  ID={r.ID} Name='{r.Name}' type={type} icon={icon}");
+                    }
+                }
+                else if (tableName == "BehaviorParam_PC")
+                {
+                    var customBeh = param.Rows.Where(r => r.ID >= 100000).ToList();
+                    Console.WriteLine($"Found {customBeh.Count} high-ID rows in BehaviorParam_PC:");
+                    foreach (var r in customBeh.Take(10))
+                    {
+                        int varId = ParamHelper.GetCellInt(r, "variationId");
+                        int behId = ParamHelper.GetCellInt(r, "behaviorId");
+                        int refType = ParamHelper.GetCellInt(r, "refType");
+                        int refId = ParamHelper.GetCellInt(r, "refId");
+                        Console.WriteLine($"  ID={r.ID} Name='{r.Name}' varId={varId} behId={behId} refType={refType} refId={refId}");
+                    }
+                }
             }
 
             InspectTable("ShopLineupParam");
             InspectTable("EquipParamProtector");
             InspectTable("EquipParamWeapon");
+            InspectTable("SwordArtsParam");
+            InspectTable("BehaviorParam_PC");
             InspectTable("ItemLotParam_enemy");
             InspectTable("NpcParam");
             return 0;

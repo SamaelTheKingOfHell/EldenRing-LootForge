@@ -44,6 +44,11 @@ class TestUIModularSchema(unittest.TestCase):
         self.assertIn("global_multiplier_percent", keys)
         self.assertEqual(keys["global_multiplier_percent"].param_type, ParamType.FLOAT)
 
+        self.assertIn("import_custom_skills_movesets", keys)
+        self.assertEqual(keys["import_custom_skills_movesets"].param_type, ParamType.BOOL)
+        self.assertEqual(keys["import_custom_skills_movesets"].purpose, ParamPurpose.DROP_STYLE)
+        self.assertTrue(keys["import_custom_skills_movesets"].default)
+
         # Diablo Procedural ARPG Generator
         self.assertIn("diablo_loot_enabled", keys)
         self.assertEqual(keys["diablo_loot_enabled"].param_type, ParamType.BOOL)
@@ -86,6 +91,12 @@ class TestUIModularSchema(unittest.TestCase):
         self.assertIn("addition_type", drop_ctrls)
         self.assertIn("anti_dup", drop_ctrls)
         self.assertIn("global_multiplier_percent", drop_ctrls)
+        self.assertIn("import_custom_skills_movesets", drop_ctrls)
+
+        # Toggle custom skills movesets checkbox
+        cb_skills = drop_ctrls["import_custom_skills_movesets"]
+        cb_skills.setChecked(False)
+        self.assertFalse(changes.get("import_custom_skills_movesets"))
 
         # Test Diablo Card
         diablo_card, diablo_ctrls = ParamWidgetFactory.build_diablo_card(

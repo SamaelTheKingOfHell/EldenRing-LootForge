@@ -19,5 +19,6 @@ Adheres to `[CS-MODULAR]`, `[CS-GRANULARITY]`, and `[CS-DECOUPLE]` by decomposin
 | `BossLootPoolService.cs` | `BossLootPoolService` | Boss encounter progression-tier loot pool generation and contiguous chained row injection (`ItemLotParam_map`). |
 | `SmartDiscoveryService.cs` | `SmartDiscoveryService` | Schema-driven dynamic world introspection for weapons, armor, accessories, and boss lots. |
 | `UniversalSweeperService.cs` | `UniversalSweeperService` | 100% full-regulation vanilla item infusion across EquipParamWeapon, EquipParamProtector, and FMGs. |
+| `SkillMovesetService.cs` | `SkillMovesetService` | Mod regulation introspection, extracting custom weapon skills (`SwordArtsParam`), moveset behaviors (`BehaviorParam_PC`, `AtkParam_Pc`), and injection. |
 | `ParamHelper.cs` | `ParamHelper` | Utility methods for safely reading, writing, and type-converting PARAM cell values. |
 | `RegTool.csproj` | - | .NET 9.0 project definition linking `SoulsFormatsNEXT`. |

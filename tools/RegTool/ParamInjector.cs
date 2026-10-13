@@ -167,6 +167,9 @@ namespace LootForge.RegTool
             {
                 Console.WriteLine($"[RegTool WARN] Could not purge EquipParamAccessory: {ex.Message}");
             }
+
+            // 7. Purge LootForge custom skills and moveset behaviors
+            SkillMovesetService.PurgePreviousInjections(getOrLoadParam);
         }
     }
 }

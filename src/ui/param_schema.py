@@ -104,6 +104,14 @@ def get_generator_param_descriptors() -> List[ParamDescriptor]:
             step=5.0,
             unit="%"
         ),
+        ParamDescriptor(
+            key="import_custom_skills_movesets",
+            label="Port Custom Weapon Skills & Movesets",
+            param_type=ParamType.BOOL,
+            purpose=ParamPurpose.DROP_STYLE,
+            description="Automatically port custom weapon skills (Ashes of War), animations, and behavior graphs from weapon mods. Uncheck to test with vanilla animations and skills.",
+            default=True
+        ),
 
         # --- Group 2: Diablo ARPG Procedural Generator ---
         ParamDescriptor(

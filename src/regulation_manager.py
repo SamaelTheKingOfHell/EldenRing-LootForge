@@ -567,22 +567,24 @@ class RegulationManager:
                                 errors.append(f"Failed to remove {sp}: {e}")
 
         parts_dirs_to_clean = set()
-        if target_dir:
-            parts_dirs_to_clean.add(target_dir / "parts")
-        parts_dirs_to_clean.add(local_out_dir / "parts")
+        for folder_name in ["parts", "chr", "sfx", "action"]:
+            if target_dir:
+                parts_dirs_to_clean.add(target_dir / folder_name)
+            parts_dirs_to_clean.add(local_out_dir / folder_name)
 
         for pd in parts_dirs_to_clean:
             if not pd.exists():
                 continue
-            for f in list(pd.glob("*.partsbnd.dcx")):
-                if any(mid in f.name for mid in allocated_model_ids):
-                    if str(f) not in removed_files:
-                        try:
-                            f.unlink()
-                            removed_files.append(str(f))
-                            system_logger.info(f"Removed allocated part matching model ID: {f}", source="Rollback")
-                        except Exception as e:
-                            errors.append(f"Failed to remove {f}: {e}")
+            if pd.name == "parts":
+                for f in list(pd.glob("*.partsbnd.dcx")):
+                    if any(mid in f.name for mid in allocated_model_ids):
+                        if str(f) not in removed_files:
+                            try:
+                                f.unlink()
+                                removed_files.append(str(f))
+                                system_logger.info(f"Removed allocated part matching model ID: {f}", source="Rollback")
+                            except Exception as e:
+                                errors.append(f"Failed to remove {f}: {e}")
 
             try:
                 if pd.exists() and not any(pd.iterdir()):

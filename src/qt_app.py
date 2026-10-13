@@ -112,6 +112,7 @@ class LootForgeMainWindow(QMainWindow):
             on_spoil_toggle=self._toggle_item_spoil,
             on_global_spoil_toggle=self._toggle_global_spoil,
             on_page_size_changed=self._on_page_size_changed_from_modal,
+            on_custom_art_toggle=self._on_custom_art_toggled,
             distributor=self.distributor
         )
 
@@ -345,7 +346,8 @@ class LootForgeMainWindow(QMainWindow):
             global_multiplier=self.global_multiplier_percent,
             global_spoiled=self.global_spoiled,
             items_per_page=self.items_per_page,
-            diablo_enabled=self.config.diablo_loot_enabled
+            diablo_enabled=self.config.diablo_loot_enabled,
+            skills_movesets_enabled=getattr(self.config, "import_custom_skills_movesets", True)
         )
 
     def _render_table_page(self):
@@ -365,7 +367,7 @@ class LootForgeMainWindow(QMainWindow):
             if not out_p.is_absolute():
                 out_p = self.base_dir / out_p
             self.asset_renumberer.output_dir = out_p
-        elif key == "diablo_loot_enabled":
+        elif key in ("diablo_loot_enabled", "import_custom_skills_movesets"):
             self._sync_modal_data()
 
     def _on_page_size_changed_from_modal(self, val: int):
@@ -450,13 +452,26 @@ class LootForgeMainWindow(QMainWindow):
                 s.allocation = self.id_allocator.allocate(s.set_id)
                 saved_user_rate = self.config.user_drop_rates.get(s.set_id, 20.0)
                 saved_spoil = self.config.item_spoiled_states.get(s.set_id, False)
+                saved_art_toggle = self.config.item_custom_art_toggles.get(s.set_id, True)
+                s.import_custom_moveset = getattr(self.config, "import_custom_skills_movesets", True) and saved_art_toggle
+
+                skill_name = ""
+                has_moveset = False
+                if s.skill_moveset:
+                    if s.skill_moveset.has_custom_skill and s.skill_moveset.skill_name:
+                        skill_name = s.skill_moveset.skill_name
+                    has_moveset = s.skill_moveset.has_custom_moveset
+
                 self.drop_configs.append(ItemDropConfig(
                     item_key=s.set_id,
                     name=self._format_mod_display_name(s.folder_or_archive_name),
                     vanilla_rate=20.0,
                     user_rate=saved_user_rate,
                     is_spoiled=saved_spoil,
-                    source_entity="Pending Route"
+                    source_entity="Pending Route",
+                    custom_skill_name=skill_name,
+                    has_custom_moveset=has_moveset,
+                    import_custom_art=saved_art_toggle
                 ))
 
             self.summary_badge.setText(f"{len(self.scanned_sets)} Mod Sets Detected ({len(self.drop_configs)} Items)")
@@ -500,6 +515,16 @@ class LootForgeMainWindow(QMainWindow):
         cfg.is_spoiled = not cfg.is_spoiled
         self.config.item_spoiled_states[cfg.item_key] = cfg.is_spoiled
         self.config.save(self.config_path)
+
+    def _on_custom_art_toggled(self, cfg: ItemDropConfig, is_enabled: bool):
+        cfg.import_custom_art = is_enabled
+        self.config.item_custom_art_toggles[cfg.item_key] = is_enabled
+        self.config.save(self.config_path)
+        for s in self.scanned_sets:
+            if s.set_id == cfg.item_key:
+                s.import_custom_moveset = is_enabled
+                break
+        system_logger.info(f"Toggled custom art for {cfg.item_key}: {is_enabled}", source="GUI")
 
     def _create_backup(self):
         reg_path = self.active_reg_input.text().strip() or os.path.join(self.config.game_directory, "regulation.bin")
@@ -576,6 +601,7 @@ class LootForgeMainWindow(QMainWindow):
             diablo_total_variants = 0
 
             for s, cfg in zip(self.scanned_sets, self.drop_configs):
+                s.import_custom_moveset = getattr(self.config, "import_custom_skills_movesets", True) and getattr(cfg, "import_custom_art", True)
                 if s.loot_target:
                     s.loot_target.chance_or_cost = self.distributor.calculate_final_rate(
                         cfg.user_rate, self.global_multiplier_percent
@@ -670,9 +696,13 @@ class LootForgeMainWindow(QMainWindow):
 
             file_size_mb = round(patch_result["target_size_bytes"] / (1024 * 1024), 2)
             diablo_info = f"⚡ Diablo ARPG: {diablo_total_variants} procedural relics generated!\n" if diablo_total_variants > 0 else ""
+            custom_skills_count = sum(1 for s in self.scanned_sets if getattr(s, "import_custom_moveset", True) and s.skill_moveset and s.skill_moveset.has_custom_skill)
+            custom_movesets_count = sum(1 for s in self.scanned_sets if getattr(s, "import_custom_moveset", True) and s.skill_moveset and s.skill_moveset.has_custom_moveset)
+            art_info = f"⚔ Custom Art: {custom_skills_count} skill(s) & {custom_movesets_count} moveset(s) ported!\n" if (custom_skills_count > 0 or custom_movesets_count > 0) else ""
             msg = (
                 f"Successfully forged and injected {injected_count} standalone mod set(s)!\n\n"
                 f"{diablo_info}"
+                f"{art_info}"
                 f"✅ Regulation: '{target_reg}' ({file_size_mb} MB)\n"
                 f"✅ Parts Deployed: {parts_deployed} files to {output_dir / 'parts'}\n\n"
                 f"Ready to launch with Mod Engine 2 or your mod manager!"

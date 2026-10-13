@@ -143,7 +143,28 @@ This roadmap defines the implementation phases for the cross-platform Standalone
   - Configurable scaling parameters (`price_power_scaling_enabled`, `price_multiplier`, `sell_price_ratio`) in `src/config.py`.
   - Comprehensive unit and integration test suite in `tests/test_pricing_engine.py` verifying mathematical bounds, rounding, and patch spec integrations (`[CS-NO-MOCK]`).
 
-## Phase 13: Dark Souls 1/2/3 Legacy Armor Porting Subsystem (Research Phase)
+## Phase 15: Custom Skills & Movesets Porting Engine
+- [x] **Mod Regulation Introspection (`tools/RegTool/SkillMovesetService.cs`)**:
+  - Discovers and decrypts mod `regulation.bin` in intake directories.
+  - Extracts custom weapon definitions, `swordArtsParamId`, `behaviorVariationId`, and animation category mappings (`wepmotionCategory`, `wepmotionOneHandId`, `wepmotionBothHandId`, `spAtkCategory`).
+  - Traces and extracts custom `SwordArtsParam`, `EquipParamGem`, `BehaviorParam_PC`, `AtkParam_Pc`, `SpEffectParam`, and `Bullet` records.
+  - Ingests custom skill titles and descriptions from mod FMGs (`item.msgbnd.dcx`).
+- [x] **Moveset & Animation Asset Deployment (`src/skill_moveset_importer.py` & `src/parts_deployer.py`)**:
+  - Discovers player character animation containers (`chr/c0000_a*.anibnd.dcx`, `chr/c0000.behbnd.dcx`), visual effects (`sfx/`), and action dictionaries (`action/`).
+  - Safely deploys them into Mod Engine 2 staging directories with case normalization.
+- [x] **Parameter Injection & Standalone Binding (`tools/RegTool/PatchService.cs` & `src/param_builder.py`)**:
+  - Binds standalone forged weapons to custom skill IDs and behavior variations.
+  - Injects extracted skill and moveset parameter rows into the target `regulation.bin`.
+  - Injects skill name and caption texts into `item.msgbnd.dcx`.
+  - Supports clean purge and uninstallation tracking via `lootforge_manifest.json`.
+- [x] **UI & Review Table Custom Art Controls (`src/ui/loot_modal.py` & `src/qt_app.py`)**:
+  - Real-time badges for custom skills (`✦ Skill: <Name>`) and movesets (`✦ Moveset`) in the review table.
+  - Per-item action toggle allowing players to choose between custom mod art vs default vanilla/Diablo roll.
+- [x] **Audit Logging & Clean Rollback (`src/manifest_store.py` & `src/regulation_manager.py`)**:
+  - Full audit logging of custom skill names, IDs, and moveset flags in `lootforge_manifest.json`.
+  - 1-click comprehensive rollback unlinks deployed moveset files across `chr/`, `sfx/`, and `action/`, and prunes empty folders.
+
+## Phase 13: Dark Souls 1/2/3 Legacy Armor Porting Subsystem
 - [ ] **Client-Side Game Installation Discovery**:
   - Automated detection of Steam/local installations of DS1 (PTDE/DSR), DS2 (SOTFS), and DS3 via registry and `libraryfolders.vdf`.
 - [ ] **Selective In-Memory Archive Extraction**:
@@ -154,7 +175,5 @@ This roadmap defines the implementation phases for the cross-platform Standalone
   - Translating legacy Havok skeleton nodes to Elden Ring's `c0000` player skeleton, with automated cross-gender mesh mirroring.
 - [ ] **Pre-Diablo Integration & Drop Distribution**:
   - Ingesting ported sets as authentic `DetectedModSet` objects into LootForge's standalone ID allocator, boss remembrance exchanges, post-boss chests, and optional Diablo procedural ARPG stat infusion.
-
-
 
 

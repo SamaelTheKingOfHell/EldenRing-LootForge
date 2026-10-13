@@ -47,6 +47,7 @@ class LootReviewModal(QDialog):
         on_spoil_toggle: Optional[Callable[[ItemDropConfig], None]] = None,
         on_global_spoil_toggle: Optional[Callable[[], None]] = None,
         on_page_size_changed: Optional[Callable[[int], None]] = None,
+        on_custom_art_toggle: Optional[Callable[[ItemDropConfig, bool], None]] = None,
         distributor: Optional[LootDistributor] = None
     ):
         super().__init__(parent)
@@ -60,6 +61,7 @@ class LootReviewModal(QDialog):
         self.on_spoil_toggle = on_spoil_toggle
         self.on_global_spoil_toggle = on_global_spoil_toggle
         self.on_page_size_changed = on_page_size_changed
+        self.on_custom_art_toggle = on_custom_art_toggle
         self.distributor = distributor
 
         # State
@@ -71,6 +73,7 @@ class LootReviewModal(QDialog):
         self.current_page: int = 1
         self.items_per_page: int = 8
         self.filter_query: str = ""
+        self.skills_movesets_enabled: bool = True
 
         self._build_ui()
 
@@ -118,9 +121,9 @@ class LootReviewModal(QDialog):
 
         # Items Table
         self.items_table = QTableWidget()
-        self.items_table.setColumnCount(7)
+        self.items_table.setColumnCount(8)
         self.items_table.setHorizontalHeaderLabels([
-            "Mod / Item", "Drop Location", "Vanilla %", "Configured %", "Final %", "Reset", "Reveal"
+            "Mod / Item", "Drop Location", "Vanilla %", "Configured %", "Final %", "Reset", "Reveal", "Moveset / Skill"
         ])
         self.items_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         self.items_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
@@ -129,6 +132,7 @@ class LootReviewModal(QDialog):
         self.items_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
         self.items_table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
         self.items_table.horizontalHeader().setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)
+        self.items_table.horizontalHeader().setSectionResizeMode(7, QHeaderView.ResizeMode.ResizeToContents)
         self.items_table.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         layout.addWidget(self.items_table, stretch=1)
 
@@ -167,13 +171,15 @@ class LootReviewModal(QDialog):
         global_multiplier: float,
         global_spoiled: bool,
         items_per_page: int = 8,
-        diablo_enabled: bool = False
+        diablo_enabled: bool = False,
+        skills_movesets_enabled: bool = True
     ):
         """Populates modal dataset and updates display controls."""
         self.drop_configs = drop_configs
         self.global_multiplier_percent = global_multiplier
         self.global_spoiled = global_spoiled
         self.diablo_enabled = diablo_enabled
+        self.skills_movesets_enabled = skills_movesets_enabled
         self.items_per_page = items_per_page
 
         idx = self.page_size_combo.findData(items_per_page)
@@ -219,11 +225,14 @@ class LootReviewModal(QDialog):
         else:
             self.filtered_configs = [
                 c for c in self.drop_configs
-                if self.filter_query in str(c.name).lower() or self.filter_query in str(c.source_entity or "").lower()
+                if self.filter_query in str(c.name).lower()
+                or self.filter_query in str(c.source_entity or "").lower()
+                or self.filter_query in str(getattr(c, "custom_skill_name", "")).lower()
             ]
         self.current_page = 1
         diablo_tag = " • Diablo ARPG: Active" if self.diablo_enabled else ""
-        self.stats_badge.setText(f"{len(self.drop_configs)} Total Items ({len(self.filtered_configs)} Shown){diablo_tag}")
+        skills_tag = "" if getattr(self, "skills_movesets_enabled", True) else " • Custom Movesets: Disabled (Testing Mode)"
+        self.stats_badge.setText(f"{len(self.drop_configs)} Total Items ({len(self.filtered_configs)} Shown){diablo_tag}{skills_tag}")
         self.render_table_page()
 
     def render_table_page(self):
@@ -247,8 +256,20 @@ class LootReviewModal(QDialog):
         self.items_table.setRowCount(len(page_items))
 
         for row_idx, cfg in enumerate(page_items):
-            # Item Name
-            self.items_table.setItem(row_idx, 0, QTableWidgetItem(cfg.name))
+            # Item Name (with optional custom skill / moveset badge)
+            has_skill = bool(getattr(cfg, "custom_skill_name", ""))
+            has_moveset = bool(getattr(cfg, "has_custom_moveset", False))
+            if has_skill or has_moveset:
+                tags = []
+                if has_skill:
+                    tags.append(f"✦ Skill: {cfg.custom_skill_name}")
+                if has_moveset:
+                    tags.append("✦ Moveset")
+                name_item = QTableWidgetItem(f"{cfg.name} [{', '.join(tags)}]")
+                name_item.setForeground(QColor("#ffd475"))
+            else:
+                name_item = QTableWidgetItem(cfg.name)
+            self.items_table.setItem(row_idx, 0, name_item)
 
             # Location (Mystery protection)
             is_revealed = self.global_spoiled or cfg.is_spoiled
@@ -293,6 +314,44 @@ class LootReviewModal(QDialog):
             eye_btn = QPushButton("👁 Spoil" if not cfg.is_spoiled else "🔒 Hide")
             eye_btn.clicked.connect(lambda _, c=cfg: self._on_spoil(c))
             self.items_table.setCellWidget(row_idx, 6, eye_btn)
+
+            # Custom Moveset / Skill Action Toggle
+            if has_skill or has_moveset:
+                art_btn = QPushButton()
+                globally_enabled = getattr(self, "skills_movesets_enabled", True)
+                if not globally_enabled:
+                    art_btn.setText("Disabled (Global Settings Bool)")
+                    art_btn.setStyleSheet("color: #777777; border: 1px solid rgba(119, 119, 119, 0.3); background-color: #12141a; font-size: 11px; padding: 2px 6px;")
+                    art_btn.setEnabled(False)
+                    art_btn.setToolTip("Custom skills & movesets are globally disabled in settings for bug testing.")
+                elif getattr(cfg, "import_custom_art", True):
+                    if has_skill:
+                        label = f"✦ Active: {cfg.custom_skill_name}"
+                    elif has_moveset:
+                        label = "✦ Active: Custom Moveset"
+                    else:
+                        label = "✦ Active"
+                    art_btn.setText(label)
+                    art_btn.setStyleSheet("color: #ffd475; border: 1px solid rgba(197, 160, 89, 0.6); background-color: #1a1e2b; font-size: 11px; padding: 2px 6px;")
+                    art_btn.setEnabled(True)
+                    art_btn.clicked.connect(lambda _, c=cfg: self._on_toggle_custom_art(c))
+                else:
+                    art_btn.setText("Default (Vanilla/ARPG)")
+                    art_btn.setStyleSheet("color: #9e9a91; border: 1px solid rgba(158, 154, 145, 0.3); background-color: #12141a; font-size: 11px; padding: 2px 6px;")
+                    art_btn.setEnabled(True)
+                    art_btn.clicked.connect(lambda _, c=cfg: self._on_toggle_custom_art(c))
+                self.items_table.setCellWidget(row_idx, 7, art_btn)
+            else:
+                dash_item = QTableWidgetItem("-")
+                dash_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                dash_item.setForeground(QColor("#666666"))
+                self.items_table.setItem(row_idx, 7, dash_item)
+
+    def _on_toggle_custom_art(self, cfg: ItemDropConfig):
+        cfg.import_custom_art = not getattr(cfg, "import_custom_art", True)
+        if self.on_custom_art_toggle:
+            self.on_custom_art_toggle(cfg, cfg.import_custom_art)
+        self.render_table_page()
 
     def _on_user_rate(self, cfg: ItemDropConfig, val: float):
         cfg.user_rate = val

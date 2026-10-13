@@ -164,6 +164,22 @@ class ParamBuilder:
                 field_updates["_lf_hasMaleFiles"] = 1 if has_male_files else 0
                 field_updates["_lf_hasFemaleFiles"] = 1 if has_female_files else 0
                 field_updates["_lf_fallbackModelId"] = VANILLA_FALLBACK_MODEL_ID
+            else:
+                # If weapon has custom skill or moveset metadata, apply it
+                if getattr(mod_set, "import_custom_moveset", True) and mod_set.skill_moveset:
+                    sm = mod_set.skill_moveset
+                    if sm.has_custom_skill and sm.skill_id > 0:
+                        field_updates["swordArtsParamId"] = sm.skill_id
+                    if sm.behavior_variation_id > 0:
+                        field_updates["behaviorVariationId"] = sm.behavior_variation_id
+                    if sm.wepmotion_category > 0:
+                        field_updates["wepmotionCategory"] = sm.wepmotion_category
+                    if sm.wepmotion_one_hand_id > 0:
+                        field_updates["wepmotionOneHandId"] = sm.wepmotion_one_hand_id
+                    if sm.wepmotion_both_hand_id > 0:
+                        field_updates["wepmotionBothHandId"] = sm.wepmotion_both_hand_id
+                    if sm.sp_atk_category > 0:
+                        field_updates["spAtkCategory"] = sm.sp_atk_category
 
             model_field = self.SLOT_MODEL_FIELD.get(slot)
             if model_field:
@@ -299,12 +315,23 @@ class ParamBuilder:
             source="ParamBuilder"
         )
 
-        return {
+        patch_spec = {
             "set_id": mod_set.set_id,
             "equip_params": equip_params,
             "fmg_texts": fmg_texts,
             "loot_distribution": loot_spec
         }
+
+        if mod_set.is_weapon and getattr(mod_set, "import_custom_moveset", True) and mod_set.skill_moveset:
+            sm = mod_set.skill_moveset
+            if sm.custom_skills_spec:
+                patch_spec["custom_skills"] = sm.custom_skills_spec
+            if sm.custom_behaviors_spec:
+                patch_spec["custom_behaviors"] = sm.custom_behaviors_spec
+            if sm.custom_attacks_spec:
+                patch_spec["custom_attacks"] = sm.custom_attacks_spec
+
+        return patch_spec
 
     def build_diablo_patch_specs(
         self,

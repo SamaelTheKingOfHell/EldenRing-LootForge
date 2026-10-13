@@ -122,6 +122,20 @@ class PartsDeployer:
                             source="PartsDeployer"
                         )
 
+            # If weapon has custom moveset assets (chr/, sfx/, action/), deploy them alongside parts
+            if ms.is_weapon and getattr(ms, "import_custom_moveset", True) and ms.skill_moveset:
+                try:
+                    from src.skill_moveset_importer import SkillMovesetImporter
+                    importer = SkillMovesetImporter(output_dir.parent if output_dir.name == "mod" else output_dir)
+                    moveset_files = importer.deploy_moveset_assets(ms, input_base_dir, output_dir)
+                    deployed += len(moveset_files)
+                    self.last_deployed_files.extend(moveset_files)
+                except Exception as ex:
+                    system_logger.error(
+                        f"Failed to deploy custom moveset assets for {ms.set_id}: {ex}",
+                        source="PartsDeployer"
+                    )
+
         system_logger.info(
             f"Deployed {deployed} parts file(s) to {parts_output}",
             source="PartsDeployer"
