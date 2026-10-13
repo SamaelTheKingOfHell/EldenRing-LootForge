@@ -641,7 +641,8 @@ class LootForgeMainWindow(QMainWindow):
                 target_reg=target_reg,
                 game_dir=self.config.game_directory,
                 boss_loot_pools_enabled=self.config.boss_loot_pools_enabled,
-                boss_weapons_per_pool=self.config.boss_weapons_per_pool
+                boss_weapons_per_pool=self.config.boss_weapons_per_pool,
+                sweep_vanilla_items=self.config.diablo_loot_enabled and self.config.diablo_inject_vanilla_stats
             )
 
             output_dir = target_reg.parent

@@ -21,3 +21,4 @@ tests/injection_output/
 scratch/
 data/*.dcx
 research
+data/world_snapshot.json

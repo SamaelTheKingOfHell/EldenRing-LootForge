@@ -199,7 +199,8 @@ class RegulationManager:
         target_reg: Path,
         game_dir: str = "",
         boss_loot_pools_enabled: bool = True,
-        boss_weapons_per_pool: int = 3
+        boss_weapons_per_pool: int = 3,
+        sweep_vanilla_items: bool = False
     ) -> Dict[str, Any]:
         """
         Executes RegTool to inject patch specifications into target regulation.bin.
@@ -302,6 +303,29 @@ class RegulationManager:
                         system_logger.warning(f"Boss loot pool injection returned code {b_res.returncode}: {b_res.stderr or b_res.stdout}", source="RegulationManager")
                 except Exception as be:
                     system_logger.warning(f"Boss loot pool notice: {be}", source="RegulationManager")
+
+            # Automatically sweep and infuse all vanilla items across EquipParamWeapon, EquipParamProtector, and FMGs
+            if sweep_vanilla_items:
+                try:
+                    sweep_cmd = [str(self.regtool_exe)] if (sys.platform.startswith("win") and self.regtool_exe.exists()) else (
+                        ["dotnet", str(self.regtool_dll)] if self.regtool_dll.exists() else
+                        ["dotnet", "run", "--project", str(self.regtool_proj), "--"]
+                    )
+                    sweep_cmd.extend([
+                        "sweep-vanilla",
+                        "--input", str(target_reg),
+                        "--output", str(target_reg),
+                        "--defs", str(self.defs_dir),
+                    ])
+                    if msg_dir:
+                        sweep_cmd.extend(["--msg", str(msg_dir)])
+                    s_res = subprocess.run(sweep_cmd, capture_output=True, text=True, cwd=str(self.base_dir), check=False)
+                    if s_res.returncode == 0:
+                        system_logger.info("Successfully swept and infused all vanilla items across the regulation file.", source="RegulationManager")
+                    else:
+                        system_logger.warning(f"Vanilla sweeper returned code {s_res.returncode}: {s_res.stderr or s_res.stdout}", source="RegulationManager")
+                except Exception as se:
+                    system_logger.warning(f"Vanilla sweeper notice: {se}", source="RegulationManager")
 
             return {
                 "success": True,
@@ -576,4 +600,72 @@ class RegulationManager:
             "removed_files": list(set(removed_files)),
             "errors": errors
         }
+
+    def introspect_world(
+        self,
+        reg_path: Path,
+        msg_dir: Optional[Path] = None,
+        output_json: Optional[Path] = None
+    ) -> Dict[str, Any]:
+        """
+        Executes RegTool's smart introspection service on regulation.bin,
+        extracting all valid weapons, armor, accessories, and boss encounter lots.
+        """
+        if not reg_path.exists():
+            raise FileNotFoundError(f"Regulation file not found: {reg_path}")
+
+        out_path = output_json or (self.base_dir / "data" / "world_snapshot.json")
+        cmd = [str(self.regtool_exe)] if (sys.platform.startswith("win") and self.regtool_exe.exists()) else (
+            ["dotnet", str(self.regtool_dll)] if self.regtool_dll.exists() else
+            ["dotnet", "run", "--project", str(self.regtool_proj), "--"]
+        )
+        cmd.extend([
+            "introspect-world",
+            "--input", str(reg_path),
+            "--defs", str(self.defs_dir),
+            "--output", str(out_path)
+        ])
+        if msg_dir and Path(msg_dir).exists():
+            cmd.extend(["--msg", str(msg_dir)])
+
+        res = subprocess.run(cmd, capture_output=True, text=True, cwd=str(self.base_dir), check=False)
+        if res.returncode != 0:
+            system_logger.warning(f"Introspect world returned non-zero code {res.returncode}: {res.stderr or res.stdout}", source="RegulationManager")
+
+        if out_path.exists():
+            try:
+                with open(out_path, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception as e:
+                system_logger.warning(f"Failed to load world snapshot JSON: {e}", source="RegulationManager")
+
+        return {}
+
+    def sweep_vanilla_items(
+        self,
+        reg_path: Path,
+        msg_dir: Optional[Path] = None
+    ) -> bool:
+        """
+        Executes universal sweeper on target regulation.bin, infusing all
+        vanilla weapons, armor, and accessories with Diablo stats and FMG text.
+        """
+        if not reg_path.exists():
+            raise FileNotFoundError(f"Regulation file not found: {reg_path}")
+
+        cmd = [str(self.regtool_exe)] if (sys.platform.startswith("win") and self.regtool_exe.exists()) else (
+            ["dotnet", str(self.regtool_dll)] if self.regtool_dll.exists() else
+            ["dotnet", "run", "--project", str(self.regtool_proj), "--"]
+        )
+        cmd.extend([
+            "sweep-vanilla",
+            "--input", str(reg_path),
+            "--output", str(reg_path),
+            "--defs", str(self.defs_dir)
+        ])
+        if msg_dir and Path(msg_dir).exists():
+            cmd.extend(["--msg", str(msg_dir)])
+
+        res = subprocess.run(cmd, capture_output=True, text=True, cwd=str(self.base_dir), check=False)
+        return res.returncode == 0
 

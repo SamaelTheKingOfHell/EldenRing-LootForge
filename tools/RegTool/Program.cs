@@ -50,6 +50,10 @@ namespace LootForge.RegTool
                         return DiagnosticService.ExecuteFindMultiSlotLots(options);
                     case "inject-boss-loot-pools":
                         return BossLootPoolService.ExecuteInjectBossLootPools(options);
+                    case "introspect-world":
+                        return SmartDiscoveryService.ExecuteIntrospect(options);
+                    case "sweep-vanilla":
+                        return UniversalSweeperService.ExecuteSweep(options);
                     default:
                         Console.Error.WriteLine($"Unknown command: '{command}'");
                         PrintUsage();

@@ -154,6 +154,39 @@ class TestRegulationManager(unittest.TestCase):
         self.assertTrue(target_reg.exists())
         self.assertGreater(target_reg.stat().st_size, 1000000)
 
+    def test_smart_discovery_introspect_world(self):
+        """Verify that introspect_world dynamically discovers weapons, armor, and boss lots from regulation.bin."""
+        if not self.real_reg or not self.real_reg.exists():
+            self.skipTest("No real backup regulation.bin available in backups/ for roundtrip test.")
+
+        out_json = Path(self.test_dir) / "test_snapshot.json"
+        snapshot = self.manager.introspect_world(
+            reg_path=self.real_reg,
+            output_json=out_json
+        )
+
+        self.assertTrue(out_json.exists())
+        self.assertIn("TotalWeapons", snapshot)
+        self.assertGreater(snapshot["TotalWeapons"], 100)
+        self.assertIn("TotalProtectors", snapshot)
+        self.assertGreater(snapshot["TotalProtectors"], 50)
+        self.assertIn("TotalBossLots", snapshot)
+        self.assertGreater(snapshot["TotalBossLots"], 20)
+
+    def test_universal_sweeper_vanilla_infusion(self):
+        """Verify that sweep_vanilla_items infuses the entire regulation file with Diablo stats."""
+        if not self.real_reg or not self.real_reg.exists():
+            self.skipTest("No real backup regulation.bin available in backups/ for roundtrip test.")
+
+        target_reg = Path(self.test_dir) / "mod" / "regulation.bin"
+        target_reg.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(self.real_reg, target_reg)
+
+        success = self.manager.sweep_vanilla_items(reg_path=target_reg)
+        self.assertTrue(success)
+        self.assertTrue(target_reg.exists())
+        self.assertGreater(target_reg.stat().st_size, 1000000)
+
 
 if __name__ == "__main__":
     unittest.main()

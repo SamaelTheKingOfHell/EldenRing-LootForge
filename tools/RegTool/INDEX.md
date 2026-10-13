@@ -17,5 +17,7 @@ Adheres to `[CS-MODULAR]`, `[CS-GRANULARITY]`, and `[CS-DECOUPLE]` by decomposin
 | `FmgInjector.cs` | `FmgInjector` | FMG loading, vanilla name/description lookup, item text injection, and DLC archive mirroring. |
 | `DiagnosticService.cs` | `DiagnosticService` | Regulation verification, FMG text searching, regulation dumping, and Data0 archive extraction. |
 | `BossLootPoolService.cs` | `BossLootPoolService` | Boss encounter progression-tier loot pool generation and contiguous chained row injection (`ItemLotParam_map`). |
+| `SmartDiscoveryService.cs` | `SmartDiscoveryService` | Schema-driven dynamic world introspection for weapons, armor, accessories, and boss lots. |
+| `UniversalSweeperService.cs` | `UniversalSweeperService` | 100% full-regulation vanilla item infusion across EquipParamWeapon, EquipParamProtector, and FMGs. |
 | `ParamHelper.cs` | `ParamHelper` | Utility methods for safely reading, writing, and type-converting PARAM cell values. |
 | `RegTool.csproj` | - | .NET 9.0 project definition linking `SoulsFormatsNEXT`. |

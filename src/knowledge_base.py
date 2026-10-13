@@ -39,7 +39,10 @@ class VanillaKnowledgeBase:
         self._merchants = routes_data.get("merchants", [])
         self._enemies = routes_data.get("enemies", [])
         self._chests = routes_data.get("chests", [])
-
+        self._discovered_weapons = models_data.get("_discovered_weapons", {})
+        self._discovered_protectors = models_data.get("_discovered_protectors", {})
+        self._discovered_accessories = models_data.get("_discovered_accessories", {})
+        self._discovered_boss_lots = routes_data.get("_discovered_boss_lots", [])
 
     @classmethod
     def from_data_dir(cls, data_dir: str = "data") -> "VanillaKnowledgeBase":
@@ -62,6 +65,71 @@ class VanillaKnowledgeBase:
                 routes_data = json.load(f)
         else:
             system_logger.warning(f"Loot routes file not found: {routes_file}", source="KnowledgeBase")
+
+        # Dynamically ingest live schema-discovered snapshot into discovered collections
+        snapshot_file = p / "world_snapshot.json"
+        if snapshot_file.exists():
+            try:
+                with open(snapshot_file, "r", encoding="utf-8") as f:
+                    snap = json.load(f)
+
+                disc_weps: Dict[str, Any] = {}
+                for w in snap.get("Weapons", []):
+                    wid = str(w.get("Id", ""))
+                    if wid:
+                        disc_weps[wid] = {
+                            "name": w.get("Name", f"Weapon {wid}"),
+                            "baseParamId": w.get("Id"),
+                            "defaultRoute": "merchant_shop",
+                            "progressionTier": w.get("Tier", 1)
+                        }
+                models_data["_discovered_weapons"] = disc_weps
+
+                disc_prots: Dict[str, Any] = {}
+                for prot in snap.get("Protectors", []):
+                    pid = str(prot.get("Id", ""))
+                    if pid:
+                        disc_prots[pid] = {
+                            "name": prot.get("Name", f"Armor {pid}"),
+                            "baseParamId": prot.get("Id"),
+                            "defaultRoute": "enemy_drop",
+                            "progressionTier": prot.get("Tier", 1)
+                        }
+                models_data["_discovered_protectors"] = disc_prots
+
+                disc_accs: Dict[str, Any] = {}
+                for acc in snap.get("Accessories", []):
+                    aid = str(acc.get("Id", ""))
+                    if aid:
+                        disc_accs[aid] = {
+                            "name": acc.get("Name", f"Talisman {aid}"),
+                            "baseParamId": acc.get("Id"),
+                            "defaultRoute": "enemy_drop",
+                            "progressionTier": acc.get("Tier", 1)
+                        }
+                models_data["_discovered_accessories"] = disc_accs
+
+                disc_bosses: List[Dict[str, Any]] = []
+                for bl in snap.get("BossLots", []):
+                    lot_id = bl.get("LotId")
+                    if lot_id:
+                        disc_bosses.append({
+                            "id": f"boss_lot_{lot_id}",
+                            "name": bl.get("Name", f"Boss Lot {lot_id}"),
+                            "boss": bl.get("Name", f"Boss Lot {lot_id}"),
+                            "lotParamId": lot_id,
+                            "progressionTier": bl.get("Tier", 1),
+                            "defaultCost": 30000
+                        })
+                routes_data["_discovered_boss_lots"] = disc_bosses
+
+                system_logger.info(
+                    f"Smart Discovery: Ingested live snapshot ({len(disc_weps)} weapons, "
+                    f"{len(disc_prots)} protectors, {len(disc_bosses)} boss lots).",
+                    source="KnowledgeBase"
+                )
+            except Exception as e:
+                system_logger.warning(f"Could not load world snapshot: {e}", source="KnowledgeBase")
 
         return cls(models_data, routes_data)
 
@@ -97,6 +165,26 @@ class VanillaKnowledgeBase:
             return dict(self._accessories)
         filtered = {k: v for k, v in self._accessories.items() if v.get("progressionTier") == tier.value}
         return filtered if filtered else dict(self._accessories)
+
+    def list_all_discovered_weapons(self) -> Dict[str, Dict[str, Any]]:
+        """Returns all dynamically discovered weapons across the regulation."""
+        return dict(self._discovered_weapons) if self._discovered_weapons else dict(self._weapons)
+
+    def list_all_discovered_protectors(self) -> Dict[str, Dict[str, Any]]:
+        """Returns all dynamically discovered protectors across the regulation."""
+        return dict(self._discovered_protectors) if self._discovered_protectors else dict(self._protectors)
+
+    def list_all_discovered_accessories(self) -> Dict[str, Dict[str, Any]]:
+        """Returns all dynamically discovered accessories across the regulation."""
+        return dict(self._discovered_accessories) if self._discovered_accessories else dict(self._accessories)
+
+    def list_all_discovered_boss_lots(self, tier: Optional[ProgressionTier] = None) -> List[Dict[str, Any]]:
+        """Returns all dynamically discovered boss lots, optionally filtered by tier."""
+        lots = self._discovered_boss_lots
+        if tier is None or not lots:
+            return list(lots)
+        filtered = [b for b in lots if b.get("progressionTier") == tier.value]
+        return filtered if filtered else list(lots)
 
 
     def get_default_loot_target(
