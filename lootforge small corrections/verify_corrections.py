@@ -202,10 +202,11 @@ class TestSmallCorrectionsVerification(unittest.TestCase):
                 tables = [ep["param_table"] for ep in var["equip_params"]]
                 self.assertIn("EquipParamAccessory", tables)
             elif bucket == 1:
-                # Chest: multi-drop (bundled companion accessory)
-                self.assertEqual(len(awarded), 2, f"Chest variant at index {idx} must award multiple items!")
+                # Chest: multi-drop (bundled multiple companion accessories)
+                self.assertGreaterEqual(len(awarded), 3, f"Chest variant at index {idx} must award multiple extra injections!")
                 tables = [ep["param_table"] for ep in var["equip_params"]]
                 self.assertIn("EquipParamAccessory", tables)
+
             elif bucket == 2:
                 # Rest: single drop
                 self.assertEqual(len(awarded), 1, f"Rest variant at index {idx} must award single item!")

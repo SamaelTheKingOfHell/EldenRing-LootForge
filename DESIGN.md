@@ -17,16 +17,21 @@ Defines the macro placement strategy:
    - Places modded items on the thematic vanilla-expected drop list, shop, or boss weapon transfusion (e.g. Radahn set goes to Radahn Remembrance/Enia, Cleanrot set goes to Cleanrot Knights).
 
 ### 2.2. `AntiDup` Enum (for 100% Drop Items)
-Governs how items with guaranteed (100%) boss drops are handled:
+Governs how items with guaranteed (100%) boss drops are handled, strictly locked to world progression tiers (Early, Mid, Late, Endgame) so late-game relics never drop in early-game regions:
 1. `BOSS_ROTATION (1)`:
-   - If the original item is a 100% drop from a boss, LootForge rotates the custom item to a **different boss**.
+   - If the original item is a 100% drop from a boss, LootForge rotates the custom item to a **different boss within the matching progression tier**.
    - **Limit Rule**: Maximum of **1 custom set per boss**.
    - **Cascading Fallback**:
-     1. Available major bosses (Remembrances & Great Runes).
-     2. If major bosses are exhausted, distribute to **mini-bosses** (Tree Sentinels, Night's Cavalry, Bell Bearing Hunters, Deathbirds).
-     3. If mini-bosses are exhausted, distribute to **stronger wild enemies** at normal vanilla drop rates.
+     1. Available major bosses in the matching progression tier.
+     2. If tier bosses are exhausted, cascades immediately to **Chests After Boss** in that progression tier (high-value discovery chests situated in/after boss chambers, e.g. Stormveil Throne Room Chest, Raya Lucaria Library Chest, Redmane Armory Chest, Farum Azula Sanctum, Haligtree Roots Sanctum).
+     3. If tier chests are exhausted, distribute to **mini-bosses and elite enemies in that progression tier** (Tree Sentinels, Night's Cavalry, Crucible Knights).
+     4. Final fallback to stronger wild enemies within the same progression tier.
 2. `EVERYTHING_IN_THE_WILD (2)`:
-   - Bypasses boss rotation completely; all items are placed onto wild monsters at normal drop rates.
+   - Bypasses boss rotation completely; all items are placed onto wild monsters strictly matching the item's progression tier at normal drop rates.
+3. `CHEST_AFTER_BOSS (3)`:
+   - Directly places 100% boss drop items into the high-value **Chest After Boss** located immediately after the boss's arena/chamber (or within the matching progression tier).
+   - **High-Value Multi-Injection Rule**: Chests are guaranteed high prestige (elevated drop value / Epic-Mythic ARPG rolls) and **always contain multiple extra injections** (at least 2 companion talisman relics bundled together concurrently via non-destructive sequential lot chaining `targetLotId + 1..9`).
+
 
 ### 2.3. Set Invariance Mandate
 - **Rule**: In all distribution modes, all pieces of a set from the same mod **always drop from the exact same mob, boss, or shop**.

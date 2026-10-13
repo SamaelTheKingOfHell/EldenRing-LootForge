@@ -8,7 +8,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "nomadic_merchant_liurnia",
       "defaultEnemyName": "Nomadic Merchant (Liurnia of the Lakes)",
-      "description": "Armor of a knight expelled from their realm."
+      "description": "Armor of a knight expelled from their realm.",
+      "progressionTier": 1
     },
     "8700": {
       "name": "Land of Reeds Set",
@@ -17,7 +18,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "isolated_merchant_dragonbarrow",
       "defaultEnemyName": "Isolated Merchant (Dragonbarrow)",
-      "description": "Armor worn by warriors of the Land of Reeds."
+      "description": "Armor worn by warriors of the Land of Reeds.",
+      "progressionTier": 1
     },
     "6300": {
       "name": "Astrologer Set",
@@ -26,7 +28,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "nomadic_merchant_liurnia",
       "defaultEnemyName": "Nomadic Merchant (Liurnia of the Lakes)",
-      "description": "Robes of the astrologers who read fate in the stars."
+      "description": "Robes of the astrologers who read fate in the stars.",
+      "progressionTier": 1
     },
     "7300": {
       "name": "Champion Set",
@@ -35,7 +38,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "nomadic_merchant_caelid",
       "defaultEnemyName": "Nomadic Merchant (Caelid Highway)",
-      "description": "Attire of the champions of the badlands."
+      "description": "Attire of the champions of the badlands.",
+      "progressionTier": 1
     },
     "9300": {
       "name": "Bandit Set",
@@ -50,7 +54,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "nomadic_merchant_weeping",
       "defaultEnemyName": "Nomadic Merchant (Weeping Peninsula)",
-      "description": "Garb favored by leather-clad bandits."
+      "description": "Garb favored by leather-clad bandits.",
+      "progressionTier": 1
     },
     "6700": {
       "name": "Blue Cloth Set",
@@ -59,7 +64,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "isolated_merchant_raya_lucaria",
       "defaultEnemyName": "Isolated Merchant (Main Academy Gate)",
-      "description": "Garments worn by nomadic warriors of the blue cloth."
+      "description": "Garments worn by nomadic warriors of the blue cloth.",
+      "progressionTier": 1
     },
     "8800": {
       "name": "Confessor Set",
@@ -68,7 +74,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "nomadic_merchant_mt_gelmir",
       "defaultEnemyName": "Nomadic Merchant (Mt. Gelmir)",
-      "description": "Black attire of Church confessors operating in secret."
+      "description": "Black attire of Church confessors operating in secret.",
+      "progressionTier": 1
     },
     "8900": {
       "name": "Prisoner Set",
@@ -82,7 +89,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "nomadic_merchant_river_aint",
       "defaultEnemyName": "Nomadic Merchant (Ainsel River)",
-      "description": "Iron mask and tattered garments of a prisoner condemned."
+      "description": "Iron mask and tattered garments of a prisoner condemned.",
+      "progressionTier": 1
     },
     "6200": {
       "name": "Prophet Set",
@@ -96,7 +104,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "hermit_merchant_altus",
       "defaultEnemyName": "Hermit Merchant (Leyndell Outskirts)",
-      "description": "Attire of an exiled prophet who spoke ominous visions of fire."
+      "description": "Attire of an exiled prophet who spoke ominous visions of fire.",
+      "progressionTier": 1
     },
     "4000": {
       "name": "Carian Knight Set",
@@ -105,7 +114,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "moongrum_carian_knight",
       "defaultEnemyName": "Moongrum, Carian Knight (Raya Lucaria)",
-      "description": "Armor of the enchanted knights who served the Carian royal family."
+      "description": "Armor of the enchanted knights who served the Carian royal family.",
+      "progressionTier": 2
     },
     "4010": {
       "name": "Raging Wolf Set",
@@ -114,7 +124,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "vargram_raging_wolf",
       "defaultEnemyName": "Vargram the Raging Wolf (Leyndell)",
-      "description": "Armor worn by Vargram the Raging Wolf, one of the first Tarnished to visit the Roundtable Hold."
+      "description": "Armor worn by Vargram the Raging Wolf, one of the first Tarnished to visit the Roundtable Hold.",
+      "progressionTier": 3
     },
     "4020": {
       "name": "Fingerprint Set",
@@ -123,7 +134,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "roundtable_knight_vyke",
       "defaultEnemyName": "Roundtable Knight Vyke (Contender's Evergaol)",
-      "description": "Iron armor singed and blistered by fingers."
+      "description": "Iron armor singed and blistered by fingers.",
+      "progressionTier": 3
     },
     "4030": {
       "name": "Knight Set",
@@ -132,7 +144,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "twin_maiden_husks",
       "defaultEnemyName": "Twin Maiden Husks (Roundtable Hold)",
-      "description": "Armor of an anonymous knight of the Lands Between."
+      "description": "Armor of an anonymous knight of the Lands Between.",
+      "progressionTier": 1
     },
     "4040": {
       "name": "Banished Knight Set",
@@ -141,7 +154,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "banished_knight",
       "defaultEnemyName": "Banished Knight (Stormveil / Castle Sol)",
-      "description": "Thick, full set of armor covering the entire body. Once worn by knights exiled from their homeland."
+      "description": "Thick, full set of armor covering the entire body. Once worn by knights exiled from their homeland.",
+      "progressionTier": 1
     },
     "4090": {
       "name": "Night's Cavalry Set",
@@ -150,7 +164,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "nights_cavalry_duo",
       "defaultEnemyName": "Night's Cavalry Duo (Consecrated Snowfield)",
-      "description": "Pitch-black armor worn by the Night's Cavalry."
+      "description": "Pitch-black armor worn by the Night's Cavalry.",
+      "progressionTier": 4
     },
     "4110": {
       "name": "Cleanrot Knight Set",
@@ -159,7 +174,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "cleanrot_knight",
       "defaultEnemyName": "Cleanrot Knight (Caelid Swamp / Elphael)",
-      "description": "Armor worn by the Cleanrot Knights who fought alongside Malenia."
+      "description": "Armor worn by the Cleanrot Knights who fought alongside Malenia.",
+      "progressionTier": 2
     },
     "4130": {
       "name": "Crucible Tree Set",
@@ -168,7 +184,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "crucible_knight_siluria",
       "defaultEnemyName": "Crucible Knight Siluria (Deeproot Depths)",
-      "description": "Armor of the Crucible Knights who served Godfrey, the first Elden Lord."
+      "description": "Armor of the Crucible Knights who served Godfrey, the first Elden Lord.",
+      "progressionTier": 3
     },
     "4140": {
       "name": "Crucible Axe Set",
@@ -177,7 +194,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "crucible_knight_ordovis",
       "defaultEnemyName": "Crucible Knight Ordovis (Auriza Hero's Grave)",
-      "description": "Armor of the Crucible Knights, holding primordial gold."
+      "description": "Armor of the Crucible Knights, holding primordial gold.",
+      "progressionTier": 3
     },
     "4150": {
       "name": "Tree Sentinel Set",
@@ -186,7 +204,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "tree_sentinel_auriza",
       "defaultEnemyName": "Tree Sentinel Duo (Altus / Auriza Grave)",
-      "description": "Armor crafted from gleaming gold, worn by the heavy cavalry serving the Erdtree."
+      "description": "Armor crafted from gleaming gold, worn by the heavy cavalry serving the Erdtree.",
+      "progressionTier": 3
     },
     "4160": {
       "name": "Bloodhound Knight Set",
@@ -195,7 +214,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "bloodhound_knight_darriwil",
       "defaultEnemyName": "Bloodhound Knight Darriwil (Forlorn Hound Evergaol)",
-      "description": "Armor worn by the Bloodhound Knights, fierce trackers without masters."
+      "description": "Armor worn by the Bloodhound Knights, fierce trackers without masters.",
+      "progressionTier": 2
     },
     "4170": {
       "name": "Black Knife Set",
@@ -204,7 +224,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "black_knife_assassin",
       "defaultEnemyName": "Black Knife Assassin (Ordina / Sage's Cave)",
-      "description": "Armor worn by the Black Knife Assassins, cloaked in silence."
+      "description": "Armor worn by the Black Knife Assassins, cloaked in silence.",
+      "progressionTier": 3
     },
     "4180": {
       "name": "Blaidd's Set",
@@ -218,7 +239,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "blaidd_shadow",
       "defaultEnemyName": "Blaidd the Half-Wolf (Ranni's Rise)",
-      "description": "Armor of Blaidd the Half-Wolf, sworn shadow of Lunar Princess Ranni."
+      "description": "Armor of Blaidd the Half-Wolf, sworn shadow of Lunar Princess Ranni.",
+      "progressionTier": 2
     },
     "4200": {
       "name": "Radahn's Lion Set",
@@ -227,7 +249,8 @@
       "defaultRoute": "boss_remembrance",
       "targetSourceId": "remembrance_starscourge",
       "defaultEnemyName": "Remembrance of the Starscourge (General Radahn)",
-      "description": "Armor of General Radahn, adorned with golden lion motifs and mane."
+      "description": "Armor of General Radahn, adorned with golden lion motifs and mane.",
+      "progressionTier": 2
     },
     "4230": {
       "name": "Malenia's Set",
@@ -236,7 +259,8 @@
       "defaultRoute": "boss_remembrance",
       "targetSourceId": "remembrance_rot_goddess",
       "defaultEnemyName": "Remembrance of the Rot Goddess (Malenia)",
-      "description": "Armor made of unalloyed gold, worn by Malenia, Blade of Miquella."
+      "description": "Armor made of unalloyed gold, worn by Malenia, Blade of Miquella.",
+      "progressionTier": 4
     },
     "4240": {
       "name": "Lord of Blood's Robe",
@@ -248,7 +272,8 @@
       "defaultRoute": "boss_remembrance",
       "targetSourceId": "remembrance_blood_lord",
       "defaultEnemyName": "Remembrance of the Blood Lord (Mohg)",
-      "description": "Robe of Mohg, Lord of Blood, soaked in the accursed blood of the Formless Mother."
+      "description": "Robe of Mohg, Lord of Blood, soaked in the accursed blood of the Formless Mother.",
+      "progressionTier": 4
     },
     "4250": {
       "name": "Maliketh's Set",
@@ -257,7 +282,8 @@
       "defaultRoute": "boss_remembrance",
       "targetSourceId": "remembrance_black_blade",
       "defaultEnemyName": "Remembrance of the Black Blade (Maliketh)",
-      "description": "Beast armor forged from black iron and gold, bearing the power of Destined Death."
+      "description": "Beast armor forged from black iron and gold, bearing the power of Destined Death.",
+      "progressionTier": 4
     },
     "4260": {
       "name": "Elden Lord Set",
@@ -266,7 +292,8 @@
       "defaultRoute": "boss_remembrance",
       "targetSourceId": "remembrance_hoarah_loux",
       "defaultEnemyName": "Remembrance of Hoarah Loux (Godfrey)",
-      "description": "Armor of Godfrey, the first Elden Lord and chieftain of the badlands."
+      "description": "Armor of Godfrey, the first Elden Lord and chieftain of the badlands.",
+      "progressionTier": 4
     },
     "1560": {
       "name": "Beast Champion Set",
@@ -275,7 +302,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "bernahl",
       "defaultEnemyName": "Bernahl",
-      "description": "Beast Champion Set"
+      "description": "Beast Champion Set",
+      "progressionTier": 3
     },
     "1570": {
       "name": "Hoslow's Set",
@@ -284,7 +312,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "juno_hoslow",
       "defaultEnemyName": "Juno Hoslow",
-      "description": "Hoslow's Set"
+      "description": "Hoslow's Set",
+      "progressionTier": 4
     },
     "1650": {
       "name": "Ronin's Set",
@@ -298,7 +327,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "nomadic_merchant_altus",
       "defaultEnemyName": "Nomadic Merchant (Altus)",
-      "description": "Ronin's Set"
+      "description": "Ronin's Set",
+      "progressionTier": 3
     },
     "1850": {
       "name": "Fire Prelate Set",
@@ -307,7 +337,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "fire_prelate",
       "defaultEnemyName": "Fire Prelate",
-      "description": "Fire Prelate Set"
+      "description": "Fire Prelate Set",
+      "progressionTier": 4
     },
     "1870": {
       "name": "Guardian Set",
@@ -322,7 +353,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "erdtree_guardian",
       "defaultEnemyName": "Erdtree Guardian",
-      "description": "Guardian Set"
+      "description": "Guardian Set",
+      "progressionTier": 3
     },
     "1410": {
       "name": "Snow Witch Set",
@@ -336,7 +368,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "ranni_quest",
       "defaultEnemyName": "Ranni",
-      "description": "Snow Witch Set"
+      "description": "Snow Witch Set",
+      "progressionTier": 2
     },
     "1380": {
       "name": "Deathbed Dress",
@@ -348,7 +381,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "fias_champions",
       "defaultEnemyName": "Fia's Champions",
-      "description": "Deathbed Dress"
+      "description": "Deathbed Dress",
+      "progressionTier": 2
     },
     "1390": {
       "name": "Goldmask's Set",
@@ -360,7 +394,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "goldmask_quest",
       "defaultEnemyName": "Goldmask",
-      "description": "Goldmask's Set"
+      "description": "Goldmask's Set",
+      "progressionTier": 2
     }
   },
   "weapons": {
@@ -370,7 +405,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "twin_maiden_husks",
       "defaultEnemyName": "Twin Maiden Husks",
-      "description": "A well-balanced standard straight sword, favored by knights and starting Vagabonds."
+      "description": "A well-balanced standard straight sword, favored by knights and starting Vagabonds.",
+      "progressionTier": 1
     },
     "1800": {
       "name": "Halberd",
@@ -378,7 +414,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "nomadic_merchant_liurnia",
       "defaultEnemyName": "Nomadic Merchant",
-      "description": "A polearm combining spear and axe, capable of keeping foes at bay."
+      "description": "A polearm combining spear and axe, capable of keeping foes at bay.",
+      "progressionTier": 1
     },
     "3133": {
       "name": "Heater Shield",
@@ -386,7 +423,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "twin_maiden_husks",
       "defaultEnemyName": "Twin Maiden Husks",
-      "description": "Compact metal medium shield with 100% physical defense."
+      "description": "Compact metal medium shield with 100% physical defense.",
+      "progressionTier": 1
     },
     "9000": {
       "name": "Uchigatana",
@@ -394,7 +432,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "deathtouched_catacombs_chest",
       "defaultEnemyName": "Deathtouched Catacombs",
-      "description": "Katana characterized by its gently curved single-edged blade. Causes blood loss buildup."
+      "description": "Katana characterized by its gently curved single-edged blade. Causes blood loss buildup.",
+      "progressionTier": 1
     },
     "4100": {
       "name": "Longbow",
@@ -402,7 +441,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "twin_maiden_husks",
       "defaultEnemyName": "Twin Maiden Husks",
-      "description": "Standard longbow favored by hunters and samurai."
+      "description": "Standard longbow favored by hunters and samurai.",
+      "progressionTier": 1
     },
     "3007": {
       "name": "Red Thorn Roundshield",
@@ -410,7 +450,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "nomadic_merchant_weeping",
       "defaultEnemyName": "Nomadic Merchant",
-      "description": "Small round wooden shield adorned with red thorns."
+      "description": "Small round wooden shield adorned with red thorns.",
+      "progressionTier": 1
     },
     "3313": {
       "name": "Astrologer's Staff",
@@ -418,7 +459,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "nomadic_merchant_liurnia",
       "defaultEnemyName": "Nomadic Merchant (Liurnia of the Lakes)",
-      "description": "Glintstone catalyst used to cast sorceries."
+      "description": "Glintstone catalyst used to cast sorceries.",
+      "progressionTier": 1
     },
     "2010": {
       "name": "Short Sword",
@@ -426,7 +468,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "nomadic_merchant",
       "defaultEnemyName": "Nomadic Merchant",
-      "description": "Lightweight straight sword with quick recovery."
+      "description": "Lightweight straight sword with quick recovery.",
+      "progressionTier": 1
     },
     "3008": {
       "name": "Scripture Wooden Shield",
@@ -434,7 +477,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "nomadic_merchant_liurnia",
       "defaultEnemyName": "Nomadic Merchant",
-      "description": "Small wooden shield inscribed with holy scripture."
+      "description": "Small wooden shield inscribed with holy scripture.",
+      "progressionTier": 1
     },
     "1400": {
       "name": "Battle Axe",
@@ -442,7 +486,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "twin_maiden_husks",
       "defaultEnemyName": "Twin Maiden Husks",
-      "description": "Thick-bladed axe wielded with ferocious cleaving swings."
+      "description": "Thick-bladed axe wielded with ferocious cleaving swings.",
+      "progressionTier": 1
     },
     "3123": {
       "name": "Large Leather Shield",
@@ -450,7 +495,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "kale_church_of_elleh",
       "defaultEnemyName": "Merchant Kal\u00e9 (Church of Elleh)",
-      "description": "Round medium shield made of stretched leather."
+      "description": "Round medium shield made of stretched leather.",
+      "progressionTier": 1
     },
     "1090": {
       "name": "Great Knife",
@@ -458,7 +504,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "demi_human_chief",
       "defaultEnemyName": "Demi-Human",
-      "description": "Broad-bladed curved dagger causing blood loss buildup."
+      "description": "Broad-bladed curved dagger causing blood loss buildup.",
+      "progressionTier": 1
     },
     "4000": {
       "name": "Shortbow",
@@ -466,7 +513,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "nomadic_merchant_coastal",
       "defaultEnemyName": "Nomadic Merchant (Coastal Cave)",
-      "description": "Compact bow allowing rapid shooting while rolling or jumping."
+      "description": "Compact bow allowing rapid shooting while rolling or jumping.",
+      "progressionTier": 1
     },
     "3000": {
       "name": "Buckler",
@@ -474,7 +522,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "gostoc_stormveil",
       "defaultEnemyName": "Gatekeeper Gostoc (Stormveil)",
-      "description": "Small metal shield specializing in parrying attacks."
+      "description": "Small metal shield specializing in parrying attacks.",
+      "progressionTier": 1
     },
     "7140": {
       "name": "Scimitar",
@@ -482,7 +531,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "twin_maiden_husks",
       "defaultEnemyName": "Twin Maiden Husks",
-      "description": "Curved sword that cuts with spinning, dancing slashes."
+      "description": "Curved sword that cuts with spinning, dancing slashes.",
+      "progressionTier": 1
     },
     "3009": {
       "name": "Riveted Wooden Shield",
@@ -490,7 +540,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "nomadic_merchant_liurnia",
       "defaultEnemyName": "Nomadic Merchant",
-      "description": "Small round shield reinforced with metal rivets."
+      "description": "Small round shield reinforced with metal rivets.",
+      "progressionTier": 1
     },
     "2020": {
       "name": "Broadsword",
@@ -498,7 +549,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "nomadic_merchant_coastal",
       "defaultEnemyName": "Nomadic Merchant (Coastal)",
-      "description": "Straight sword with a wide blade excelling at sweeping horizontal cuts."
+      "description": "Straight sword with a wide blade excelling at sweeping horizontal cuts.",
+      "progressionTier": 1
     },
     "3400": {
       "name": "Finger Seal",
@@ -506,7 +558,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "twin_maiden_husks",
       "defaultEnemyName": "Twin Maiden Husks",
-      "description": "Sacred seal catalyst used to cast incantations."
+      "description": "Sacred seal catalyst used to cast incantations.",
+      "progressionTier": 1
     },
     "3110": {
       "name": "Blue-Gold Kite Shield",
@@ -514,7 +567,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "nomadic_merchant_east_liurnia",
       "defaultEnemyName": "Nomadic Merchant (East Liurnia)",
-      "description": "Medium kite shield painted with blue and gold leaf."
+      "description": "Medium kite shield painted with blue and gold leaf.",
+      "progressionTier": 1
     },
     "5000": {
       "name": "Estoc",
@@ -522,7 +576,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "nomadic_merchant_liurnia",
       "defaultEnemyName": "Nomadic Merchant",
-      "description": "Long thrusting sword with a sharp piercing point."
+      "description": "Long thrusting sword with a sharp piercing point.",
+      "progressionTier": 1
     },
     "3300": {
       "name": "Glintstone Staff",
@@ -530,7 +585,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "nomadic_merchant_liurnia",
       "defaultEnemyName": "Nomadic Merchant",
-      "description": "Standard staff catalyst fitted with glintstone."
+      "description": "Standard staff catalyst fitted with glintstone.",
+      "progressionTier": 1
     },
     "3011": {
       "name": "Rift Shield",
@@ -538,7 +594,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "nomadic_merchant_bellum",
       "defaultEnemyName": "Nomadic Merchant (Bellum Church)",
-      "description": "Small round shield featuring a painted rift design."
+      "description": "Small round shield featuring a painted rift design.",
+      "progressionTier": 1
     },
     "1600": {
       "name": "Short Spear",
@@ -546,7 +603,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "twin_maiden_husks",
       "defaultEnemyName": "Twin Maiden Husks",
-      "description": "Thrusting spear designed for rapid thrusts and defensive poking."
+      "description": "Thrusting spear designed for rapid thrusts and defensive poking.",
+      "progressionTier": 1
     },
     "3003": {
       "name": "Rickety Shield",
@@ -554,7 +612,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "wandering_noble",
       "defaultEnemyName": "Wandering Noble",
-      "description": "Crude shield roughly cobbled together from wooden planks."
+      "description": "Crude shield roughly cobbled together from wooden planks.",
+      "progressionTier": 1
     },
     "1101": {
       "name": "Club",
@@ -562,7 +621,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "nomadic_merchant_coastal",
       "defaultEnemyName": "Nomadic Merchant",
-      "description": "Simple wooden club capable of inflicting immense poise damage."
+      "description": "Simple wooden club capable of inflicting immense poise damage.",
+      "progressionTier": 1
     },
     "0206": {
       "name": "Greatsword",
@@ -570,7 +630,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "caelid_caravan_troll",
       "defaultEnemyName": "Dragonbarrow Caravan Giant (Caelid)",
-      "description": "A coarse iron lump of an ultra greatsword, mowing down foes with sheer weight."
+      "description": "A coarse iron lump of an ultra greatsword, mowing down foes with sheer weight.",
+      "progressionTier": 2
     },
     "0211": {
       "name": "Dark Moon Greatsword",
@@ -578,7 +639,8 @@
       "defaultRoute": "boss_remembrance",
       "targetSourceId": "remembrance_full_moon",
       "defaultEnemyName": "Remembrance of the Full Moon Queen (Rennala)",
-      "description": "A Moon Greatsword, bestowed by a Carian queen upon her spouse to honor long tradition."
+      "description": "A Moon Greatsword, bestowed by a Carian queen upon her spouse to honor long tradition.",
+      "progressionTier": 3
     },
     "0415": {
       "name": "Moonveil",
@@ -586,7 +648,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "magma_wyrm_makar",
       "defaultEnemyName": "Magma Wyrm Makar (Gael Tunnel / Ruin-Strewn)",
-      "description": "Katana forged of glintstone, drawing a blade of light with silent speed."
+      "description": "Katana forged of glintstone, drawing a blade of light with silent speed.",
+      "progressionTier": 2
     },
     "0416": {
       "name": "Rivers of Blood",
@@ -594,7 +657,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "bloody_finger_okina",
       "defaultEnemyName": "Bloody Finger Okina (Church of Repose)",
-      "description": "Weapon of Okina, swordsman from the Land of Reeds, cursed with an unquenchable thirst for blood."
+      "description": "Weapon of Okina, swordsman from the Land of Reeds, cursed with an unquenchable thirst for blood.",
+      "progressionTier": 4
     },
     "0213": {
       "name": "Bastard Sword",
@@ -602,7 +666,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "twin_maiden_husks",
       "defaultEnemyName": "Twin Maiden Husks",
-      "description": "Bastard Sword"
+      "description": "Bastard Sword",
+      "progressionTier": 2
     },
     "0303": {
       "name": "Claymore",
@@ -610,7 +675,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "castle_morne_chest",
       "defaultEnemyName": "Castle Morne Chest",
-      "description": "Claymore"
+      "description": "Claymore",
+      "progressionTier": 2
     },
     "0453": {
       "name": "Nagakiba",
@@ -618,7 +684,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "yura",
       "defaultEnemyName": "Bloody Finger Hunter Yura",
-      "description": "Nagakiba"
+      "description": "Nagakiba",
+      "progressionTier": 2
     },
     "0550": {
       "name": "Twinblade",
@@ -626,7 +693,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "dragon_burnt_ruins_chest",
       "defaultEnemyName": "Dragon-Burnt Ruins Chest",
-      "description": "Twinblade"
+      "description": "Twinblade",
+      "progressionTier": 2
     },
     "0554": {
       "name": "Godskin Peeler",
@@ -634,7 +702,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "godskin_apostle_windmill",
       "defaultEnemyName": "Godskin Apostle (Windmill Village)",
-      "description": "Godskin Peeler"
+      "description": "Godskin Peeler",
+      "progressionTier": 2
     },
     "0556": {
       "name": "Eleonora's Poleblade",
@@ -642,7 +711,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "eleonora_violet_bloody_finger",
       "defaultEnemyName": "Eleonora, Violet Bloody Finger",
-      "description": "Eleonora's Poleblade"
+      "description": "Eleonora's Poleblade",
+      "progressionTier": 2
     },
     "0606": {
       "name": "Banished Knight's Greatsword",
@@ -650,7 +720,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "banished_knight_sol",
       "defaultEnemyName": "Banished Knight (Castle Sol)",
-      "description": "Banished Knight's Greatsword"
+      "description": "Banished Knight's Greatsword",
+      "progressionTier": 2
     },
     "0617": {
       "name": "Carian Knight's Sword",
@@ -658,7 +729,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "moongrum_carian_knight",
       "defaultEnemyName": "Moongrum",
-      "description": "Carian Knight's Sword"
+      "description": "Carian Knight's Sword",
+      "progressionTier": 2
     },
     "0622": {
       "name": "Coded Sword",
@@ -666,7 +738,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "roundtable_hold_chest",
       "defaultEnemyName": "Roundtable Hold Chest",
-      "description": "Coded Sword"
+      "description": "Coded Sword",
+      "progressionTier": 2
     },
     "0626": {
       "name": "Sword of Night and Flame",
@@ -674,7 +747,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "caria_manor_chest",
       "defaultEnemyName": "Caria Manor Chest",
-      "description": "Sword of Night and Flame"
+      "description": "Sword of Night and Flame",
+      "progressionTier": 2
     },
     "0716": {
       "name": "Commander's Standard",
@@ -682,7 +756,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "commander_oneil",
       "defaultEnemyName": "Commander O'Neil",
-      "description": "Commander's Standard"
+      "description": "Commander's Standard",
+      "progressionTier": 2
     },
     "1105": {
       "name": "Halo Scythe",
@@ -690,7 +765,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "cleanrot_knight_halo",
       "defaultEnemyName": "Cleanrot Knight",
-      "description": "Halo Scythe"
+      "description": "Halo Scythe",
+      "progressionTier": 2
     },
     "2045": {
       "name": "One-Eyed Shield",
@@ -698,7 +774,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "chief_guardian_arghanthy",
       "defaultEnemyName": "Chief Guardian Arghanthy",
-      "description": "One-Eyed Shield"
+      "description": "One-Eyed Shield",
+      "progressionTier": 2
     }
   },
   "accessories": {
@@ -708,7 +785,8 @@
       "defaultRoute": "merchant_shop",
       "targetSourceId": "kale_church_of_elleh",
       "defaultEnemyName": "Merchant Kal\u00e9 (Church of Elleh)",
-      "description": "A medallion with crimson amber inlaid. Boosts maximum HP."
+      "description": "A medallion with crimson amber inlaid. Boosts maximum HP.",
+      "progressionTier": 1
     },
     "1010": {
       "name": "Cerulean Amber Medallion",
@@ -716,7 +794,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "lakeside_crystal_cave",
       "defaultEnemyName": "Bloodhound Knight (Lakeside Crystal Cave)",
-      "description": "A medallion with cerulean amber inlaid. Boosts maximum FP."
+      "description": "A medallion with cerulean amber inlaid. Boosts maximum FP.",
+      "progressionTier": 1
     },
     "1020": {
       "name": "Viridian Amber Medallion",
@@ -724,7 +803,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "tombsward_cave",
       "defaultEnemyName": "Miranda the Blighted Bloom (Tombsward Cave)",
-      "description": "A medallion with viridian amber inlaid. Boosts maximum stamina."
+      "description": "A medallion with viridian amber inlaid. Boosts maximum stamina.",
+      "progressionTier": 1
     },
     "1030": {
       "name": "Arsenal Charm",
@@ -732,7 +812,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "nepheli_loux",
       "defaultEnemyName": "Nepheli Loux (Stormveil Castle)",
-      "description": "An iron charm that resembles a mass of weaponry. Boosts maximum equipment load."
+      "description": "An iron charm that resembles a mass of weaponry. Boosts maximum equipment load.",
+      "progressionTier": 1
     },
     "1032": {
       "name": "Great-Jar's Arsenal",
@@ -740,7 +821,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "great_jar_knights",
       "defaultEnemyName": "Great-Jar's Knights (Dragonbarrow)",
-      "description": "A charm resembling a great jar overflowing with weaponry. Vastly boosts maximum equipment load."
+      "description": "A charm resembling a great jar overflowing with weaponry. Vastly boosts maximum equipment load.",
+      "progressionTier": 2
     },
     "1040": {
       "name": "Erdtree's Favor",
@@ -748,7 +830,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "fringefolk_heros_grave",
       "defaultEnemyName": "Fringefolk Hero's Grave Cache",
-      "description": "A talisman depicting a special blessing of the Erdtree. Raises maximum HP, stamina, and equip load."
+      "description": "A talisman depicting a special blessing of the Erdtree. Raises maximum HP, stamina, and equip load.",
+      "progressionTier": 1
     },
     "1050": {
       "name": "Radagon's Scarseal",
@@ -756,7 +839,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "weeping_evergaol",
       "defaultEnemyName": "Ancient Hero of Zamor (Weeping Evergaol)",
-      "description": "Eye engraved with an Elden Rune. Raises vigor, endurance, strength, and dexterity, but increases damage taken."
+      "description": "Eye engraved with an Elden Rune. Raises vigor, endurance, strength, and dexterity, but increases damage taken.",
+      "progressionTier": 1
     },
     "1051": {
       "name": "Radagon's Soreseal",
@@ -764,7 +848,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "fort_faroth_chest",
       "defaultEnemyName": "Fort Faroth Hidden Cache",
-      "description": "This legendary talisman greatly raises vigor, endurance, strength, and dexterity, but increases damage taken."
+      "description": "This legendary talisman greatly raises vigor, endurance, strength, and dexterity, but increases damage taken.",
+      "progressionTier": 3
     },
     "1060": {
       "name": "Starscourge Heirloom",
@@ -772,7 +857,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "fort_gael_chest",
       "defaultEnemyName": "Fort Gael Chest (Caelid)",
-      "description": "A talisman engraved with a scene from a heroic tale. Raises strength by 5."
+      "description": "A talisman engraved with a scene from a heroic tale. Raises strength by 5.",
+      "progressionTier": 1
     },
     "1070": {
       "name": "Prosthesis-Wearer Heirloom",
@@ -780,7 +866,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "gowry_quest",
       "defaultEnemyName": "Millicent's Quest (Church of the Plague)",
-      "description": "A talisman engraved with a scene from a heroic tale. Raises dexterity by 5."
+      "description": "A talisman engraved with a scene from a heroic tale. Raises dexterity by 5.",
+      "progressionTier": 2
     },
     "1080": {
       "name": "Stargazer Heirloom",
@@ -788,7 +875,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "divine_tower_liurnia",
       "defaultEnemyName": "Divine Tower of Liurnia Summit",
-      "description": "A talisman engraved with the legend of a queen. Raises intelligence by 5."
+      "description": "A talisman engraved with the legend of a queen. Raises intelligence by 5.",
+      "progressionTier": 2
     },
     "1090": {
       "name": "Two Fingers Heirloom",
@@ -796,7 +884,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "purified_ruins_chest",
       "defaultEnemyName": "Purified Ruins Underground Chest",
-      "description": "A talisman engraved with the legend of the Two Fingers. Raises faith by 5."
+      "description": "A talisman engraved with the legend of the Two Fingers. Raises faith by 5.",
+      "progressionTier": 2
     },
     "1100": {
       "name": "Silver Scarab",
@@ -804,7 +893,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "hidden_path_haligtree_chest",
       "defaultEnemyName": "Hidden Path to the Haligtree Chest",
-      "description": "A talisman facsimile of a scarab, the carrier of treasures. Raises item discovery."
+      "description": "A talisman facsimile of a scarab, the carrier of treasures. Raises item discovery.",
+      "progressionTier": 2
     },
     "1110": {
       "name": "Gold Scarab",
@@ -812,7 +902,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "abandoned_cave_knights",
       "defaultEnemyName": "Cleanrot Knight Duo (Abandoned Cave)",
-      "description": "A talisman facsimile of a scarab, the carrier of treasures. Increases runes obtained from defeated enemies."
+      "description": "A talisman facsimile of a scarab, the carrier of treasures. Increases runes obtained from defeated enemies.",
+      "progressionTier": 2
     },
     "1140": {
       "name": "Moon of Nokstella",
@@ -820,7 +911,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "nokstella_throne_chest",
       "defaultEnemyName": "Nokstella Eternal City Throne Chest",
-      "description": "This legendary talisman increases memory slots by 2."
+      "description": "This legendary talisman increases memory slots by 2.",
+      "progressionTier": 2
     },
     "1150": {
       "name": "Green Turtle Talisman",
@@ -828,7 +920,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "summonwater_village_chest",
       "defaultEnemyName": "Summonwater Village Underground Chest",
-      "description": "A talisman in the shape of a green turtle. Raises stamina recovery speed."
+      "description": "A talisman in the shape of a green turtle. Raises stamina recovery speed.",
+      "progressionTier": 2
     },
     "1210": {
       "name": "Bull-Goat's Talisman",
@@ -836,7 +929,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "dragonbarrow_cave_cache",
       "defaultEnemyName": "Dragonbarrow Cave Cache",
-      "description": "A talisman depicting the giant horned bull-goat. Raises poise by 33%."
+      "description": "A talisman depicting the giant horned bull-goat. Raises poise by 33%.",
+      "progressionTier": 2
     },
     "2050": {
       "name": "Ritual Sword Talisman",
@@ -844,7 +938,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "lux_ruins_chest",
       "defaultEnemyName": "Lux Ruins Underground Chest (Altus)",
-      "description": "A talisman patterned after swords used in ritual combat. Raises attack power when HP is at maximum."
+      "description": "A talisman patterned after swords used in ritual combat. Raises attack power when HP is at maximum.",
+      "progressionTier": 2
     },
     "2060": {
       "name": "Spear Talisman",
@@ -852,7 +947,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "lakeside_crystal_cave_chest",
       "defaultEnemyName": "Lakeside Crystal Cave Chest",
-      "description": "Enhances thrusting weapon counterattacks."
+      "description": "Enhances thrusting weapon counterattacks.",
+      "progressionTier": 2
     },
     "2070": {
       "name": "Hammer Talisman",
@@ -860,7 +956,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "rebellion_knight_henricus",
       "defaultEnemyName": "Recusant Henricus (Limgrave Colosseum)",
-      "description": "Enhances stamina damage dealt against blocking foes."
+      "description": "Enhances stamina damage dealt against blocking foes.",
+      "progressionTier": 2
     },
     "2090": {
       "name": "Dagger Talisman",
@@ -868,7 +965,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "volcano_manor_guest_hall",
       "defaultEnemyName": "Volcano Manor Secret Cache",
-      "description": "Enhances critical hit damage."
+      "description": "Enhances critical hit damage.",
+      "progressionTier": 2
     },
     "2100": {
       "name": "Arrow's Reach Talisman",
@@ -876,7 +974,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "stormhill_tower_chest",
       "defaultEnemyName": "Stormhill Guard Tower Chest",
-      "description": "Increases effective range of bows and crossbows."
+      "description": "Increases effective range of bows and crossbows.",
+      "progressionTier": 2
     },
     "2120": {
       "name": "Twinblade Talisman",
@@ -884,7 +983,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "castle_morne_back_tower",
       "defaultEnemyName": "Castle Morne Tower Chest",
-      "description": "Enhances the final hit of attack chains."
+      "description": "Enhances the final hit of attack chains.",
+      "progressionTier": 2
     },
     "2130": {
       "name": "Axe Talisman",
@@ -892,7 +992,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "mistwood_ruins_chest",
       "defaultEnemyName": "Mistwood Ruins Underground Chest",
-      "description": "Enhances charged attack damage."
+      "description": "Enhances charged attack damage.",
+      "progressionTier": 2
     },
     "2140": {
       "name": "Lance Talisman",
@@ -900,7 +1001,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "campsite_cache_limgrave",
       "defaultEnemyName": "Deathtouched Catacombs Cliffs Cache",
-      "description": "Enhances attacks made whilst on horseback."
+      "description": "Enhances attacks made whilst on horseback.",
+      "progressionTier": 2
     },
     "2180": {
       "name": "Claw Talisman",
@@ -908,7 +1010,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "stormveil_rampart_tower",
       "defaultEnemyName": "Stormveil Castle Rampart Tower Cache",
-      "description": "A talisman depicting a bird's claw. Enhances jump attacks."
+      "description": "A talisman depicting a bird's claw. Enhances jump attacks.",
+      "progressionTier": 2
     },
     "2200": {
       "name": "Curved Sword Talisman",
@@ -916,7 +1019,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "stormveil_cliff_chest",
       "defaultEnemyName": "Stormveil Cliffside Cellar Chest",
-      "description": "Enhances guard counter attacks."
+      "description": "Enhances guard counter attacks.",
+      "progressionTier": 2
     },
     "3000": {
       "name": "Graven-School Talisman",
@@ -924,7 +1028,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "raya_lucaria_secret_room",
       "defaultEnemyName": "Raya Lucaria Debate Parlor Secret Cache",
-      "description": "Raises potency of sorceries."
+      "description": "Raises potency of sorceries.",
+      "progressionTier": 2
     },
     "3070": {
       "name": "Radagon Icon",
@@ -932,7 +1037,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "debate_parlor_second_floor",
       "defaultEnemyName": "Raya Lucaria Debate Parlor Rafters Chest",
-      "description": "A legendary talisman depicting King Consort Radagon. Shortens spell casting time."
+      "description": "A legendary talisman depicting King Consort Radagon. Shortens spell casting time.",
+      "progressionTier": 2
     },
     "3090": {
       "name": "Godfrey Icon",
@@ -940,7 +1046,8 @@
       "defaultRoute": "enemy_drop",
       "targetSourceId": "golden_lineage_evergaol",
       "defaultEnemyName": "Godefroy the Grafted (Golden Lineage Evergaol)",
-      "description": "A legendary talisman depicting Godfrey, the first Elden Lord. Enhances charged spells and skills."
+      "description": "A legendary talisman depicting Godfrey, the first Elden Lord. Enhances charged spells and skills.",
+      "progressionTier": 4
     }
   }
 }

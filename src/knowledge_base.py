@@ -8,7 +8,7 @@ Boss Soul Remembrances, elite enemies, and merchants.
 import json
 from pathlib import Path
 from typing import Dict, Any, Optional, List
-from src.models import LootDistributionType, LootTarget
+from src.models import LootDistributionType, LootTarget, ProgressionTier
 from src.logger import system_logger
 
 
@@ -38,6 +38,8 @@ class VanillaKnowledgeBase:
         self._elite_enemies = routes_data.get("eliteEnemies", [])
         self._merchants = routes_data.get("merchants", [])
         self._enemies = routes_data.get("enemies", [])
+        self._chests = routes_data.get("chests", [])
+
 
     @classmethod
     def from_data_dir(cls, data_dir: str = "data") -> "VanillaKnowledgeBase":
@@ -89,9 +91,13 @@ class VanillaKnowledgeBase:
         """Returns all cataloged vanilla weapons."""
         return dict(self._weapons)
 
-    def list_all_vanilla_accessories(self) -> Dict[str, Dict[str, Any]]:
-        """Returns all cataloged vanilla accessories/talismans."""
-        return dict(self._accessories)
+    def list_all_vanilla_accessories(self, tier: Optional[ProgressionTier] = None) -> Dict[str, Dict[str, Any]]:
+        """Returns all cataloged vanilla accessories/talismans, optionally filtered by tier."""
+        if tier is None:
+            return dict(self._accessories)
+        filtered = {k: v for k, v in self._accessories.items() if v.get("progressionTier") == tier.value}
+        return filtered if filtered else dict(self._accessories)
+
 
     def get_default_loot_target(
         self,
@@ -164,17 +170,120 @@ class VanillaKnowledgeBase:
                 chance_or_cost=10000
             )
 
-    def list_boss_remembrances(self) -> List[Dict[str, Any]]:
-        """Returns all selectable Boss Soul Remembrances."""
-        return list(self._boss_remembrances)
+    def get_progression_tier(self, entity_or_id: Any) -> ProgressionTier:
+        """
+        Resolves an item model, weapon/protector dict, boss, merchant, or enemy
+        to its canonical ProgressionTier (EARLY=1, MID=2, LATE=3, ENDGAME=4).
+        """
+        if isinstance(entity_or_id, ProgressionTier):
+            return entity_or_id
+        if isinstance(entity_or_id, int) and entity_or_id in (1, 2, 3, 4):
+            return ProgressionTier(entity_or_id)
 
-    def list_elite_enemies(self) -> List[Dict[str, Any]]:
-        """Returns all selectable enemy drop targets."""
-        return list(self._elite_enemies)
+        info: Optional[Dict[str, Any]] = None
+        if isinstance(entity_or_id, dict):
+            info = entity_or_id
+        elif isinstance(entity_or_id, str):
+            info = (
+                self.lookup_protector(entity_or_id)
+                or self.lookup_weapon(entity_or_id)
+                or self.lookup_accessory(entity_or_id)
+            )
+            if not info:
+                # Check entity lists by id
+                for b in self._boss_remembrances:
+                    if b.get("id") == entity_or_id or b.get("boss") == entity_or_id:
+                        info = b
+                        break
+                if not info:
+                    for c in self._chests:
+                        if c.get("id") == entity_or_id or str(c.get("lotParamId")) == entity_or_id:
+                            info = c
+                            break
+                if not info:
+                    for e in self._elite_enemies:
+                        if e.get("id") == entity_or_id or str(e.get("lotParamId")) == entity_or_id:
+                            info = e
+                            break
+                if not info:
+                    for m in self._merchants:
+                        if m.get("id") == entity_or_id or str(m.get("shopId")) == entity_or_id:
+                            info = m
+                            break
 
-    def list_merchants(self) -> List[Dict[str, Any]]:
-        """Returns all selectable merchants."""
-        return list(self._merchants)
+        if info:
+            if "progressionTier" in info:
+                val = int(info["progressionTier"])
+                if val in (1, 2, 3, 4):
+                    return ProgressionTier(val)
+            if "targetSourceId" in info and info["targetSourceId"] != entity_or_id:
+                return self.get_progression_tier(info["targetSourceId"])
+            name_lower = (info.get("name", "") + " " + info.get("location", "") + " " + info.get("description", "")).lower()
+        else:
+            name_lower = str(entity_or_id).lower()
+
+        # Keyword heuristics
+        if any(w in name_lower for w in ["haligtree", "malenia", "farum", "azula", "maliketh", "mohg", "placidusax", "elden beast", "elden throne", "snowfield", "mountaintop", "sol"]):
+            return ProgressionTier.ENDGAME
+        if any(w in name_lower for w in ["altus", "leyndell", "volcano", "gelmir", "rykard", "godfrey", "crucible", "ordovis", "vyke", "vargram"]):
+            return ProgressionTier.LATE
+        if any(w in name_lower for w in ["liurnia", "raya lucaria", "caria", "rennala", "radahn", "caelid", "redmane", "makar", "siofra", "ainsel", "moonveil"]):
+            return ProgressionTier.MID
+        if any(w in name_lower for w in ["stormveil", "limgrave", "weeping", "gatefront", "morne", "godrick", "margit", "darriwil", "kale", "elleh"]):
+            return ProgressionTier.EARLY
+
+        return ProgressionTier.MID
+
+    def get_progression_tier_for_spec(self, spec: Dict[str, Any]) -> ProgressionTier:
+        """Determines the progression tier for a patch specification."""
+        for ep in spec.get("equip_params", []):
+            base_clone_id = ep.get("base_clone_id")
+            if base_clone_id:
+                return self.get_progression_tier(str(base_clone_id))
+        set_id = spec.get("set_id", "")
+        return self.get_progression_tier(set_id)
+
+    def get_chest_after_boss(self, boss_id: str) -> Optional[Dict[str, Any]]:
+        """Resolves a boss remembrance or boss ID to its dedicated post-boss chest."""
+        for b in self._boss_remembrances:
+            if b.get("id") == boss_id or b.get("boss") == boss_id:
+                chest_id = b.get("chestAfterBossId")
+                if chest_id:
+                    for c in self._chests:
+                        if c.get("id") == chest_id:
+                            return dict(c)
+        for c in self._chests:
+            if c.get("afterBoss") == boss_id:
+                return dict(c)
+        return None
+
+    def list_chests(self, tier: Optional[ProgressionTier] = None) -> List[Dict[str, Any]]:
+        """Returns cataloged treasure chests, optionally filtered by progression tier."""
+        if tier is None:
+            return list(self._chests)
+        filtered = [c for c in self._chests if c.get("progressionTier") == tier.value]
+        return filtered if filtered else list(self._chests)
+
+    def list_boss_remembrances(self, tier: Optional[ProgressionTier] = None) -> List[Dict[str, Any]]:
+        """Returns all selectable Boss Soul Remembrances, optionally filtered by tier."""
+        if tier is None:
+            return list(self._boss_remembrances)
+        filtered = [b for b in self._boss_remembrances if b.get("progressionTier") == tier.value]
+        return filtered if filtered else list(self._boss_remembrances)
+
+    def list_elite_enemies(self, tier: Optional[ProgressionTier] = None) -> List[Dict[str, Any]]:
+        """Returns all selectable enemy drop targets, optionally filtered by tier."""
+        if tier is None:
+            return list(self._elite_enemies)
+        filtered = [e for e in self._elite_enemies if e.get("progressionTier") == tier.value]
+        return filtered if filtered else list(self._elite_enemies)
+
+    def list_merchants(self, tier: Optional[ProgressionTier] = None) -> List[Dict[str, Any]]:
+        """Returns all selectable merchants, optionally filtered by tier."""
+        if tier is None:
+            return list(self._merchants)
+        filtered = [m for m in self._merchants if m.get("progressionTier") == tier.value]
+        return filtered if filtered else list(self._merchants)
 
     def get_enemy_lot_id(self, enemy_id: str) -> Optional[int]:
         """Resolves an enemy or elite enemy identifier to its ItemLotParam_enemy ID."""
@@ -199,13 +308,13 @@ class VanillaKnowledgeBase:
         - elites: Elite knights and roaming champions across all regions
         - roaming: Roaming enemies and standard encounter mobs
         """
-        chests = [
-            {"id": "gatefront_ruins_chest", "name": "Gatefront Ruins Chest (Limgrave)", "lotParamId": 102100},
-            {"id": "castle_sol_medallion", "name": "Castle Sol Secret Chest (Mountaintops)", "lotParamId": 102800},
-            {"id": "morne_tunnel_cache", "name": "Morne Tunnel Hidden Cache (Weeping Peninsula)", "lotParamId": 20600},
-            {"id": "alexander_warrior_remains", "name": "Alexander Warrior Jar Treasure (Farum Azula)", "lotParamId": 101740},
-            {"id": "patches_leather_cache", "name": "Patches' Murkwater Cave Cache (Limgrave)", "lotParamId": 101840},
-            {"id": "yura_ronin_cache", "name": "Yura's Zamor Ruins Cache (Mountaintops)", "lotParamId": 101640},
+        chests = list(self._chests) if self._chests else [
+            {"id": "gatefront_ruins_chest", "name": "Gatefront Ruins Chest (Limgrave)", "lotParamId": 102100, "progressionTier": 1},
+            {"id": "castle_sol_medallion", "name": "Castle Sol Secret Chest (Mountaintops)", "lotParamId": 102800, "progressionTier": 4},
+            {"id": "morne_tunnel_cache", "name": "Morne Tunnel Hidden Cache (Weeping Peninsula)", "lotParamId": 20600, "progressionTier": 1},
+            {"id": "alexander_warrior_remains", "name": "Alexander Warrior Jar Treasure (Farum Azula)", "lotParamId": 101740, "progressionTier": 4},
+            {"id": "patches_leather_cache", "name": "Patches' Murkwater Cave Cache (Limgrave)", "lotParamId": 101840, "progressionTier": 1},
+            {"id": "yura_ronin_cache", "name": "Yura's Zamor Ruins Cache (Mountaintops)", "lotParamId": 101640, "progressionTier": 4},
         ]
         for e in self._enemies:
             if "chest" in e.get("name", "").lower() or "cache" in e.get("name", "").lower():
@@ -224,5 +333,6 @@ class VanillaKnowledgeBase:
             "elites": list(self._elite_enemies),
             "roaming": roaming if roaming else list(self._elite_enemies)
         }
+
 
 

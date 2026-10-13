@@ -8,9 +8,10 @@ import random
 from typing import Dict, Optional, Set
 from src.models import (
     AdditionType, AntiDup, LootDistributionType, LootTarget,
-    DetectedModSet, ItemDropConfig
+    DetectedModSet, ItemDropConfig, ProgressionTier
 )
 from src.knowledge_base import VanillaKnowledgeBase
+
 from src.logger import system_logger
 
 
@@ -95,6 +96,8 @@ class LootDistributor:
             else:
                 source_name = "Wandering Enemy (Uncharted)"
 
+        tier = self._kb.get_progression_tier(vanilla_info or mod_set.target_model_id)
+
         # 0. Test Mode: cycles across Bosses, Mobs, Shops
         if addition_type == AdditionType.TEST_MODE:
             target = self._test_mode_placement()
@@ -103,10 +106,12 @@ class LootDistributor:
 
         # 1. Anti-Dup Handling for 100% Boss Drops
         if is_100_percent_boss:
-            if anti_dup == AntiDup.BOSS_ROTATION:
-                target = self._rotate_boss_drop(source_id, source_name)
+            if anti_dup == AntiDup.CHEST_AFTER_BOSS:
+                target = self._route_chest_after_boss(source_id, source_name, tier=tier)
+            elif anti_dup == AntiDup.BOSS_ROTATION:
+                target = self._rotate_boss_drop(source_id, source_name, tier=tier)
             elif anti_dup == AntiDup.EVERYTHING_IN_THE_WILD:
-                target = self._place_in_wild(source_name)
+                target = self._place_in_wild(source_name, tier=tier)
             else:
                 target = self._standard_placement(default_route, source_id, source_name)
             mod_set.loot_target = target
@@ -114,7 +119,7 @@ class LootDistributor:
 
         # 2. Addition Type Routing
         if addition_type == AdditionType.RANDOM_ADDITION:
-            target = self._random_boss_shop_or_transfusion() if is_not_dropped else self._random_mob_drop()
+            target = self._random_boss_shop_or_transfusion(tier=tier) if is_not_dropped else self._random_mob_drop(tier=tier)
         else:
             target = self._standard_placement(default_route, source_id, source_name)
 
@@ -155,62 +160,87 @@ class LootDistributor:
         system_logger.info(f"Test Mode: Routed to Enemy Drop -> '{chosen['name']}' (100% drop)", source="LootDistributor")
         return LootTarget(LootDistributionType.ENEMY_DROP, chosen["id"], f"[Test: Mob 100%] {chosen['name']}", 100.0)
 
-    def _rotate_boss_drop(self, original_boss_id: str, original_boss_name: str) -> LootTarget:
-        """AntiDup Option 1: Boss Rotation with wrap-around across Remembrance bosses."""
-        bosses = self._kb.list_boss_remembrances()
-        available = [b for b in bosses if b["id"] != original_boss_id and b["id"] not in self._assigned_bosses and self._shop_allocations.get(b["id"], 0) < self.max_shop_capacity]
+    def _rotate_boss_drop(self, original_boss_id: str, original_boss_name: str, tier: Optional[ProgressionTier] = None) -> LootTarget:
+        """
+        AntiDup Option 1: Boss Rotation with progression matching and cascade to Chest After Boss.
+        1. Rotates to another major boss strictly within the matching progression tier (max 1 set per boss).
+        2. If all bosses in that tier are filled, cascades directly to high-value Chests After Boss in that tier.
+        3. If chests in that tier are exhausted, cascades to elite enemies in that tier.
+        """
+        tier_bosses = self._kb.list_boss_remembrances(tier=tier)
+        available = [
+            b for b in tier_bosses
+            if b["id"] != original_boss_id and b["id"] not in self._assigned_bosses and self._shop_allocations.get(b["id"], 0) < 1
+        ]
 
         if available:
             chosen = random.choice(available)
             self._assigned_bosses.add(chosen["id"])
             self._shop_allocations[chosen["id"]] = self._shop_allocations.get(chosen["id"], 0) + 1
-            system_logger.info(f"Boss Rotation: Rotated from '{original_boss_name}' to '{chosen['name']}'", source="LootDistributor")
+            system_logger.info(f"Boss Rotation ({tier.name if tier else 'ALL'}): Rotated from '{original_boss_name}' to '{chosen['name']}'", source="LootDistributor")
             return LootTarget(LootDistributionType.BOSS_REMEMBRANCE, chosen["id"], chosen["name"], float(chosen.get("defaultCost", 30000)))
 
-        # When all bosses have at least 1 mod item assigned, wrap around across other bosses under capacity
-        other_bosses = [b for b in bosses if b["id"] != original_boss_id and self._shop_allocations.get(b["id"], 0) < self.max_shop_capacity]
-        if other_bosses:
-            chosen = random.choice(other_bosses)
-            self._shop_allocations[chosen["id"]] = self._shop_allocations.get(chosen["id"], 0) + 1
-            system_logger.info(f"Boss Rotation (Wrap): Rotated from '{original_boss_name}' to '{chosen['name']}'", source="LootDistributor")
-            return LootTarget(LootDistributionType.BOSS_REMEMBRANCE, chosen["id"], chosen["name"], float(chosen.get("defaultCost", 30000)))
+        # Fallback 1: High-value Chests After Boss in the matching progression tier
+        tier_chests = self._kb.list_chests(tier=tier)
+        post_boss_chests = [c for c in tier_chests if c.get("afterBoss")]
+        candidate_chests = post_boss_chests if post_boss_chests else tier_chests
+        if candidate_chests:
+            chosen_chest = random.choice(candidate_chests)
+            system_logger.info(f"Boss Rotation: Cascaded to Chest After Boss '{chosen_chest['name']}' (tier {tier.name if tier else 'ALL'})", source="LootDistributor")
+            return LootTarget(LootDistributionType.MAP_PICKUP, str(chosen_chest.get("lotParamId", 102100)), f"[Chest After Boss] {chosen_chest['name']}", 100.0)
 
-        # Fallback 1: World Discovery & Treasure Chests (Bosses -> Chests -> The Rest)
-        pools = self._kb.get_diablo_distribution_pools() if hasattr(self._kb, "get_diablo_distribution_pools") else {}
-        chests = pools.get("chests", [])
-        if chests:
-            chosen_chest = random.choice(chests)
-            system_logger.info(f"Boss Rotation: Cascaded to Treasure Chest '{chosen_chest['name']}'", source="LootDistributor")
-            return LootTarget(LootDistributionType.MAP_PICKUP, str(chosen_chest.get("lotParamId", 102100)), chosen_chest["name"], 100.0)
-
-        # Fallback 2: The Rest (Elite enemies across the realm)
-        mini_bosses = [
-            e for e in self._kb.list_elite_enemies()
-            if any(k in e["name"].lower() for k in ["sentinel", "knight", "cavalry", "assassin", "darriwil"])
-        ]
-        if mini_bosses:
-            chosen_mini = random.choice(mini_bosses)
-            system_logger.info(f"Boss Rotation: Cascaded to Mini-Boss '{chosen_mini['name']}'", source="LootDistributor")
+        # Fallback 2: Elite enemies / mini-bosses in matching progression tier
+        tier_elites = self._kb.list_elite_enemies(tier=tier)
+        if tier_elites:
+            chosen_mini = random.choice(tier_elites)
+            system_logger.info(f"Boss Rotation: Cascaded to Mini-Boss '{chosen_mini['name']}' (tier {tier.name if tier else 'ALL'})", source="LootDistributor")
             return LootTarget(LootDistributionType.ENEMY_DROP, chosen_mini["id"], chosen_mini["name"], float(chosen_mini.get("defaultDropChance", 25.0)))
 
-        return self._place_in_wild(original_boss_name)
+        return self._place_in_wild(original_boss_name, tier=tier)
 
-    def _place_in_wild(self, original_name: str) -> LootTarget:
-        """Places item into the wild on stronger enemies at normal drop rates."""
-        all_enemies = self._kb.list_elite_enemies()
-        chosen = random.choice(all_enemies) if all_enemies else {"id": "wild_enemy", "name": "Strong Wild Foe", "defaultDropChance": 20.0}
-        system_logger.info(f"Placed in wild on: '{chosen['name']}' ({chosen.get('defaultDropChance', 20.0)}%)", source="LootDistributor")
+    def _route_chest_after_boss(self, boss_id: str, boss_name: str, tier: Optional[ProgressionTier] = None) -> LootTarget:
+        """
+        AntiDup Option 3: Guaranteed Chest After Boss.
+        Directly routes 100% boss drop into the post-boss chest following the boss's arena/chamber,
+        matching the boss's progression tier.
+        """
+        chest = self._kb.get_chest_after_boss(boss_id)
+        if not chest:
+            tier_chests = self._kb.list_chests(tier=tier)
+            post_boss_chests = [c for c in tier_chests if c.get("afterBoss")]
+            candidate_chests = post_boss_chests if post_boss_chests else tier_chests
+            if candidate_chests:
+                chest = random.choice(candidate_chests)
+
+        if chest:
+            system_logger.info(f"AntiDup: Routed directly to Chest After Boss '{chest['name']}' (Lot {chest.get('lotParamId')})", source="LootDistributor")
+            return LootTarget(
+                LootDistributionType.MAP_PICKUP,
+                str(chest.get("lotParamId", 102100)),
+                f"[Chest After Boss] {chest['name']}",
+                100.0
+            )
+
+        return self._place_in_wild(boss_name, tier=tier)
+
+    def _place_in_wild(self, original_name: str, tier: Optional[ProgressionTier] = None) -> LootTarget:
+        """Places item into the wild on enemies strictly within matching progression tier."""
+        tier_enemies = self._kb.list_elite_enemies(tier=tier)
+        chosen = random.choice(tier_enemies) if tier_enemies else {"id": "wild_enemy", "name": "Strong Wild Foe", "defaultDropChance": 20.0}
+        system_logger.info(f"Placed in wild ({tier.name if tier else 'ALL'}): '{chosen['name']}' ({chosen.get('defaultDropChance', 20.0)}%)", source="LootDistributor")
         return LootTarget(LootDistributionType.ENEMY_DROP, chosen["id"], chosen["name"], float(chosen.get("defaultDropChance", 20.0)))
 
-    def _random_boss_shop_or_transfusion(self) -> LootTarget:
+    def _random_boss_shop_or_transfusion(self, tier: Optional[ProgressionTier] = None) -> LootTarget:
         """Places non-dropped items randomly across bosses, shops, or transfusions with capacity checking."""
+        tier_bosses = self._kb.list_boss_remembrances(tier=tier)
+        tier_merchants = self._kb.list_merchants(tier=tier)
         pool = [
             {"type": LootDistributionType.BOSS_REMEMBRANCE, "id": b["id"], "name": b["name"], "cost": float(b.get("defaultCost", 30000))}
-            for b in self._kb.list_boss_remembrances()
+            for b in tier_bosses
             if self._shop_allocations.get(b["id"], 0) < self.max_shop_capacity
         ] + [
             {"type": LootDistributionType.MERCHANT_SHOP, "id": m["id"], "name": m["name"], "cost": float(m.get("defaultRuneCost", 10000))}
-            for m in self._kb.list_merchants()
+            for m in tier_merchants
             if self._shop_allocations.get(m["id"], 0) < self.max_shop_capacity
         ]
         if pool:
@@ -218,22 +248,22 @@ class LootDistributor:
             self._shop_allocations[chosen["id"]] = self._shop_allocations.get(chosen["id"], 0) + 1
             return LootTarget(chosen["type"], chosen["id"], chosen["name"], chosen["cost"])
 
-        # When all shops/bosses hit row limit, rotate overflowed item to chests first (Bosses -> Chests -> The Rest)
-        pools = self._kb.get_diablo_distribution_pools() if hasattr(self._kb, "get_diablo_distribution_pools") else {}
-        chests = pools.get("chests", [])
-        if chests:
-            chosen_chest = random.choice(chests)
+        # When all shops/bosses in tier hit row limit, rotate overflowed item to chests in tier first (Bosses -> Chests -> The Rest)
+        tier_chests = self._kb.list_chests(tier=tier)
+        if tier_chests:
+            chosen_chest = random.choice(tier_chests)
             system_logger.info(f"Shop limits reached. Rotating overflowed item to Chest '{chosen_chest['name']}'.", source="LootDistributor")
             return LootTarget(LootDistributionType.MAP_PICKUP, str(chosen_chest.get("lotParamId", 102100)), chosen_chest["name"], 100.0)
 
-        system_logger.info("Shop row limits reached for all merchants/bosses. Rotating overflowed item to wild enemies.", source="LootDistributor")
-        return self._place_in_wild(original_name="Overflowed Mod Item")
+        system_logger.info("Shop row limits reached for merchants/bosses. Rotating overflowed item to wild enemies.", source="LootDistributor")
+        return self._place_in_wild(original_name="Overflowed Mod Item", tier=tier)
 
-    def _random_mob_drop(self) -> LootTarget:
-        """Places normal items randomly onto wild mobs."""
-        enemies = self._kb.list_elite_enemies()
+    def _random_mob_drop(self, tier: Optional[ProgressionTier] = None) -> LootTarget:
+        """Places normal items randomly onto wild mobs in matching progression tier."""
+        enemies = self._kb.list_elite_enemies(tier=tier)
         chosen = random.choice(enemies) if enemies else {"id": "mob_default", "name": "Roaming Enemy", "defaultDropChance": 20.0}
         return LootTarget(LootDistributionType.ENEMY_DROP, chosen["id"], chosen["name"], float(chosen.get("defaultDropChance", 20.0)))
+
 
     def _standard_placement(self, default_route: str, source_id: str, source_name: str) -> LootTarget:
         """Standard thematic placement with shop capacity overflow checks."""

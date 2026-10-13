@@ -16,8 +16,10 @@ from src.knowledge_base import VanillaKnowledgeBase
 from src.loot_distributor import LootDistributor
 from src.models import (
     AdditionType, AntiDup, DetectedModSet, ModPartFile, EquipmentSlot,
-    LootDistributionType
+    LootDistributionType, LootTarget, ProgressionTier
 )
+
+
 
 
 class TestLootDistributor(unittest.TestCase):
@@ -195,6 +197,130 @@ class TestLootDistributor(unittest.TestCase):
         t2 = dist._standard_placement("merchant_shop", "kale", "Merchant Kalé")
         self.assertEqual(t2.route_type, LootDistributionType.ENEMY_DROP)
 
+    def test_anti_dup_chest_after_boss_direct_routing(self):
+        """Verifies that AntiDup.CHEST_AFTER_BOSS places 100% drops directly into post-boss chests."""
+        radahn_set = DetectedModSet(
+            set_id="radahn_chest_mod",
+            folder_or_archive_name="RadahnChestMod",
+            target_model_id="4200",  # General Radahn
+            target_vanilla_name="Radahn's Lion Set",
+            parts=[ModPartFile("bd_m_4200.dcx", "p", EquipmentSlot.BODY, "4200")]
+        )
+
+        target = self.distributor.distribute_set(
+            radahn_set,
+            addition_type=AdditionType.STANDARD_ADDITION,
+            anti_dup=AntiDup.CHEST_AFTER_BOSS
+        )
+
+        self.assertEqual(target.route_type, LootDistributionType.MAP_PICKUP)
+        self.assertIn("Chest After Boss", target.display_name)
+        self.assertIn("Redmane Castle", target.display_name)
+        self.assertEqual(target.chance_or_cost, 100.0)
+
+    def test_anti_dup_boss_rotation_cascades_to_chest_after_boss_when_tier_bosses_full(self):
+        """Verifies that BOSS_ROTATION cascades to Chest After Boss before wild mobs when tier bosses are full."""
+        # Tier 2 Mid-game has 2 bosses: Rennala (remembrance_full_moon) and Radahn (remembrance_starscourge)
+        # When Radahn item rotates, it assigns to Rennala (1 set limit per boss).
+        # A second Radahn item has no more available bosses in Tier 2, so it must cascade to Chest After Boss in Tier 2!
+        self.distributor.reset_rotation_state()
+
+        mod1 = DetectedModSet(
+            set_id="radahn_1",
+            folder_or_archive_name="Radahn1",
+            target_model_id="4200",
+            target_vanilla_name="Radahn's Lion Set",
+            parts=[ModPartFile("bd_m_4200_1.dcx", "p", EquipmentSlot.BODY, "4200")]
+        )
+        mod2 = DetectedModSet(
+            set_id="radahn_2",
+            folder_or_archive_name="Radahn2",
+            target_model_id="4200",
+            target_vanilla_name="Radahn's Lion Set",
+            parts=[ModPartFile("bd_m_4200_2.dcx", "p", EquipmentSlot.BODY, "4200")]
+        )
+
+        t1 = self.distributor.distribute_set(mod1, anti_dup=AntiDup.BOSS_ROTATION)
+        # First item rotated to Rennala (the only other boss in Tier 2)
+        self.assertEqual(t1.route_type, LootDistributionType.BOSS_REMEMBRANCE)
+        self.assertEqual(t1.target_id, "remembrance_full_moon")
+
+        # Second item: all bosses in Tier 2 have reached their 1 custom set limit!
+        # Must cascade directly to Chest After Boss in Tier 2!
+        t2 = self.distributor.distribute_set(mod2, anti_dup=AntiDup.BOSS_ROTATION)
+        self.assertEqual(t2.route_type, LootDistributionType.MAP_PICKUP)
+        self.assertIn("Chest After Boss", t2.display_name)
+        self.assertEqual(t2.chance_or_cost, 100.0)
+
+    def test_progression_locking_no_late_game_on_beginning(self):
+        """Verifies that late-game items are NEVER placed on early-game bosses, chests, or mobs."""
+        malenia_tier = self.kb.get_progression_tier("4230")  # Malenia's Set
+        self.assertEqual(malenia_tier, ProgressionTier.ENDGAME)
+
+        maliketh_tier = self.kb.get_progression_tier("4250")  # Maliketh's Set
+        self.assertEqual(maliketh_tier, ProgressionTier.ENDGAME)
+
+        vagabond_tier = self.kb.get_progression_tier("6600")  # Vagabond starting set
+        self.assertEqual(vagabond_tier, ProgressionTier.EARLY)
+
+        # When Malenia set is rotated, target must be ENDGAME (never Godrick, Gatefront, or Limgrave)
+        malenia_mod = DetectedModSet(
+            set_id="malenia_mod",
+            folder_or_archive_name="MaleniaMod",
+            target_model_id="4230",
+            target_vanilla_name="Malenia's Set",
+            parts=[ModPartFile("bd_m_4230.dcx", "p", EquipmentSlot.BODY, "4230")]
+        )
+
+        for _ in range(5):
+            self.distributor.reset_rotation_state()
+            t = self.distributor.distribute_set(malenia_mod, anti_dup=AntiDup.BOSS_ROTATION)
+            target_tier = self.kb.get_progression_tier(t.target_id)
+            self.assertEqual(
+                target_tier,
+                ProgressionTier.ENDGAME,
+                f"Malenia item must never be routed to early-game target '{t.display_name}'!"
+            )
+            self.assertNotIn("Godrick", t.display_name)
+            self.assertNotIn("Gatefront", t.display_name)
+            self.assertNotIn("Limgrave", t.display_name)
+
+    def test_chest_always_contains_multiple_extra_injections(self):
+        """Verifies that chest loot specifications built by ParamBuilder bundle multiple extra injections."""
+        from src.param_builder import ParamBuilder
+        from src.models import StandaloneAllocation
+
+        builder = ParamBuilder(knowledge_base=self.kb)
+        mod_set = DetectedModSet(
+            set_id="morne_chest_mod",
+            folder_or_archive_name="MorneChestMod",
+            target_model_id="4000",
+            target_vanilla_name="Carian Knight Helm",
+            parts=[ModPartFile("hd_m_4000.dcx", "p", EquipmentSlot.HEAD, "4000")],
+            allocation=StandaloneAllocation(
+                new_model_id="9050",
+                new_equip_param_id=9050000,
+                new_item_lot_id=9100050,
+                marker_tag="[LootForge]"
+            ),
+            loot_target=LootTarget(
+                route_type=LootDistributionType.MAP_PICKUP,
+                target_id="102100",
+                display_name="Gatefront Ruins Underground Chest",
+                chance_or_cost=100.0
+            )
+        )
+
+        spec = builder.build_patch_spec(mod_set)
+        loot = spec["loot_distribution"]
+        awarded = loot["awarded_items"]
+
+        # Primary piece + at least 2 companion accessory injections = at least 3 awarded items
+        self.assertGreaterEqual(len(awarded), 3, "Chests must always contain multiple extra injections!")
+        accessory_params = [ep for ep in spec["equip_params"] if ep.get("param_table") == "EquipParamAccessory"]
+        self.assertGreaterEqual(len(accessory_params), 2, "Chests must bundle multiple companion accessories!")
+
 
 if __name__ == "__main__":
     unittest.main()
+

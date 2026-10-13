@@ -259,6 +259,205 @@ namespace LootForge.RegTool
             return 0;
         }
 
+        public static int ExecuteFindItem(Dictionary<string, string> options)
+        {
+            if (!options.TryGetValue("input", out string? inputPath) || string.IsNullOrEmpty(inputPath))
+            {
+                Console.Error.WriteLine("Missing required --input path to regulation.bin.");
+                return 1;
+            }
+            if (!options.TryGetValue("item", out string? itemStr) || !int.TryParse(itemStr, out int targetItemId))
+            {
+                Console.Error.WriteLine("Missing or invalid --item <id>.");
+                return 1;
+            }
+            string defsDir = options.TryGetValue("defs", out string? dd) && !string.IsNullOrEmpty(dd) ? dd : @"tools\vendor\Paramdex\ER\Defs";
+
+            Console.WriteLine($"[RegTool] Decrypting regulation: {inputPath} to search for item ID {targetItemId}...");
+            BND4 bnd = RegulationDecryptor.DecryptERRegulation(inputPath);
+
+            PARAM LoadParam(string tableName)
+            {
+                var file = bnd.Files.FirstOrDefault(f => f.Name.EndsWith($"{tableName}.param", StringComparison.OrdinalIgnoreCase));
+                if (file == null) throw new Exception($"Table {tableName} not found");
+                var param = PARAM.Read(file.Bytes);
+                string defBaseName = tableName.StartsWith("ItemLotParam", StringComparison.OrdinalIgnoreCase) ? "ItemLotParam" : tableName;
+                string xmlFile = Path.Combine(defsDir, $"{defBaseName}.xml");
+                if (File.Exists(xmlFile))
+                {
+                    var def = PARAMDEF.XmlDeserialize(xmlFile, false, false);
+                    param.ApplyParamdefSomewhatCarefully(def);
+                }
+                return param;
+            }
+
+            var matchedLotIds = new HashSet<int>();
+
+            void SearchLotTable(string tableName)
+            {
+                var param = LoadParam(tableName);
+                Console.WriteLine($"\n--- Searching {tableName} (rows: {param.Rows.Count}) for item {targetItemId} ---");
+                foreach (var r in param.Rows)
+                {
+                    bool found = false;
+                    for (int s = 1; s <= 8; s++)
+                    {
+                        int itm = ParamHelper.GetCellInt(r, $"lotItemId0{s}");
+                        if (itm == targetItemId)
+                        {
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (found)
+                    {
+                        matchedLotIds.Add(r.ID);
+                        Console.WriteLine($"[MATCH] {tableName} Row ID={r.ID} Name='{r.Name}'");
+                        for (int s = 1; s <= 8; s++)
+                        {
+                            int itm = ParamHelper.GetCellInt(r, $"lotItemId0{s}");
+                            if (itm > 0)
+                            {
+                                int cat = ParamHelper.GetCellInt(r, $"lotItemCategory0{s}");
+                                int pts = ParamHelper.GetCellInt(r, $"lotItemBasePoint0{s}");
+                                int num = ParamHelper.GetCellInt(r, $"lotItemNum0{s}");
+                                int flag = ParamHelper.GetCellInt(r, $"getItemFlagId0{s}");
+                                Console.WriteLine($"   Slot {s}: item={itm} category={cat} basePoint={pts} num={num} flag={flag}");
+                            }
+                        }
+
+                        // Also check chained rows (ID + 1 .. ID + 9)
+                        for (int offset = 1; offset <= 9; offset++)
+                        {
+                            var chained = param.Rows.FirstOrDefault(row => row.ID == r.ID + offset);
+                            if (chained != null)
+                            {
+                                Console.WriteLine($"   [Chained Row +{offset}] ID={chained.ID} Name='{chained.Name}'");
+                                for (int s = 1; s <= 8; s++)
+                                {
+                                    int itm = ParamHelper.GetCellInt(chained, $"lotItemId0{s}");
+                                    if (itm > 0)
+                                    {
+                                        int cat = ParamHelper.GetCellInt(chained, $"lotItemCategory0{s}");
+                                        int pts = ParamHelper.GetCellInt(chained, $"lotItemBasePoint0{s}");
+                                        int num = ParamHelper.GetCellInt(chained, $"lotItemNum0{s}");
+                                        int flag = ParamHelper.GetCellInt(chained, $"getItemFlagId0{s}");
+                                        Console.WriteLine($"      Slot {s}: item={itm} category={cat} basePoint={pts} num={num} flag={flag}");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            SearchLotTable("ItemLotParam_enemy");
+            SearchLotTable("ItemLotParam_map");
+
+            // Now search NpcParam to find which NPC drops this ItemLot
+            var npcParam = LoadParam("NpcParam");
+            Console.WriteLine($"\n--- Checking NpcParam for matching ItemLot IDs ---");
+            foreach (var r in npcParam.Rows)
+            {
+                int lotId = ParamHelper.GetCellInt(r, "itemLotId_enemy");
+                if (matchedLotIds.Contains(lotId))
+                {
+                    Console.WriteLine($"[NPC MATCH] NpcParam ID={r.ID} Name='{r.Name}' itemLotId_enemy={lotId}");
+                }
+            }
+
+            return 0;
+        }
+
+        public static int ExecuteDumpBossLots(Dictionary<string, string> options)
+        {
+            if (!options.TryGetValue("input", out string? inputPath)) return 1;
+            string defsDir = options.TryGetValue("defs", out string? dd) && !string.IsNullOrEmpty(dd) ? dd : @"tools\vendor\Paramdex\ER\Defs";
+            BND4 bnd = RegulationDecryptor.DecryptERRegulation(inputPath);
+
+            PARAM LoadParam(string tableName)
+            {
+                var file = bnd.Files.FirstOrDefault(f => f.Name.EndsWith($"{tableName}.param", StringComparison.OrdinalIgnoreCase));
+                if (file == null) throw new Exception($"Table {tableName} not found");
+                var param = PARAM.Read(file.Bytes);
+                string defBaseName = tableName.StartsWith("ItemLotParam", StringComparison.OrdinalIgnoreCase) ? "ItemLotParam" : tableName;
+                string xmlFile = Path.Combine(defsDir, $"{defBaseName}.xml");
+                if (File.Exists(xmlFile))
+                {
+                    var def = PARAMDEF.XmlDeserialize(xmlFile, false, false);
+                    param.ApplyParamdefSomewhatCarefully(def);
+                }
+                return param;
+            }
+
+            var mapParam = LoadParam("ItemLotParam_map");
+            var enemyParam = LoadParam("ItemLotParam_enemy");
+
+            Console.WriteLine($"=== Scanning for 100% Guaranteed Drops (Bosses & Pickups) ===");
+            int mapBossCount = 0;
+            foreach (var r in mapParam.Rows)
+            {
+                int p1 = ParamHelper.GetCellInt(r, "lotItemBasePoint01");
+                int itm1 = ParamHelper.GetCellInt(r, "lotItemId01");
+                int cat1 = ParamHelper.GetCellInt(r, "lotItemCategory01");
+                // Check if category is Weapon (2), Protector (3), or Accessory (4) with 1000 points
+                if (itm1 > 0 && p1 >= 1000 && (cat1 == 2 || cat1 == 4))
+                {
+                    mapBossCount++;
+                    if (mapBossCount <= 40 || r.ID == 1037420400)
+                    {
+                        Console.WriteLine($"[MAP BOSS/REWARD] ID={r.ID} Name='{r.Name}' Item={itm1} Cat={cat1} Pts={p1}");
+                    }
+                }
+            }
+            Console.WriteLine($"Total 100% Weapon/Accessory drops in ItemLotParam_map: {mapBossCount}");
+
+            int enemyBossCount = 0;
+            foreach (var r in enemyParam.Rows)
+            {
+                int p1 = ParamHelper.GetCellInt(r, "lotItemBasePoint01");
+                int itm1 = ParamHelper.GetCellInt(r, "lotItemId01");
+                int cat1 = ParamHelper.GetCellInt(r, "lotItemCategory01");
+                if (itm1 > 0 && p1 >= 1000 && (cat1 == 2 || cat1 == 4))
+                {
+                    enemyBossCount++;
+                    if (enemyBossCount <= 40)
+                    {
+                        Console.WriteLine($"[ENEMY BOSS/REWARD] ID={r.ID} Name='{r.Name}' Item={itm1} Cat={cat1} Pts={p1}");
+                    }
+                }
+            }
+            Console.WriteLine($"Total 100% Weapon/Accessory drops in ItemLotParam_enemy: {enemyBossCount}");
+            return 0;
+        }
+
+        public static int ExecuteDumpEmevd(Dictionary<string, string> options)
+        {
+            if (!options.TryGetValue("input", out string? inputPath)) return 1;
+            EMEVD emevd = EMEVD.Read(inputPath);
+            Console.WriteLine($"[EMEVD] Loaded {inputPath}, total events: {emevd.Events.Count}");
+            foreach (var ev in emevd.Events)
+            {
+                Console.WriteLine($"\n--- Event ID: {ev.ID} (instructions: {ev.Instructions.Count}) ---");
+                foreach (var ins in ev.Instructions)
+                {
+                    string hex = BitConverter.ToString(ins.ArgData).Replace("-", " ");
+                    Console.WriteLine($"  Bank={ins.Bank,-4} ID={ins.ID,-4} Length={ins.ArgData.Length,-3} Args: {hex}");
+                    for (int i = 0; i <= ins.ArgData.Length - 4; i += 4)
+                    {
+                        int val = BitConverter.ToInt32(ins.ArgData, i);
+                        if (val > 1000 && val < 2000000000)
+                        {
+                            Console.Write($" [int@{i}={val}]");
+                        }
+                    }
+                    Console.WriteLine();
+                }
+            }
+            return 0;
+        }
+
         public static int ExtractMsgFiles(Dictionary<string, string> options)
         {
             if (!options.TryGetValue("game-dir", out string? gameDir) || string.IsNullOrEmpty(gameDir))

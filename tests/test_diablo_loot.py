@@ -632,14 +632,15 @@ class TestDiabloLoot(unittest.TestCase):
             fmg_acc = [ft for ft in bv["fmg_texts"] if ft.get("is_accessory")]
             self.assertGreaterEqual(len(fmg_acc), 1, "Must have an FMG entry marked as accessory!")
 
-        # Chest variants must have multiple drops (companion accessory)
+        # Chest variants must have multiple extra injections (at least 2 companion accessories)
         for cv in chest_variants:
             awarded = cv["loot_distribution"]["awarded_items"]
-            self.assertEqual(len(awarded), 2, "Chest variants must have multiple drops (relic + companion accessory)!")
+            self.assertGreaterEqual(len(awarded), 3, "Chest variants must have multiple extra injections (relic + multiple companion accessories)!")
             tables = [ep["param_table"] for ep in cv["equip_params"]]
-            self.assertIn("EquipParamAccessory", tables, "Chest variant must bundle an EquipParamAccessory companion relic!")
+            self.assertIn("EquipParamAccessory", tables, "Chest variant must bundle EquipParamAccessory companion relics!")
             fmg_acc = [ft for ft in cv["fmg_texts"] if ft.get("is_accessory")]
-            self.assertGreaterEqual(len(fmg_acc), 1, "Must have an FMG entry marked as accessory!")
+            self.assertGreaterEqual(len(fmg_acc), 2, "Must have multiple FMG entries marked as accessory for chest extra injections!")
+
 
         # Rest variants must only have single primary item
         for rv in rest_variants:

@@ -139,12 +139,13 @@ class DiabloLootGenerator:
         self._shop_allocations.clear()
         self._total_shop_allocations = 0
 
-    def roll_rarity(self, is_boss: bool = False) -> RarityTier:
-        """Selects a rarity tier using drop weights. Bosses are guaranteed Giga Legendary or Mythic."""
-        weights_dict = self.BOSS_RARITY_WEIGHTS if is_boss else self.RARITY_WEIGHTS
+    def roll_rarity(self, is_boss: bool = False, is_chest: bool = False) -> RarityTier:
+        """Selects a rarity tier using drop weights. Bosses and Chests are guaranteed high tier (Legendary or Mythic)."""
+        weights_dict = self.BOSS_RARITY_WEIGHTS if (is_boss or is_chest) else self.RARITY_WEIGHTS
         tiers = list(weights_dict.keys())
         weights = list(weights_dict.values())
         return self._rng.choices(tiers, weights=weights, k=1)[0]
+
 
     def roll_affixes(
         self,
@@ -301,21 +302,38 @@ class DiabloLootGenerator:
 
         variant_specs: List[Dict[str, Any]] = []
 
+        tier = kb.get_progression_tier_for_spec(base_spec) if (kb and hasattr(kb, "get_progression_tier_for_spec")) else None
+
         for v_idx in range(variants_per_item):
             spec_copy = copy.deepcopy(base_spec)
             spec_copy["set_id"] = f"{base_spec['set_id']}_v{v_idx + 1}"
 
-            # 1. Determine distribution destination across whole game
+            # 1. Determine distribution destination across whole game with progression locking
             is_boss = False
             boss_name: Optional[str] = None
             loot_spec: Optional[Dict[str, Any]] = None
 
             if pools:
-                boss_pool = pools.get("bosses", [])
-                merchant_pool = pools.get("merchants", [])
-                chest_pool = pools.get("chests", [])
-                elites = pools.get("elites", [])
-                roaming = pools.get("roaming", [])
+                raw_bosses = pools.get("bosses", [])
+                raw_merchants = pools.get("merchants", [])
+                raw_chests = pools.get("chests", [])
+                raw_elites = pools.get("elites", [])
+                raw_roaming = pools.get("roaming", [])
+
+                # Filter pools strictly by progression tier to prevent late-game gear in early regions
+                if tier and kb and hasattr(kb, "get_progression_tier"):
+                    boss_pool = [b for b in raw_bosses if kb.get_progression_tier(b) == tier] or raw_bosses
+                    chest_pool = [c for c in raw_chests if kb.get_progression_tier(c) == tier] or raw_chests
+                    merchant_pool = [m for m in raw_merchants if kb.get_progression_tier(m) == tier] or raw_merchants
+                    elites = [e for e in raw_elites if kb.get_progression_tier(e) == tier] or raw_elites
+                    roaming = [r for r in raw_roaming if kb.get_progression_tier(r) == tier] or raw_roaming
+                else:
+                    boss_pool = raw_bosses
+                    chest_pool = raw_chests
+                    merchant_pool = raw_merchants
+                    elites = raw_elites
+                    roaming = raw_roaming
+
                 enemy_pool = (elites + roaming) if (elites or roaming) else []
 
                 # Rotation strictly prioritizes: Bosses (0) > Chests (1) > The Rest (2: Merchants, Elites, Roaming Mobs)
@@ -347,7 +365,7 @@ class DiabloLootGenerator:
                                 "type": "map_pickup",
                                 "lot_id": chest["lotParamId"],
                                 "target_id": str(chest["lotParamId"]),
-                                "display_name": f"[World Discovery] {chest['name']}",
+                                "display_name": f"[Chest After Boss] {chest['name']}",
                                 "drop_rate_percent": 100.0
                             }
 
@@ -357,7 +375,7 @@ class DiabloLootGenerator:
                         "type": "map_pickup",
                         "lot_id": chest["lotParamId"],
                         "target_id": str(chest["lotParamId"]),
-                        "display_name": f"[World Discovery] {chest['name']}",
+                        "display_name": f"[Chest Discovery] {chest['name']}",
                         "drop_rate_percent": 100.0
                     }
 
@@ -403,7 +421,9 @@ class DiabloLootGenerator:
                                 "drop_rate_percent": float(enemy.get("defaultDropChance", 20.0))
                             }
 
-            # 2. Modify Equip Params and FMG texts with rolled affixes
+            is_chest_drop = loot_spec is not None and loot_spec.get("type") in ("map_pickup", "world_chest")
+
+            # 2. Modify Equip Params and FMG texts with rolled affixes (Chests are highly valuable: guaranteed high rarity)
             variant_new_ids: List[int] = []
 
             for ep in spec_copy.get("equip_params", []):
@@ -414,8 +434,8 @@ class DiabloLootGenerator:
 
                 is_weapon = ep.get("param_table") == "EquipParamWeapon"
                 is_accessory = ep.get("param_table") == "EquipParamAccessory"
-                rarity = self.roll_rarity(is_boss=is_boss)
-                affixes = self.roll_affixes(rarity, is_weapon=is_weapon, is_accessory=is_accessory, is_boss=is_boss)
+                rarity = self.roll_rarity(is_boss=is_boss, is_chest=is_chest_drop)
+                affixes = self.roll_affixes(rarity, is_weapon=is_weapon, is_accessory=is_accessory, is_boss=is_boss or is_chest_drop)
 
                 field_updates = ep.setdefault("field_updates", {})
                 field_updates["sortId"] = new_id
@@ -436,53 +456,60 @@ class DiabloLootGenerator:
                             fmg["caption"], rarity, affixes, boss_name=boss_name, skill=rolled_skill
                         )
 
-            # Multi-drop for Bosses and Chests: award multiple drops (include accessories into the pool)
-            is_chest_drop = loot_spec is not None and loot_spec.get("type") in ("map_pickup", "world_chest")
+            # Multi-drop for Bosses and Chests: award multiple drops
+            # Chests are highly valuable and always contain multiple extra injections (at least 2 companion accessories)
             if (is_boss or is_chest_drop) and kb and variant_new_ids:
-                acc_catalog = kb.list_all_vanilla_accessories() if hasattr(kb, "list_all_vanilla_accessories") else {}
+                acc_catalog = kb.list_all_vanilla_accessories(tier=tier) if hasattr(kb, "list_all_vanilla_accessories") else {}
+                if not acc_catalog and hasattr(kb, "list_all_vanilla_accessories"):
+                    acc_catalog = kb.list_all_vanilla_accessories()
+
                 if acc_catalog:
                     acc_keys = list(acc_catalog.keys())
-                    comp_key = acc_keys[(v_idx + len(variant_new_ids)) % len(acc_keys)]
-                    comp_info = acc_catalog[comp_key]
-                    comp_base_id = comp_info.get("baseParamId", 1000)
-                    comp_name = comp_info.get("name", "Talisman")
+                    num_extra = 2 if is_chest_drop else 1
 
-                    comp_param_id = variant_new_ids[0] + 50
-                    if comp_param_id not in variant_new_ids:
-                        comp_rarity = self.roll_rarity(is_boss=is_boss)
-                        comp_affixes = self.roll_affixes(comp_rarity, is_weapon=False, is_accessory=True, is_boss=is_boss)
-                        comp_field_updates = {"sortId": comp_param_id, "isDeposit": 1}
-                        self.apply_affixes_to_equipment(comp_field_updates, comp_affixes, is_weapon=False, is_accessory=True)
+                    for extra_idx in range(num_extra):
+                        comp_key = acc_keys[(v_idx + len(variant_new_ids) + extra_idx) % len(acc_keys)]
+                        comp_info = acc_catalog[comp_key]
+                        comp_base_id = comp_info.get("baseParamId", 1000)
+                        comp_name = comp_info.get("name", "Talisman")
 
-                        comp_fmg_name = self.build_item_name(f"[LootForge] {comp_name}", comp_rarity, comp_affixes, is_boss=is_boss)
-                        comp_fmg_caption = self.build_caption_with_affixes(
-                            f"Companion talisman awarded with {spec_copy.get('set_id')}.",
-                            comp_rarity, comp_affixes, boss_name=boss_name
-                        )
+                        comp_param_id = variant_new_ids[0] + 50 + extra_idx
+                        if comp_param_id not in variant_new_ids:
+                            comp_rarity = self.roll_rarity(is_boss=is_boss, is_chest=is_chest_drop)
+                            comp_affixes = self.roll_affixes(comp_rarity, is_weapon=False, is_accessory=True, is_boss=is_boss or is_chest_drop)
+                            comp_field_updates = {"sortId": comp_param_id, "isDeposit": 1}
+                            self.apply_affixes_to_equipment(comp_field_updates, comp_affixes, is_weapon=False, is_accessory=True)
 
-                        spec_copy.setdefault("equip_params", []).append({
-                            "param_table": "EquipParamAccessory",
-                            "new_param_id": comp_param_id,
-                            "base_clone_id": comp_base_id,
-                            "slot": "accessory",
-                            "slot_offset": 50,
-                            "row_name": f"[LootForge] {comp_name}",
-                            "field_updates": comp_field_updates
-                        })
+                            chest_tag = "Chest Discovery" if is_chest_drop else "Encounter Trophy"
+                            comp_fmg_name = self.build_item_name(f"[LootForge] {comp_name}", comp_rarity, comp_affixes, is_boss=is_boss or is_chest_drop)
+                            comp_fmg_caption = self.build_caption_with_affixes(
+                                f"Extra treasure ({chest_tag}) awarded with {spec_copy.get('set_id')}.",
+                                comp_rarity, comp_affixes, boss_name=boss_name
+                            )
 
-                        spec_copy.setdefault("fmg_texts", []).append({
-                            "item_id": comp_param_id,
-                            "vanilla_source_id": comp_base_id,
-                            "slot": "accessory",
-                            "slot_offset": 50,
-                            "is_weapon": False,
-                            "is_accessory": True,
-                            "name": comp_fmg_name,
-                            "caption": comp_fmg_caption,
-                            "info": f"Origin: Vanilla {comp_name} (Companion Drop)"
-                        })
+                            spec_copy.setdefault("equip_params", []).append({
+                                "param_table": "EquipParamAccessory",
+                                "new_param_id": comp_param_id,
+                                "base_clone_id": comp_base_id,
+                                "slot": "accessory",
+                                "slot_offset": 50 + extra_idx,
+                                "row_name": f"[LootForge] {comp_name}",
+                                "field_updates": comp_field_updates
+                            })
 
-                        variant_new_ids.append(comp_param_id)
+                            spec_copy.setdefault("fmg_texts", []).append({
+                                "item_id": comp_param_id,
+                                "vanilla_source_id": comp_base_id,
+                                "slot": "accessory",
+                                "slot_offset": 50 + extra_idx,
+                                "is_weapon": False,
+                                "is_accessory": True,
+                                "name": comp_fmg_name,
+                                "caption": comp_fmg_caption,
+                                "info": f"Origin: Vanilla {comp_name} ({chest_tag})"
+                            })
+
+                            variant_new_ids.append(comp_param_id)
 
             # 3. Synchronize loot distribution
             if loot_spec:
@@ -492,6 +519,7 @@ class DiabloLootGenerator:
                 spec_copy["loot_distribution"]["awarded_items"] = variant_new_ids
 
             variant_specs.append(spec_copy)
+
 
         return variant_specs
 

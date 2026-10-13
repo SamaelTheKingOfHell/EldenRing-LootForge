@@ -7,7 +7,9 @@
       "boss": "Godrick the Grafted",
       "location": "Stormveil Castle",
       "remembranceItemId": 10100,
-      "defaultCost": 20000
+      "defaultCost": 20000,
+      "progressionTier": 1,
+      "chestAfterBossId": "stormveil_throne_chest"
     },
     {
       "id": "remembrance_full_moon",
@@ -15,7 +17,9 @@
       "boss": "Rennala, Queen of the Full Moon",
       "location": "Raya Lucaria Academy",
       "remembranceItemId": 10101,
-      "defaultCost": 20000
+      "defaultCost": 20000,
+      "progressionTier": 2,
+      "chestAfterBossId": "raya_lucaria_library_chest"
     },
     {
       "id": "remembrance_starscourge",
@@ -23,7 +27,9 @@
       "boss": "Starscourge Radahn",
       "location": "Redmane Castle (Caelid)",
       "remembranceItemId": 10102,
-      "defaultCost": 40000
+      "defaultCost": 40000,
+      "progressionTier": 2,
+      "chestAfterBossId": "redmane_castle_armory_chest"
     },
     {
       "id": "remembrance_rot_goddess",
@@ -31,7 +37,9 @@
       "boss": "Malenia, Blade of Miquella",
       "location": "Elphael, Brace of the Haligtree",
       "remembranceItemId": 10103,
-      "defaultCost": 50000
+      "defaultCost": 50000,
+      "progressionTier": 4,
+      "chestAfterBossId": "haligtree_roots_sanctum_chest"
     },
     {
       "id": "remembrance_blood_lord",
@@ -39,7 +47,9 @@
       "boss": "Mohg, Lord of Blood",
       "location": "Mohgwyn Palace",
       "remembranceItemId": 10104,
-      "defaultCost": 30000
+      "defaultCost": 30000,
+      "progressionTier": 4,
+      "chestAfterBossId": "mohgwyn_dynasty_chest"
     },
     {
       "id": "remembrance_blasphemous",
@@ -47,7 +57,9 @@
       "boss": "Rykard, Lord of Blasphemy",
       "location": "Volcano Manor",
       "remembranceItemId": 10105,
-      "defaultCost": 50000
+      "defaultCost": 50000,
+      "progressionTier": 3,
+      "chestAfterBossId": "volcano_manor_temple_chest"
     },
     {
       "id": "remembrance_black_blade",
@@ -55,7 +67,9 @@
       "boss": "Maliketh, the Black Blade",
       "location": "Crumbling Farum Azula",
       "remembranceItemId": 10106,
-      "defaultCost": 50000
+      "defaultCost": 50000,
+      "progressionTier": 4,
+      "chestAfterBossId": "farum_azula_great_bridge_chest"
     },
     {
       "id": "remembrance_hoarah_loux",
@@ -63,7 +77,9 @@
       "boss": "Godfrey, First Elden Lord",
       "location": "Leyndell, Ashen Capital",
       "remembranceItemId": 10107,
-      "defaultCost": 50000
+      "defaultCost": 50000,
+      "progressionTier": 3,
+      "chestAfterBossId": "leyndell_erdtree_sanctuary_chest"
     },
     {
       "id": "remembrance_dragonlord",
@@ -71,7 +87,9 @@
       "boss": "Dragonlord Placidusax",
       "location": "Crumbling Farum Azula",
       "remembranceItemId": 10108,
-      "defaultCost": 30000
+      "defaultCost": 30000,
+      "progressionTier": 4,
+      "chestAfterBossId": "farum_azula_dragon_temple_chest"
     },
     {
       "id": "remembrance_elden_remembrance",
@@ -79,7 +97,9 @@
       "boss": "Elden Beast",
       "location": "Elden Throne",
       "remembranceItemId": 10109,
-      "defaultCost": 50000
+      "defaultCost": 50000,
+      "progressionTier": 4,
+      "chestAfterBossId": "ashen_capital_divine_cache"
     }
   ],
   "eliteEnemies": [
@@ -87,85 +107,99 @@
       "id": "moongrum_carian_knight",
       "name": "Moongrum, Carian Knight (Raya Lucaria Academy)",
       "lotParamId": 340000000,
-      "defaultDropChance": 25.0
+      "defaultDropChance": 25.0,
+      "progressionTier": 2
     },
     {
       "id": "crucible_knight_ordovis",
       "name": "Crucible Knight Ordovis (Auriza Hero's Grave)",
       "lotParamId": 250000000,
-      "defaultDropChance": 20.0
+      "defaultDropChance": 20.0,
+      "progressionTier": 3
     },
     {
       "id": "crucible_knight_siluria",
       "name": "Crucible Knight Siluria (Deeproot Depths)",
       "lotParamId": 250000100,
-      "defaultDropChance": 20.0
+      "defaultDropChance": 20.0,
+      "progressionTier": 3
     },
     {
       "id": "cleanrot_knight",
       "name": "Cleanrot Knight (Caelid Swamp / Elphael)",
       "lotParamId": 380000000,
-      "defaultDropChance": 15.0
+      "defaultDropChance": 15.0,
+      "progressionTier": 2
     },
     {
       "id": "banished_knight",
       "name": "Banished Knight (Stormveil Castle / Castle Sol)",
       "lotParamId": 301000000,
-      "defaultDropChance": 15.0
+      "defaultDropChance": 15.0,
+      "progressionTier": 1
     },
     {
       "id": "black_knife_assassin",
       "name": "Black Knife Assassin (Sage's Cave / Black Knife Catacombs)",
       "lotParamId": 210000000,
-      "defaultDropChance": 20.0
+      "defaultDropChance": 20.0,
+      "progressionTier": 3
     },
     {
       "id": "bloodhound_knight_darriwil",
       "name": "Bloodhound Knight Darriwil (Forlorn Hound Evergaol)",
       "lotParamId": 410000000,
-      "defaultDropChance": 25.0
+      "defaultDropChance": 25.0,
+      "progressionTier": 1
     },
     {
       "id": "tree_sentinel_auriza",
       "name": "Tree Sentinel Duo (Altus Plateau)",
       "lotParamId": 420000000,
-      "defaultDropChance": 25.0
+      "defaultDropChance": 25.0,
+      "progressionTier": 3
     },
     {
       "id": "nights_cavalry_duo",
       "name": "Night's Cavalry (Consecrated Snowfield)",
       "lotParamId": 450000000,
-      "defaultDropChance": 25.0
+      "defaultDropChance": 25.0,
+      "progressionTier": 4
     },
     {
       "id": "vargram_raging_wolf",
       "name": "Vargram the Raging Wolf (Leyndell)",
       "lotParamId": 300000000,
-      "defaultDropChance": 30.0
+      "defaultDropChance": 30.0,
+      "progressionTier": 3
     },
     {
       "id": "roundtable_knight_vyke",
       "name": "Roundtable Knight Vyke (Contender's Evergaol)",
       "lotParamId": 440000000,
-      "defaultDropChance": 30.0
+      "defaultDropChance": 30.0,
+      "progressionTier": 3
     },
     {
       "id": "blaidd_shadow",
       "name": "Blaidd the Half-Wolf (Ranni's Rise)",
       "lotParamId": 301000000,
-      "defaultDropChance": 30.0
+      "defaultDropChance": 30.0,
+      "progressionTier": 2
     },
     {
       "id": "magma_wyrm_makar",
       "name": "Magma Wyrm Makar (Ruin-Strewn Precipice)",
       "lotParamId": 350000000,
-      "defaultDropChance": 30.0
+      "defaultDropChance": 30.0,
+      "progressionTier": 2
     },
     {
       "id": "bloody_finger_okina",
       "name": "Bloody Finger Okina (Church of Repose)",
       "lotParamId": 460000000,
-      "defaultDropChance": 30.0
+      "defaultDropChance": 30.0,
+      "progressionTier": 4
     }
   ],
   "merchants": [
@@ -173,19 +207,22 @@
       "id": "kale_church_of_elleh",
       "name": "Merchant Kal\u00e9 (Church of Elleh)",
       "shopId": 100010,
-      "defaultRuneCost": 5000
+      "defaultRuneCost": 5000,
+      "progressionTier": 1
     },
     {
       "id": "twin_maiden_husks",
       "name": "Twin Maiden Husks (Roundtable Hold)",
       "shopId": 100020,
-      "defaultRuneCost": 12000
+      "defaultRuneCost": 12000,
+      "progressionTier": 3
     },
     {
       "id": "nomadic_merchant_liurnia",
       "name": "Nomadic Merchant (Liurnia Lake Shore)",
       "shopId": 100030,
-      "defaultRuneCost": 8000
+      "defaultRuneCost": 8000,
+      "progressionTier": 2
     }
   ],
   "enemies": [
@@ -193,163 +230,370 @@
       "id": "godrick_soldier",
       "name": "Godrick Soldier",
       "lotParamId": 431100000,
-      "defaultDropChance": 25.0
+      "defaultDropChance": 25.0,
+      "progressionTier": 1
     },
     {
       "id": "wandering_noble",
       "name": "Wandering Noble",
       "lotParamId": 430000000,
-      "defaultDropChance": 25.0
+      "defaultDropChance": 25.0,
+      "progressionTier": 1
     },
     {
       "id": "nomadic_merchant",
       "name": "Nomadic Merchant",
       "lotParamId": 100001,
-      "defaultDropChance": 100.0
+      "defaultDropChance": 100.0,
+      "progressionTier": 1
     },
     {
       "id": "page_enemy",
       "name": "Page",
       "lotParamId": 100002,
-      "defaultDropChance": 25.0
+      "defaultDropChance": 25.0,
+      "progressionTier": 2
     },
     {
       "id": "fias_champions",
       "name": "Fia's Champions",
       "lotParamId": 100003,
-      "defaultDropChance": 100.0
+      "defaultDropChance": 100.0,
+      "progressionTier": 3
     },
     {
       "id": "goldmask_quest",
       "name": "Goldmask",
       "lotParamId": 100004,
-      "defaultDropChance": 100.0
+      "defaultDropChance": 100.0,
+      "progressionTier": 3
     },
     {
       "id": "ranni_quest",
       "name": "Ranni",
       "lotParamId": 100005,
-      "defaultDropChance": 100.0
+      "defaultDropChance": 100.0,
+      "progressionTier": 2
     },
     {
       "id": "sellen_quest",
       "name": "Sellen",
       "lotParamId": 100006,
-      "defaultDropChance": 100.0
+      "defaultDropChance": 100.0,
+      "progressionTier": 2
     },
     {
       "id": "bernahl",
       "name": "Bernahl",
       "lotParamId": 100007,
-      "defaultDropChance": 100.0
+      "defaultDropChance": 100.0,
+      "progressionTier": 3
     },
     {
       "id": "juno_hoslow",
       "name": "Juno Hoslow",
       "lotParamId": 100008,
-      "defaultDropChance": 100.0
+      "defaultDropChance": 100.0,
+      "progressionTier": 4
     },
     {
       "id": "black_knife_assassin_alt",
       "name": "Black Knife Assassin",
       "lotParamId": 100009,
-      "defaultDropChance": 100.0
+      "defaultDropChance": 100.0,
+      "progressionTier": 3
     },
     {
       "id": "nomadic_merchant_altus",
       "name": "Nomadic Merchant (Altus)",
       "lotParamId": 100010,
-      "defaultDropChance": 100.0
+      "defaultDropChance": 100.0,
+      "progressionTier": 3
     },
     {
       "id": "fire_prelate",
       "name": "Fire Prelate",
       "lotParamId": 100011,
-      "defaultDropChance": 25.0
+      "defaultDropChance": 25.0,
+      "progressionTier": 4
     },
     {
       "id": "erdtree_guardian",
       "name": "Erdtree Guardian",
       "lotParamId": 100012,
-      "defaultDropChance": 25.0
+      "defaultDropChance": 25.0,
+      "progressionTier": 3
     },
     {
       "id": "dlc_enemy_armor",
       "name": "DLC Enemy",
       "lotParamId": 100013,
-      "defaultDropChance": 25.0
+      "defaultDropChance": 25.0,
+      "progressionTier": 4
     },
     {
       "id": "castle_morne_chest",
       "name": "Castle Morne Chest",
       "lotParamId": 100014,
-      "defaultDropChance": 100.0
+      "defaultDropChance": 100.0,
+      "progressionTier": 1
     },
     {
       "id": "yura",
       "name": "Bloody Finger Hunter Yura",
       "lotParamId": 100015,
-      "defaultDropChance": 100.0
+      "defaultDropChance": 100.0,
+      "progressionTier": 2
     },
     {
       "id": "dragon_burnt_ruins_chest",
       "name": "Dragon-Burnt Ruins Chest",
       "lotParamId": 100016,
-      "defaultDropChance": 100.0
+      "defaultDropChance": 100.0,
+      "progressionTier": 1
     },
     {
       "id": "godskin_apostle_windmill",
       "name": "Godskin Apostle (Windmill Village)",
       "lotParamId": 100017,
-      "defaultDropChance": 100.0
+      "defaultDropChance": 100.0,
+      "progressionTier": 3
     },
     {
       "id": "eleonora_violet_bloody_finger",
       "name": "Eleonora, Violet Bloody Finger",
       "lotParamId": 100018,
-      "defaultDropChance": 100.0
+      "defaultDropChance": 100.0,
+      "progressionTier": 2
     },
     {
       "id": "banished_knight_sol",
       "name": "Banished Knight (Castle Sol)",
       "lotParamId": 100019,
-      "defaultDropChance": 25.0
+      "defaultDropChance": 25.0,
+      "progressionTier": 4
     },
     {
       "id": "roundtable_hold_chest",
       "name": "Roundtable Hold Chest",
       "lotParamId": 100020,
-      "defaultDropChance": 100.0
+      "defaultDropChance": 100.0,
+      "progressionTier": 3
     },
     {
       "id": "caria_manor_chest",
       "name": "Caria Manor Chest",
       "lotParamId": 100021,
-      "defaultDropChance": 100.0
+      "defaultDropChance": 100.0,
+      "progressionTier": 2
     },
     {
       "id": "commander_oneil",
       "name": "Commander O'Neil",
       "lotParamId": 100022,
-      "defaultDropChance": 100.0
+      "defaultDropChance": 100.0,
+      "progressionTier": 2
     },
     {
       "id": "cleanrot_knight_halo",
       "name": "Cleanrot Knight",
       "lotParamId": 100023,
-      "defaultDropChance": 25.0
+      "defaultDropChance": 25.0,
+      "progressionTier": 2
     },
     {
       "id": "chief_guardian_arghanthy",
       "name": "Chief Guardian Arghanthy",
       "lotParamId": 100024,
-      "defaultDropChance": 100.0
+      "defaultDropChance": 100.0,
+      "progressionTier": 3
     },
     {
       "id": "dlc_enemy_weapon",
       "name": "DLC Enemy",
       "lotParamId": 100025,
-      "defaultDropChance": 25.0
+      "defaultDropChance": 25.0,
+      "progressionTier": 4
+    }
+  ],
+  "chests": [
+    {
+      "id": "stormveil_throne_chest",
+      "name": "Stormveil Throne Room Chest (after Godrick)",
+      "lotParamId": 102110,
+      "progressionTier": 1,
+      "afterBoss": "remembrance_grafted",
+      "location": "Stormveil Castle"
+    },
+    {
+      "id": "gatefront_ruins_chest",
+      "name": "Gatefront Ruins Underground Chest (Limgrave)",
+      "lotParamId": 102100,
+      "progressionTier": 1,
+      "location": "Limgrave"
+    },
+    {
+      "id": "castle_morne_chest",
+      "name": "Castle Morne Treasure Chest (after Leonine)",
+      "lotParamId": 100014,
+      "progressionTier": 1,
+      "location": "Weeping Peninsula"
+    },
+    {
+      "id": "dragon_burnt_ruins_chest",
+      "name": "Dragon-Burnt Ruins Cellar Chest",
+      "lotParamId": 100016,
+      "progressionTier": 1,
+      "location": "Limgrave"
+    },
+    {
+      "id": "murkwater_cave_chest",
+      "name": "Murkwater Cave Treasure Chest (Patches)",
+      "lotParamId": 101840,
+      "progressionTier": 1,
+      "location": "Limgrave"
+    },
+    {
+      "id": "morne_tunnel_cache",
+      "name": "Morne Tunnel Hidden Cache",
+      "lotParamId": 20600,
+      "progressionTier": 1,
+      "location": "Weeping Peninsula"
+    },
+    {
+      "id": "raya_lucaria_library_chest",
+      "name": "Raya Lucaria Grand Library Chest (after Rennala)",
+      "lotParamId": 102200,
+      "progressionTier": 2,
+      "afterBoss": "remembrance_full_moon",
+      "location": "Raya Lucaria Academy"
+    },
+    {
+      "id": "redmane_castle_armory_chest",
+      "name": "Redmane Castle Post-Radahn Armory Chest (after Radahn)",
+      "lotParamId": 102300,
+      "progressionTier": 2,
+      "afterBoss": "remembrance_starscourge",
+      "location": "Redmane Castle (Caelid)"
+    },
+    {
+      "id": "caria_manor_chest",
+      "name": "Caria Manor Royal Moongaze Grounds Chest (after Loretta)",
+      "lotParamId": 100021,
+      "progressionTier": 2,
+      "location": "Caria Manor"
+    },
+    {
+      "id": "ruin_strewn_precipice_chest",
+      "name": "Ruin-Strewn Precipice Overlook Chest (after Makar)",
+      "lotParamId": 102400,
+      "progressionTier": 2,
+      "location": "Ruin-Strewn Precipice"
+    },
+    {
+      "id": "siofra_river_cache",
+      "name": "Siofra River Hallowhorn Grounds Cache",
+      "lotParamId": 102500,
+      "progressionTier": 2,
+      "location": "Siofra River"
+    },
+    {
+      "id": "volcano_manor_temple_chest",
+      "name": "Volcano Manor Temple of Eiglay Chest (after Rykard / Godskin)",
+      "lotParamId": 102600,
+      "progressionTier": 3,
+      "afterBoss": "remembrance_blasphemous",
+      "location": "Volcano Manor"
+    },
+    {
+      "id": "leyndell_erdtree_sanctuary_chest",
+      "name": "Leyndell Erdtree Sanctuary Treasury (after Godfrey)",
+      "lotParamId": 102700,
+      "progressionTier": 3,
+      "afterBoss": "remembrance_hoarah_loux",
+      "location": "Leyndell, Royal Capital"
+    },
+    {
+      "id": "auriza_heros_grave_chest",
+      "name": "Auriza Hero's Grave Ornate Chest (after Crucible Knights)",
+      "lotParamId": 102750,
+      "progressionTier": 3,
+      "location": "Altus Plateau"
+    },
+    {
+      "id": "sages_cave_hidden_chest",
+      "name": "Sage's Cave Deep Chamber Chest (after Black Knife)",
+      "lotParamId": 102780,
+      "progressionTier": 3,
+      "location": "Altus Plateau"
+    },
+    {
+      "id": "roundtable_hold_chest",
+      "name": "Roundtable Hold Fortified Manor Chest",
+      "lotParamId": 100020,
+      "progressionTier": 3,
+      "location": "Roundtable Hold"
+    },
+    {
+      "id": "farum_azula_great_bridge_chest",
+      "name": "Farum Azula Great Bridge Sanctum Cache (after Maliketh)",
+      "lotParamId": 102950,
+      "progressionTier": 4,
+      "afterBoss": "remembrance_black_blade",
+      "location": "Crumbling Farum Azula"
+    },
+    {
+      "id": "haligtree_roots_sanctum_chest",
+      "name": "Haligtree Roots Sanctum Chest (after Malenia)",
+      "lotParamId": 103000,
+      "progressionTier": 4,
+      "afterBoss": "remembrance_rot_goddess",
+      "location": "Elphael, Brace of the Haligtree"
+    },
+    {
+      "id": "mohgwyn_dynasty_chest",
+      "name": "Mohgwyn Dynasty Mausoleum Sanctum Chest (after Mohg)",
+      "lotParamId": 103100,
+      "progressionTier": 4,
+      "afterBoss": "remembrance_blood_lord",
+      "location": "Mohgwyn Palace"
+    },
+    {
+      "id": "farum_azula_dragon_temple_chest",
+      "name": "Farum Azula Dragon Temple Altar Chest (after Placidusax / Godskin Duo)",
+      "lotParamId": 102900,
+      "progressionTier": 4,
+      "afterBoss": "remembrance_dragonlord",
+      "location": "Crumbling Farum Azula"
+    },
+    {
+      "id": "ashen_capital_divine_cache",
+      "name": "Ashen Capital Elden Throne Divine Cache (after Radagon / Elden Beast)",
+      "lotParamId": 103200,
+      "progressionTier": 4,
+      "afterBoss": "remembrance_elden_remembrance",
+      "location": "Elden Throne"
+    },
+    {
+      "id": "castle_sol_medallion",
+      "name": "Castle Sol Secret Chest (after Commander Niall)",
+      "lotParamId": 102800,
+      "progressionTier": 4,
+      "location": "Mountaintops of the Giants"
+    },
+    {
+      "id": "alexander_warrior_remains",
+      "name": "Alexander Warrior Jar Treasure",
+      "lotParamId": 101740,
+      "progressionTier": 4,
+      "location": "Crumbling Farum Azula"
+    },
+    {
+      "id": "yura_ronin_cache",
+      "name": "Yura's Zamor Ruins Cache",
+      "lotParamId": 101640,
+      "progressionTier": 4,
+      "location": "Mountaintops of the Giants"
     }
   ]
 }

@@ -40,6 +40,21 @@ class LootDistributionType(str, Enum):
     MAP_PICKUP = "map_pickup"
 
 
+class ProgressionTier(int, Enum):
+    """
+    Progression tiers governing Elden Ring world regions and item level scaling:
+    1: Early Game - Limgrave, Stormhill, Weeping Peninsula, Stormveil Castle (Lv 1-35)
+    2: Mid Game - Liurnia of the Lakes, Raya Lucaria, Caelid, Caria Manor, Siofra River (Lv 35-70)
+    3: Late Game - Altus Plateau, Mt. Gelmir, Volcano Manor, Leyndell Royal Capital (Lv 70-100)
+    4: Endgame - Mountaintops of the Giants, Consecrated Snowfield, Crumbling Farum Azula,
+                 Haligtree/Elphael, Mohgwyn Palace, Ashen Capital (Lv 100-150+)
+    """
+    EARLY = 1
+    MID = 2
+    LATE = 3
+    ENDGAME = 4
+
+
 class AdditionType(int, Enum):
     """
     Enum 'Addition type' governing distribution algorithm:
@@ -57,13 +72,16 @@ class AdditionType(int, Enum):
 class AntiDup(int, Enum):
     """
     Enum 'Anti dup' for 100% drop items:
-    1: Boss rotation - If original item is a 100% drop from a boss, add to a different boss
-       (max 1 set per boss). If bosses run out, distribute to mini-bosses, then to stronger
-       enemies in the wild at normal drop rates.
-    2: Everything goes in the wild at normal drop rates.
+    1: Boss rotation - Rotates 100% boss drops to another boss in matching progression tier
+       (max 1 set per boss). Cascades immediately to high-value Chests After Boss, then wild mobs in tier.
+    2: Everything in the wild - Disperses onto wild enemies strictly matching the item's progression tier.
+    3: Chest after boss - Rotates 100% boss drops directly into high-value post-boss treasure chests
+       matching the boss progression tier, bundled with multiple extra injections.
     """
     BOSS_ROTATION = 1
     EVERYTHING_IN_THE_WILD = 2
+    CHEST_AFTER_BOSS = 3
+
 
 
 @dataclass

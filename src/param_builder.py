@@ -181,14 +181,52 @@ class ParamBuilder:
             }
         elif target.route_type == LootDistributionType.MAP_PICKUP:
             lot_id = int(target.target_id) if str(target.target_id).isdigit() else alloc.new_item_lot_id
+            awarded = [ep["new_param_id"] for ep in equip_params]
+
+            # Chests are highly valuable and always contain multiple extra injections
+            if self.kb and hasattr(self.kb, "list_all_vanilla_accessories"):
+                tier = self.kb.get_progression_tier(mod_set.target_model_id) if hasattr(self.kb, "get_progression_tier") else None
+                acc_catalog = self.kb.list_all_vanilla_accessories(tier=tier)
+                if not acc_catalog and hasattr(self.kb, "list_all_vanilla_accessories"):
+                    acc_catalog = self.kb.list_all_vanilla_accessories()
+                if acc_catalog:
+                    acc_items = list(acc_catalog.values())
+                    for i in range(2):
+                        comp = acc_items[i % len(acc_items)]
+                        comp_base_id = comp.get("baseParamId", 1000)
+                        comp_param_id = base_param_id + 50 + i
+                        if comp_param_id not in awarded:
+                            equip_params.append({
+                                "param_table": "EquipParamAccessory",
+                                "new_param_id": comp_param_id,
+                                "base_clone_id": comp_base_id,
+                                "slot": "accessory",
+                                "slot_offset": 50 + i,
+                                "row_name": f"[LootForge] {comp.get('name', 'Talisman')}",
+                                "field_updates": {"sortId": comp_param_id, "isDeposit": 1}
+                            })
+                            fmg_texts.append({
+                                "item_id": comp_param_id,
+                                "vanilla_source_id": comp_base_id,
+                                "slot": "accessory",
+                                "slot_offset": 50 + i,
+                                "is_weapon": False,
+                                "is_accessory": True,
+                                "name": f"[LootForge] {comp.get('name', 'Talisman')}",
+                                "caption": f"Extra treasure discovered inside {target.display_name}.",
+                                "info": f"Origin: Vanilla {comp.get('name', 'Talisman')} (Chest Discovery)"
+                            })
+                            awarded.append(comp_param_id)
+
             loot_spec = {
                 "type": "map_pickup",
                 "lot_id": lot_id,
                 "target_id": str(target.target_id),
                 "display_name": target.display_name,
                 "drop_rate_percent": float(target.chance_or_cost or 100.0),
-                "awarded_items": [ep["new_param_id"] for ep in equip_params]
+                "awarded_items": awarded
             }
+
         else:
             loot_spec = {
                 "type": "merchant_shop",

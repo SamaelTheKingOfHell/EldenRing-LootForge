@@ -87,8 +87,9 @@ def get_generator_param_descriptors() -> List[ParamDescriptor]:
             default=AntiDup.BOSS_ROTATION.value,
             enum_class=AntiDup,
             enum_options=[
-                ("[1] Boss Rotation (Remembrances -> Elites -> Wild)", AntiDup.BOSS_ROTATION),
-                ("[2] Everything in the Wild at Normal Rates", AntiDup.EVERYTHING_IN_THE_WILD),
+                ("[1] Boss Rotation (Tier Bosses -> Chests After Boss -> Wild)", AntiDup.BOSS_ROTATION),
+                ("[2] Everything in the Wild (Progression-Locked Mobs)", AntiDup.EVERYTHING_IN_THE_WILD),
+                ("[3] Chest After Boss (High-Value Post-Boss Chests)", AntiDup.CHEST_AFTER_BOSS),
             ]
         ),
         ParamDescriptor(
