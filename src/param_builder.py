@@ -54,13 +54,13 @@ class ParamBuilder:
 
     # Vanilla EquipParam row ID = model_id * multiplier + offset
     # Protectors: model*100 + (0=head, 100=body, 200=arms, 300=legs)
-    # Weapons:    model*10000
+    # Weapons:    model*1000 (e.g. 9000*1000 = 9000000 for Uchigatana, NOT 90000000 knife)
     VANILLA_CLONE_OFFSETS = {
         EquipmentSlot.HEAD: (100, 0),
         EquipmentSlot.BODY: (100, 100),
         EquipmentSlot.ARMS: (100, 200),
         EquipmentSlot.LEGS: (100, 300),
-        EquipmentSlot.WEAPON: (10000, 0),
+        EquipmentSlot.WEAPON: (1000, 0),
     }
 
     def __init__(self, knowledge_base: Optional[Any] = None):
@@ -103,8 +103,21 @@ class ParamBuilder:
             slot_name = slot.value.capitalize()
 
             # Compute the correct vanilla EquipParam row ID for cloning
-            multiplier, vanilla_offset = self.VANILLA_CLONE_OFFSETS.get(slot, (100, 0))
-            base_clone_id = int(mod_set.target_model_id) * multiplier + vanilla_offset
+            base_clone_id = None
+            if self.kb:
+                if mod_set.is_weapon:
+                    wep = self.kb.lookup_weapon(str(mod_set.target_model_id))
+                    if wep and wep.get("baseParamId"):
+                        base_clone_id = wep["baseParamId"]
+                else:
+                    prot = self.kb.lookup_protector(str(mod_set.target_model_id))
+                    if prot and prot.get("baseParamId"):
+                        multiplier, vanilla_offset = self.VANILLA_CLONE_OFFSETS.get(slot, (100, 0))
+                        base_clone_id = prot["baseParamId"] + vanilla_offset
+
+            if base_clone_id is None:
+                multiplier, vanilla_offset = self.VANILLA_CLONE_OFFSETS.get(slot, (100, 0))
+                base_clone_id = int(mod_set.target_model_id) * multiplier + vanilla_offset
 
             # Item display name with marker tag
             cleaned_title = _clean_mod_folder_name(mod_set.folder_or_archive_name)

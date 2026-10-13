@@ -77,36 +77,47 @@ class VanillaKnowledgeBase:
                 for w in snap.get("Weapons", []):
                     wid = str(w.get("Id", ""))
                     if wid:
-                        disc_weps[wid] = {
+                        entry = {
                             "name": w.get("Name", f"Weapon {wid}"),
                             "baseParamId": w.get("Id"),
                             "defaultRoute": "merchant_shop",
                             "progressionTier": w.get("Tier", 1)
                         }
+                        disc_weps[wid] = entry
+                        w_id_int = w.get("Id", 0)
+                        if w_id_int >= 1000:
+                            model_key = str(w_id_int // 1000)
+                            if model_key not in disc_weps:
+                                disc_weps[model_key] = entry
                 models_data["_discovered_weapons"] = disc_weps
 
                 disc_prots: Dict[str, Any] = {}
                 for prot in snap.get("Protectors", []):
                     pid = str(prot.get("Id", ""))
                     if pid:
-                        disc_prots[pid] = {
+                        entry = {
                             "name": prot.get("Name", f"Armor {pid}"),
                             "baseParamId": prot.get("Id"),
                             "defaultRoute": "enemy_drop",
                             "progressionTier": prot.get("Tier", 1)
                         }
+                        disc_prots[pid] = entry
+                        mid = str(prot.get("ModelId", ""))
+                        if mid and mid not in disc_prots:
+                            disc_prots[mid] = entry
                 models_data["_discovered_protectors"] = disc_prots
 
                 disc_accs: Dict[str, Any] = {}
                 for acc in snap.get("Accessories", []):
                     aid = str(acc.get("Id", ""))
                     if aid:
-                        disc_accs[aid] = {
+                        entry = {
                             "name": acc.get("Name", f"Talisman {aid}"),
                             "baseParamId": acc.get("Id"),
                             "defaultRoute": "enemy_drop",
                             "progressionTier": acc.get("Tier", 1)
                         }
+                        disc_accs[aid] = entry
                 models_data["_discovered_accessories"] = disc_accs
 
                 disc_bosses: List[Dict[str, Any]] = []
@@ -131,40 +142,70 @@ class VanillaKnowledgeBase:
             except Exception as e:
                 system_logger.warning(f"Could not load world snapshot: {e}", source="KnowledgeBase")
 
+        # If static models were not present, populate primary collections directly from discovered snapshot
+        if not models_data.get("weapons") and models_data.get("_discovered_weapons"):
+            models_data["weapons"] = models_data["_discovered_weapons"]
+        if not models_data.get("protectors") and models_data.get("_discovered_protectors"):
+            models_data["protectors"] = models_data["_discovered_protectors"]
+        if not models_data.get("accessories") and models_data.get("_discovered_accessories"):
+            models_data["accessories"] = models_data["_discovered_accessories"]
+
         return cls(models_data, routes_data)
 
     def lookup_protector(self, model_id: str) -> Optional[Dict[str, Any]]:
-        """Finds vanilla armor data by 4-digit model ID."""
+        """Finds vanilla armor data by 4-digit model ID or param ID."""
         cleaned = model_id.lstrip("0") or "0"
         padded = model_id.zfill(4)
-        return self._protectors.get(model_id) or self._protectors.get(padded) or self._protectors.get(cleaned)
+        return (
+            self._discovered_protectors.get(model_id) or
+            self._discovered_protectors.get(padded) or
+            self._discovered_protectors.get(cleaned) or
+            self._protectors.get(model_id) or
+            self._protectors.get(padded) or
+            self._protectors.get(cleaned)
+        )
 
     def lookup_weapon(self, model_id: str) -> Optional[Dict[str, Any]]:
-        """Finds vanilla weapon data by 4-digit model ID."""
+        """Finds vanilla weapon data by 4-digit model ID or param ID."""
         cleaned = model_id.lstrip("0") or "0"
         padded = model_id.zfill(4)
-        return self._weapons.get(model_id) or self._weapons.get(padded) or self._weapons.get(cleaned)
+        return (
+            self._discovered_weapons.get(model_id) or
+            self._discovered_weapons.get(padded) or
+            self._discovered_weapons.get(cleaned) or
+            self._weapons.get(model_id) or
+            self._weapons.get(padded) or
+            self._weapons.get(cleaned)
+        )
 
     def lookup_accessory(self, model_id: str) -> Optional[Dict[str, Any]]:
         """Finds vanilla accessory/talisman data by ID or baseParamId."""
         cleaned = model_id.lstrip("0") or "0"
         padded = model_id.zfill(4)
-        return self._accessories.get(model_id) or self._accessories.get(padded) or self._accessories.get(cleaned)
+        return (
+            self._discovered_accessories.get(model_id) or
+            self._discovered_accessories.get(padded) or
+            self._discovered_accessories.get(cleaned) or
+            self._accessories.get(model_id) or
+            self._accessories.get(padded) or
+            self._accessories.get(cleaned)
+        )
 
     def list_all_vanilla_protectors(self) -> Dict[str, Dict[str, Any]]:
         """Returns all cataloged vanilla armor sets."""
-        return dict(self._protectors)
+        return dict(self._protectors) if self._protectors else dict(self._discovered_protectors)
 
     def list_all_vanilla_weapons(self) -> Dict[str, Dict[str, Any]]:
         """Returns all cataloged vanilla weapons."""
-        return dict(self._weapons)
+        return dict(self._weapons) if self._weapons else dict(self._discovered_weapons)
 
     def list_all_vanilla_accessories(self, tier: Optional[ProgressionTier] = None) -> Dict[str, Dict[str, Any]]:
         """Returns all cataloged vanilla accessories/talismans, optionally filtered by tier."""
+        accs = self._accessories if self._accessories else self._discovered_accessories
         if tier is None:
-            return dict(self._accessories)
-        filtered = {k: v for k, v in self._accessories.items() if v.get("progressionTier") == tier.value}
-        return filtered if filtered else dict(self._accessories)
+            return dict(accs)
+        filtered = {k: v for k, v in accs.items() if v.get("progressionTier") == tier.value}
+        return filtered if filtered else dict(accs)
 
     def list_all_discovered_weapons(self) -> Dict[str, Dict[str, Any]]:
         """Returns all dynamically discovered weapons across the regulation."""

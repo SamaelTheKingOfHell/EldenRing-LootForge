@@ -128,6 +128,37 @@ class TestParamBuilder(unittest.TestCase):
         self.assertEqual(loot["type"], "enemy_drop")
         self.assertEqual(loot["lot_id"], 380000000)  # Authentic Cleanrot Knight lot ID!
 
+    def test_uchigatana_weapon_cloning_resolves_correct_katana_id(self):
+        """Verifies that Uchigatana (model 9000) clones from 9000000 (Katana), NOT 90000000 (Knife)."""
+        mod_set = DetectedModSet(
+            set_id="mod_uchigatana",
+            folder_or_archive_name="CustomUchigatana",
+            target_model_id="9000",
+            target_vanilla_name="Uchigatana",
+            is_weapon=True,
+            parts=[
+                ModPartFile("wp_a_9000.partsbnd.dcx", "parts/wp_a_9000.partsbnd.dcx", EquipmentSlot.WEAPON, "9000")
+            ],
+            allocation=StandaloneAllocation(
+                new_model_id="9005",
+                new_equip_param_id=9005000,
+                new_item_lot_id=9100005,
+                marker_tag="[LootForge]"
+            ),
+            loot_target=LootTarget(
+                route_type=LootDistributionType.ENEMY_DROP,
+                target_id="godrick_soldier",
+                display_name="Godrick Soldier",
+                chance_or_cost=25.0
+            )
+        )
+
+        spec = self.builder.build_patch_spec(mod_set)
+        wep_param = spec["equip_params"][0]
+        self.assertEqual(wep_param["param_table"], "EquipParamWeapon")
+        # Must be 9000000 (Uchigatana Katana), NEVER 90000000 (Knife/Cirque)!
+        self.assertEqual(wep_param["base_clone_id"], 9000000)
+
 
 if __name__ == "__main__":
     unittest.main()
