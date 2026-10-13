@@ -20,6 +20,7 @@ This directory contains the core Python engine implementation for LootForge, org
 | `loot_distributor.py` | `LootDistributor` | Calculates drop rates, set invariance, boss rotation, and color statuses. |
 | `diablo_affixes.py` | Diablo Affix Engine | Rarity tiers, affix definitions, stat deltas, Elden Ring SpEffect passives, and authentic WeaponSkill (Ash of War) pool. |
 | `diablo_generator.py` | `DiabloLootGenerator` | Procedural multi-tier variant generator, affix roll engine, weapon skills randomization, and dynamic lore injector. |
+| `pricing_engine.py` | `PricingEngine` | Dynamic power-based buy and sell price valuation engine for runes, equipment params, and shop lineups. |
 | `regulation_manager.py` | `RegulationManager` | Non-destructive regulation.bin decryptor, param patcher, and AES-256 encryptor. |
 | `parts_deployer.py` | `PartsDeployer` | Standalone .partsbnd.dcx model deployment and cross-gender mesh mirroring service. |
 | `ui/` | UI Components | Themed styles (`theme.py`), modular parameter schema, widget factory, and modals. |

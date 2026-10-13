@@ -117,4 +117,30 @@ This roadmap defines the implementation phases for the cross-platform Standalone
   - Partitioned items and encounter destinations into Early, Mid, Late, and Endgame tiers.
   - Strict progression locking preventing late-game items from appearing in early regions.
 
+## Phase 12: Progression-Balanced Ashes of War (Weapon Skills)
+- [x] **Progression-Tiered Weapon Skill Categorization (`src/diablo_affixes.py`)**:
+  - Categorized all authentic Ashes of War (`DEFAULT_WEAPON_SKILLS` and Paramdex definitions) across `ProgressionTier` (Early, Mid, Late, Endgame).
+  - Early: Starter/early ashes (Impaling Thrust, Unsheathe, Bloody Slash, Sacred Blade, Gravitas, Quickstep, Reduvia Blood Blade, etc.).
+  - Mid: Mid-game ashes (Lion's Claw, Blood Tax, Double Slash, Giant Hunt, Glintblade Phalanx, Ice Spear, Hoarfrost Stomp, Transient Moonlight, etc.).
+  - Late: Late-game ashes (Prelate's Charge, Prayerful Strike, Waves of Darkness, Royal Knight's Resolve, Bloodhound's Step, Moonlight Greatsword, Taker's Flames, etc.).
+  - Endgame: Top boss/endgame ashes (Waterfowl Dance, Destined Death, Corpse Piler, Bloodboon Ritual, Wave of Gold, Swift Slash, etc.).
+- [x] **Tier-Weighted Weapon Skill Rolling Engine (`src/diablo_generator.py`)**:
+  - `roll_weapon_skill(tier=...)` partitions the weapon skill pool and bounds roll possibilities strictly by the encounter/item progression tier (Early tier has 0% chance of Mid/Late/Endgame; Mid tier has 0% chance of Late/Endgame, etc.).
+- [x] **Configurable Toggle & UI Integration (`diablo_balance_weapon_skills_by_progression`)**:
+  - Added boolean toggle (defaults to `True`) enabling players to preserve progression balance or opt into unbound chaotic rolls across all tiers.
+  - Fully integrated across `LootForgeConfig`, UI schema (`ParamDescriptor`), and Qt app.
+
+## Phase 13: Dark Souls 1/2/3 Legacy Armor Porting Subsystem (Research Phase)
+- [ ] **Client-Side Game Installation Discovery**:
+  - Automated detection of Steam/local installations of DS1 (PTDE/DSR), DS2 (SOTFS), and DS3 via registry and `libraryfolders.vdf`.
+- [ ] **Selective In-Memory Archive Extraction**:
+  - High-performance random-access BHD5/BDT extraction of armor `parts/` archives, FMG lore texts, and `EquipParamProtector` stats without requiring 50 GB full game unpacking.
+- [ ] **FLVER2 & MATBIN Conversion Engine**:
+  - Upgrading legacy FLVER headers, re-packing vertex buffer layouts to Elden Ring 32-byte layout, re-targeting `.mtd` shaders to `.matbin` PBR shaders, and compressing with Oodle (`DCX_KRAKEN`).
+- [ ] **Skeletal Bone Remapping & Unisex Mirroring**:
+  - Translating legacy Havok skeleton nodes to Elden Ring's `c0000` player skeleton, with automated cross-gender mesh mirroring.
+- [ ] **Pre-Diablo Integration & Drop Distribution**:
+  - Ingesting ported sets as authentic `DetectedModSet` objects into LootForge's standalone ID allocator, boss remembrance exchanges, post-boss chests, and optional Diablo procedural ARPG stat infusion.
+
+
 
