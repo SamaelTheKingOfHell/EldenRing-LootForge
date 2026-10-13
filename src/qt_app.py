@@ -636,7 +636,12 @@ class LootForgeMainWindow(QMainWindow):
                 system_logger.info(f"Injected Diablo stats into {len(vanilla_stat_specs)} vanilla item loots.", source="QtApp")
 
             patch_result = self.regulation_manager.execute_patch(
-                specs=patch_specs, source_reg=source_reg, target_reg=target_reg, game_dir=self.config.game_directory
+                specs=patch_specs,
+                source_reg=source_reg,
+                target_reg=target_reg,
+                game_dir=self.config.game_directory,
+                boss_loot_pools_enabled=self.config.boss_loot_pools_enabled,
+                boss_weapons_per_pool=self.config.boss_weapons_per_pool
             )
 
             output_dir = target_reg.parent

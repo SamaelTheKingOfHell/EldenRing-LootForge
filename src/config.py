@@ -58,7 +58,9 @@ class LootForgeConfig:
         diablo_seed: Optional[int] = None,
         diablo_inject_vanilla_stats: bool = False,
         diablo_use_vanilla_base_items: bool = False,
-        diablo_randomize_weapon_skills: bool = False
+        diablo_randomize_weapon_skills: bool = False,
+        boss_loot_pools_enabled: bool = True,
+        boss_weapons_per_pool: int = 3
     ):
         self.game_directory = game_directory
         self.input_directory = input_directory
@@ -88,6 +90,8 @@ class LootForgeConfig:
         self.diablo_inject_vanilla_stats = diablo_inject_vanilla_stats
         self.diablo_use_vanilla_base_items = diablo_use_vanilla_base_items
         self.diablo_randomize_weapon_skills = diablo_randomize_weapon_skills
+        self.boss_loot_pools_enabled = boss_loot_pools_enabled
+        self.boss_weapons_per_pool = boss_weapons_per_pool
 
         # Auto-discover game directory if not specified
         if not self.game_directory:
@@ -201,6 +205,8 @@ class LootForgeConfig:
             "diablo_inject_vanilla_stats": self.diablo_inject_vanilla_stats,
             "diablo_use_vanilla_base_items": self.diablo_use_vanilla_base_items,
             "diablo_randomize_weapon_skills": self.diablo_randomize_weapon_skills,
+            "boss_loot_pools_enabled": self.boss_loot_pools_enabled,
+            "boss_weapons_per_pool": self.boss_weapons_per_pool,
             "is_windows": self.is_windows,
             "is_steam_deck": self.is_steam_deck
         }
@@ -254,7 +260,9 @@ class LootForgeConfig:
                 diablo_seed=data.get("diablo_seed", None),
                 diablo_inject_vanilla_stats=bool(data.get("diablo_inject_vanilla_stats", False)),
                 diablo_use_vanilla_base_items=bool(data.get("diablo_use_vanilla_base_items", False)),
-                diablo_randomize_weapon_skills=bool(data.get("diablo_randomize_weapon_skills", False))
+                diablo_randomize_weapon_skills=bool(data.get("diablo_randomize_weapon_skills", False)),
+                boss_loot_pools_enabled=bool(data.get("boss_loot_pools_enabled", True)),
+                boss_weapons_per_pool=int(data.get("boss_weapons_per_pool", 3))
             )
         except Exception as e:
             system_logger.warning(f"Error reading {file_path}; using defaults: {e}", source="Config")

@@ -127,6 +127,33 @@ class TestRegulationManager(unittest.TestCase):
         self.assertEqual(res.returncode, 0)
         self.assertIn("Decryption successful", res.stdout)
 
+    def test_boss_loot_pool_enrichment(self):
+        """Verify that RegTool inject-boss-loot-pools enriches regulation with chained weapon drops."""
+        if not self.real_reg or not self.real_reg.exists():
+            self.skipTest("No real backup regulation.bin available in backups/ for roundtrip test.")
+
+        target_reg = Path(self.test_dir) / "mod" / "regulation.bin"
+        target_reg.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(self.real_reg, target_reg)
+
+        cmd = [
+            str(self.manager.regtool_exe) if self.manager.regtool_exe.exists() else "dotnet",
+            "inject-boss-loot-pools",
+            "--input", str(target_reg),
+            "--output", str(target_reg),
+            "--defs", str(self.manager.defs_dir),
+            "--count", "3"
+        ]
+        if not self.manager.regtool_exe.exists():
+            cmd = ["dotnet", str(self.manager.regtool_dll)] + cmd[1:]
+
+        import subprocess
+        res = subprocess.run(cmd, capture_output=True, text=True, cwd=str(self.base_dir))
+        self.assertEqual(res.returncode, 0)
+        self.assertIn("Successfully enriched", res.stdout)
+        self.assertTrue(target_reg.exists())
+        self.assertGreater(target_reg.stat().st_size, 1000000)
+
 
 if __name__ == "__main__":
     unittest.main()

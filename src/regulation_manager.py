@@ -197,7 +197,9 @@ class RegulationManager:
         specs: List[Dict[str, Any]],
         source_reg: Path,
         target_reg: Path,
-        game_dir: str = ""
+        game_dir: str = "",
+        boss_loot_pools_enabled: bool = True,
+        boss_weapons_per_pool: int = 3
     ) -> Dict[str, Any]:
         """
         Executes RegTool to inject patch specifications into target regulation.bin.
@@ -278,6 +280,28 @@ class RegulationManager:
 
             if not target_reg.exists() or target_reg.stat().st_size < 100000:
                 raise RuntimeError(f"RegTool completed but target regulation was not created or is invalid: {target_reg}")
+
+            # Automatically inject progression-tier weapon loot pools for all bosses if enabled
+            if boss_loot_pools_enabled:
+                try:
+                    boss_cmd = [str(self.regtool_exe)] if (sys.platform.startswith("win") and self.regtool_exe.exists()) else (
+                        ["dotnet", str(self.regtool_dll)] if self.regtool_dll.exists() else
+                        ["dotnet", "run", "--project", str(self.regtool_proj), "--"]
+                    )
+                    boss_cmd.extend([
+                        "inject-boss-loot-pools",
+                        "--input", str(target_reg),
+                        "--output", str(target_reg),
+                        "--defs", str(self.defs_dir),
+                        "--count", str(max(1, min(5, boss_weapons_per_pool)))
+                    ])
+                    b_res = subprocess.run(boss_cmd, capture_output=True, text=True, cwd=str(self.base_dir), check=False)
+                    if b_res.returncode == 0:
+                        system_logger.info("Enriched all bosses with progression-tier weapon loot pools.", source="RegulationManager")
+                    else:
+                        system_logger.warning(f"Boss loot pool injection returned code {b_res.returncode}: {b_res.stderr or b_res.stdout}", source="RegulationManager")
+                except Exception as be:
+                    system_logger.warning(f"Boss loot pool notice: {be}", source="RegulationManager")
 
             return {
                 "success": True,
