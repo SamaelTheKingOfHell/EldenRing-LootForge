@@ -175,7 +175,15 @@ class LootDistributor:
             system_logger.info(f"Boss Rotation (Wrap): Rotated from '{original_boss_name}' to '{chosen['name']}'", source="LootDistributor")
             return LootTarget(LootDistributionType.BOSS_REMEMBRANCE, chosen["id"], chosen["name"], float(chosen.get("defaultCost", 30000)))
 
-        # Fallback: Elite enemies across the realm
+        # Fallback 1: World Discovery & Treasure Chests (Bosses -> Chests -> The Rest)
+        pools = self._kb.get_diablo_distribution_pools() if hasattr(self._kb, "get_diablo_distribution_pools") else {}
+        chests = pools.get("chests", [])
+        if chests:
+            chosen_chest = random.choice(chests)
+            system_logger.info(f"Boss Rotation: Cascaded to Treasure Chest '{chosen_chest['name']}'", source="LootDistributor")
+            return LootTarget(LootDistributionType.MAP_PICKUP, str(chosen_chest.get("lotParamId", 102100)), chosen_chest["name"], 100.0)
+
+        # Fallback 2: The Rest (Elite enemies across the realm)
         mini_bosses = [
             e for e in self._kb.list_elite_enemies()
             if any(k in e["name"].lower() for k in ["sentinel", "knight", "cavalry", "assassin", "darriwil"])
@@ -210,7 +218,14 @@ class LootDistributor:
             self._shop_allocations[chosen["id"]] = self._shop_allocations.get(chosen["id"], 0) + 1
             return LootTarget(chosen["type"], chosen["id"], chosen["name"], chosen["cost"])
 
-        # When all shops/bosses hit row limit, rotate overflowed item to wild enemy pool
+        # When all shops/bosses hit row limit, rotate overflowed item to chests first (Bosses -> Chests -> The Rest)
+        pools = self._kb.get_diablo_distribution_pools() if hasattr(self._kb, "get_diablo_distribution_pools") else {}
+        chests = pools.get("chests", [])
+        if chests:
+            chosen_chest = random.choice(chests)
+            system_logger.info(f"Shop limits reached. Rotating overflowed item to Chest '{chosen_chest['name']}'.", source="LootDistributor")
+            return LootTarget(LootDistributionType.MAP_PICKUP, str(chosen_chest.get("lotParamId", 102100)), chosen_chest["name"], 100.0)
+
         system_logger.info("Shop row limits reached for all merchants/bosses. Rotating overflowed item to wild enemies.", source="LootDistributor")
         return self._place_in_wild(original_name="Overflowed Mod Item")
 

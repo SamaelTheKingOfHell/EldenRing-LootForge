@@ -179,6 +179,16 @@ class ParamBuilder:
                 "drop_rate_percent": target.chance_or_cost,
                 "awarded_items": [ep["new_param_id"] for ep in equip_params]
             }
+        elif target.route_type == LootDistributionType.MAP_PICKUP:
+            lot_id = int(target.target_id) if str(target.target_id).isdigit() else alloc.new_item_lot_id
+            loot_spec = {
+                "type": "map_pickup",
+                "lot_id": lot_id,
+                "target_id": str(target.target_id),
+                "display_name": target.display_name,
+                "drop_rate_percent": float(target.chance_or_cost or 100.0),
+                "awarded_items": [ep["new_param_id"] for ep in equip_params]
+            }
         else:
             loot_spec = {
                 "type": "merchant_shop",

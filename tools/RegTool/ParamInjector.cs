@@ -16,6 +16,7 @@ namespace LootForge.RegTool
             Func<string, string, (PARAM Param, BinderFile File)> getOrLoadParam,
             Dictionary<int, bool> itemIdToIsProtector,
             Dictionary<int, bool> itemIdToIsWeapon,
+            Dictionary<int, bool> itemIdToIsAccessory,
             Dictionary<int, int> itemIdToVanillaSourceId,
             ref int injectedEquipCount)
         {
@@ -25,7 +26,8 @@ namespace LootForge.RegTool
                 itemIdToIsProtector,
                 itemIdToIsWeapon,
                 itemIdToVanillaSourceId,
-                ref injectedEquipCount
+                ref injectedEquipCount,
+                itemIdToIsAccessory
             );
         }
 
@@ -34,6 +36,7 @@ namespace LootForge.RegTool
             Func<string, string, (PARAM Param, BinderFile File)> getOrLoadParam,
             Dictionary<int, bool> itemIdToIsProtector,
             Dictionary<int, bool> itemIdToIsWeapon,
+            Dictionary<int, bool> itemIdToIsAccessory,
             ref int injectedLootCount)
         {
             LootInjector.InjectLootDistribution(
@@ -41,6 +44,7 @@ namespace LootForge.RegTool
                 getOrLoadParam,
                 itemIdToIsProtector,
                 itemIdToIsWeapon,
+                itemIdToIsAccessory,
                 ref injectedLootCount
             );
         }
@@ -150,6 +154,19 @@ namespace LootForge.RegTool
                     (r.Name != null && r.Name.Contains("[LootForge]")));
             }
             catch {}
+
+            // 6. Purge LootForge rows in EquipParamAccessory
+            try
+            {
+                var (accessoryParam, _) = getOrLoadParam("EquipParamAccessory", "EquipParamAccessory");
+                accessoryParam.Rows.RemoveAll(r =>
+                    (r.ID >= 9000000 && r.ID < 10000000) ||
+                    (r.Name != null && r.Name.Contains("[LootForge]")));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[RegTool WARN] Could not purge EquipParamAccessory: {ex.Message}");
+            }
         }
     }
 }

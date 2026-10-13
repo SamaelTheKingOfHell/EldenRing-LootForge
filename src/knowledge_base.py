@@ -33,6 +33,7 @@ class VanillaKnowledgeBase:
     def __init__(self, models_data: Dict[str, Any], routes_data: Dict[str, Any]):
         self._protectors = models_data.get("protectors", {})
         self._weapons = models_data.get("weapons", {})
+        self._accessories = models_data.get("accessories", {})
         self._boss_remembrances = routes_data.get("bossRemembrances", [])
         self._elite_enemies = routes_data.get("eliteEnemies", [])
         self._merchants = routes_data.get("merchants", [])
@@ -74,6 +75,12 @@ class VanillaKnowledgeBase:
         padded = model_id.zfill(4)
         return self._weapons.get(model_id) or self._weapons.get(padded) or self._weapons.get(cleaned)
 
+    def lookup_accessory(self, model_id: str) -> Optional[Dict[str, Any]]:
+        """Finds vanilla accessory/talisman data by ID or baseParamId."""
+        cleaned = model_id.lstrip("0") or "0"
+        padded = model_id.zfill(4)
+        return self._accessories.get(model_id) or self._accessories.get(padded) or self._accessories.get(cleaned)
+
     def list_all_vanilla_protectors(self) -> Dict[str, Dict[str, Any]]:
         """Returns all cataloged vanilla armor sets."""
         return dict(self._protectors)
@@ -82,12 +89,34 @@ class VanillaKnowledgeBase:
         """Returns all cataloged vanilla weapons."""
         return dict(self._weapons)
 
-    def get_default_loot_target(self, model_id: str, is_weapon: bool = False) -> LootTarget:
+    def list_all_vanilla_accessories(self) -> Dict[str, Dict[str, Any]]:
+        """Returns all cataloged vanilla accessories/talismans."""
+        return dict(self._accessories)
+
+    def get_default_loot_target(
+        self,
+        model_id: str,
+        is_weapon: bool = False,
+        is_accessory: bool = False
+    ) -> LootTarget:
         """
         Calculates the most thematic loot drop target for a model ID.
         """
-        info = self.lookup_weapon(model_id) if is_weapon else self.lookup_protector(model_id)
+        if is_accessory:
+            info = self.lookup_accessory(model_id)
+        elif is_weapon:
+            info = self.lookup_weapon(model_id)
+        else:
+            info = self.lookup_protector(model_id)
+
         if not info:
+            if is_accessory:
+                return LootTarget(
+                    route_type=LootDistributionType.MAP_PICKUP,
+                    target_id="102100",
+                    display_name="Gatefront Ruins Underground Chest",
+                    chance_or_cost=100.0
+                )
             if is_weapon:
                 return LootTarget(
                     route_type=LootDistributionType.MERCHANT_SHOP,
@@ -112,6 +141,13 @@ class VanillaKnowledgeBase:
                 target_id=source_id,
                 display_name=enemy_name,
                 chance_or_cost=30000
+            )
+        elif route in ("map_pickup", "world_chest", "chest"):
+            return LootTarget(
+                route_type=LootDistributionType.MAP_PICKUP,
+                target_id=source_id,
+                display_name=enemy_name,
+                chance_or_cost=100.0
             )
         elif route == "enemy_drop":
             return LootTarget(

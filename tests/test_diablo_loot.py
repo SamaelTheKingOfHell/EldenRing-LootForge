@@ -30,7 +30,7 @@ class TestDiabloLoot(unittest.TestCase):
         for aff in AFFIX_POOL:
             self.assertTrue(len(aff.name) > 0)
             self.assertTrue(len(aff.description) > 0)
-            self.assertTrue(aff.applies_to_weapon or aff.applies_to_armor)
+            self.assertTrue(aff.applies_to_weapon or aff.applies_to_armor or getattr(aff, "applies_to_accessory", False))
 
     def test_rarity_and_affix_rolling(self):
         """Verifies affix counts conform to rarity tier specifications."""
@@ -567,6 +567,122 @@ class TestDiabloLoot(unittest.TestCase):
         DiabloLootGenerator.apply_affixes_to_equipment(updates_res, [mind], is_weapon=True)
         self.assertEqual(updates_res.get("residentSpEffectId"), mind.sp_effect_id)
         self.assertEqual(updates_res.get("spEffectMsgId0"), 1002)
+
+    def test_accessory_affixes_and_equipment_updates(self):
+        """Verifies accessory affixes roll correctly and map to residentSpEffectId1..4 and refId."""
+        accessory_affixes = self.generator.roll_affixes(RarityTier.LEGENDARY, is_weapon=False, is_accessory=True)
+        self.assertGreaterEqual(len(accessory_affixes), 2)
+        for aff in accessory_affixes:
+            self.assertTrue(getattr(aff, "applies_to_accessory", False), f"Affix {aff.name} must be valid for accessories!")
+
+        updates = {}
+        DiabloLootGenerator.apply_affixes_to_equipment(updates, accessory_affixes, is_weapon=False, is_accessory=True)
+        # Should have residentSpEffectId1..4 or refId populated
+        resident_keys = [k for k in updates if k.startswith("residentSpEffectId")]
+        self.assertTrue(len(resident_keys) > 0 or "refId" in updates, "Accessory updates must populate residentSpEffects or refId!")
+
+    def test_boss_and_chest_multi_drop_with_accessory(self):
+        """Verifies multi-drop bundling for Bosses and Chests with companion accessory relics."""
+        from src.knowledge_base import VanillaKnowledgeBase
+        kb = VanillaKnowledgeBase.from_data_dir("data")
+
+        armor_set = DetectedModSet(
+            set_id="RagingWolf_1500",
+            folder_or_archive_name="Raging Wolf Set",
+            target_model_id="1500",
+            target_vanilla_name="Raging Wolf Helm",
+            parts=[ModPartFile("hr_m_1500.partsbnd.dcx", "hr_m_1500.partsbnd.dcx", EquipmentSlot.HEAD, "1500", "m", 100)],
+            allocation=StandaloneAllocation(
+                new_model_id="9010",
+                new_equip_param_id=9010000,
+                new_item_lot_id=9100010,
+                marker_tag="[LootForge]"
+            ),
+            loot_target=LootTarget(
+                route_type=LootDistributionType.ENEMY_DROP,
+                target_id="431100000",
+                display_name="Godrick Soldier",
+                chance_or_cost=100.0
+            )
+        )
+
+        variants = self.generator.generate_variants_for_spec(
+            armor_set=armor_set,
+            num_variants=6,
+            knowledge_base=kb
+        )
+        self.assertEqual(len(variants), 6)
+
+        # Mod buckets: 0=Boss, 1=Chest, 2=Rest, 3=Boss, 4=Chest, 5=Rest
+        boss_variants = [v for idx, v in enumerate(variants) if (idx % 3) == 0]
+        chest_variants = [v for idx, v in enumerate(variants) if (idx % 3) == 1]
+        rest_variants = [v for idx, v in enumerate(variants) if (idx % 3) == 2]
+
+        self.assertEqual(len(boss_variants), 2)
+        self.assertEqual(len(chest_variants), 2)
+        self.assertEqual(len(rest_variants), 2)
+
+        # Boss variants must have multiple drops (companion accessory)
+        for bv in boss_variants:
+            awarded = bv["loot_distribution"]["awarded_items"]
+            self.assertEqual(len(awarded), 2, "Boss variants must have multiple drops (relic + companion accessory)!")
+            tables = [ep["param_table"] for ep in bv["equip_params"]]
+            self.assertIn("EquipParamAccessory", tables, "Boss variant must bundle an EquipParamAccessory companion relic!")
+            fmg_acc = [ft for ft in bv["fmg_texts"] if ft.get("is_accessory")]
+            self.assertGreaterEqual(len(fmg_acc), 1, "Must have an FMG entry marked as accessory!")
+
+        # Chest variants must have multiple drops (companion accessory)
+        for cv in chest_variants:
+            awarded = cv["loot_distribution"]["awarded_items"]
+            self.assertEqual(len(awarded), 2, "Chest variants must have multiple drops (relic + companion accessory)!")
+            tables = [ep["param_table"] for ep in cv["equip_params"]]
+            self.assertIn("EquipParamAccessory", tables, "Chest variant must bundle an EquipParamAccessory companion relic!")
+            fmg_acc = [ft for ft in cv["fmg_texts"] if ft.get("is_accessory")]
+            self.assertGreaterEqual(len(fmg_acc), 1, "Must have an FMG entry marked as accessory!")
+
+        # Rest variants must only have single primary item
+        for rv in rest_variants:
+            awarded = rv["loot_distribution"]["awarded_items"]
+            self.assertEqual(len(awarded), 1, "Rest variants (mobs/merchants) must have single item drop!")
+
+    def test_vanilla_accessory_stat_injections(self):
+        """Verifies Diablo stat infusion specs for vanilla accessories/talismans."""
+        from src.knowledge_base import VanillaKnowledgeBase
+        kb = VanillaKnowledgeBase.from_data_dir("data")
+
+        specs = self.generator.generate_vanilla_stat_injections(knowledge_base=kb)
+        acc_specs = [s for s in specs if s["equip_params"][0].get("param_table") == "EquipParamAccessory"]
+        self.assertGreaterEqual(len(acc_specs), 20, "Must inject stats into vanilla accessories/talismans!")
+
+        for spec in acc_specs:
+            ep = spec["equip_params"][0]
+            self.assertTrue(ep["update_existing"])
+            self.assertEqual(ep["param_table"], "EquipParamAccessory")
+            fmg = spec["fmg_texts"][0]
+            self.assertTrue(fmg.get("is_accessory"))
+            self.assertIn("RARITY:", fmg["caption"])
+
+    def test_standalone_accessory_generation(self):
+        """Verifies standalone accessory relics generated from vanilla base models."""
+        from src.knowledge_base import VanillaKnowledgeBase
+        from src.id_allocator import IdAllocator
+        kb = VanillaKnowledgeBase.from_data_dir("data")
+        allocator = IdAllocator(base_param_id=9000000, base_item_lot_id=9100000)
+
+        specs = self.generator.generate_vanilla_base_distribution_specs(
+            knowledge_base=kb, id_allocator=allocator, variants_per_item=2
+        )
+        acc_specs = [s for s in specs if s["equip_params"][0].get("param_table") == "EquipParamAccessory"]
+        self.assertGreaterEqual(len(acc_specs), 20, "Must generate standalone accessory relics from vanilla base models!")
+
+        for spec in acc_specs:
+            ep = spec["equip_params"][0]
+            self.assertEqual(ep["param_table"], "EquipParamAccessory")
+            self.assertGreaterEqual(ep["new_param_id"], 9000000)
+            self.assertIn("loot_distribution", spec)
+            fmg = spec["fmg_texts"][0]
+            self.assertTrue(fmg.get("is_accessory"))
+            self.assertIn("[LootForge]", fmg["name"])
 
 
 if __name__ == "__main__":

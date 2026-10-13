@@ -19,7 +19,8 @@ namespace LootForge.RegTool
             bool IsWeapon,
             string Name,
             string Caption,
-            string Info
+            string Info,
+            bool IsAccessory = false
         );
 
         public static bool IsValidFmgText(string? text)
@@ -100,14 +101,17 @@ namespace LootForge.RegTool
             var weaponNameMap       = GetOrCreateMap("WeaponName");
             var weaponInfoMap       = GetOrCreateMap("WeaponInfo");
             var weaponCaptionMap    = GetOrCreateMap("WeaponCaption");
+            var accessoryNameMap    = GetOrCreateMap("AccessoryName");
+            var accessoryInfoMap    = GetOrCreateMap("AccessoryInfo");
+            var accessoryCaptionMap = GetOrCreateMap("AccessoryCaption");
 
             int count = 0;
 
             foreach (var spec in fmgTexts)
             {
-                var nameMap    = spec.IsWeapon ? weaponNameMap    : protectorNameMap;
-                var infoMap    = spec.IsWeapon ? weaponInfoMap    : protectorInfoMap;
-                var captionMap = spec.IsWeapon ? weaponCaptionMap : protectorCaptionMap;
+                var nameMap    = spec.IsAccessory ? accessoryNameMap    : (spec.IsWeapon ? weaponNameMap    : protectorNameMap);
+                var infoMap    = spec.IsAccessory ? accessoryInfoMap    : (spec.IsWeapon ? weaponInfoMap    : protectorInfoMap);
+                var captionMap = spec.IsAccessory ? accessoryCaptionMap : (spec.IsWeapon ? weaponCaptionMap : protectorCaptionMap);
 
                 string nameText = spec.Name;
                 string infoText = spec.Info;
@@ -152,7 +156,7 @@ namespace LootForge.RegTool
 
                 if (!IsValidFmgText(nameText))
                 {
-                    nameText = $"[LootForge] {(spec.IsWeapon ? "Weapon" : "Armor")} {spec.ItemId}";
+                    nameText = $"[LootForge] {(spec.IsAccessory ? "Accessory" : (spec.IsWeapon ? "Weapon" : "Armor"))} {spec.ItemId}";
                 }
 
                 nameText = FormatLootForgeItemName(nameText);

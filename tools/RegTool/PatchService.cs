@@ -110,6 +110,7 @@ namespace LootForge.RegTool
             var allFmgTexts = new List<FmgInjector.FmgTextSpec>();
             var itemIdToIsWeapon = new Dictionary<int, bool>();
             var itemIdToIsProtector = new Dictionary<int, bool>();
+            var itemIdToIsAccessory = new Dictionary<int, bool>();
             var itemIdToVanillaSourceId = new Dictionary<int, int>();
 
             List<JsonElement> specs = new List<JsonElement>();
@@ -130,7 +131,7 @@ namespace LootForge.RegTool
 
             foreach (var setSpec in specs)
             {
-                // 1. Equip Params (EquipParamProtector / EquipParamWeapon)
+                // 1. Equip Params (EquipParamProtector / EquipParamWeapon / EquipParamAccessory)
                 if (setSpec.TryGetProperty("equip_params", out var equipParamsEl) && equipParamsEl.ValueKind == JsonValueKind.Array)
                 {
                     ParamInjector.InjectEquipParams(
@@ -138,6 +139,7 @@ namespace LootForge.RegTool
                         GetOrLoadParam,
                         itemIdToIsProtector,
                         itemIdToIsWeapon,
+                        itemIdToIsAccessory,
                         itemIdToVanillaSourceId,
                         ref injectedEquipCount
                     );
@@ -151,6 +153,7 @@ namespace LootForge.RegTool
                         GetOrLoadParam,
                         itemIdToIsProtector,
                         itemIdToIsWeapon,
+                        itemIdToIsAccessory,
                         ref injectedLootCount
                     );
                 }
@@ -166,11 +169,12 @@ namespace LootForge.RegTool
                         {
                             ftVanillaId = realVanillaId;
                         }
+                        bool ftIsAccessory = itemIdToIsAccessory.TryGetValue(ftItemId, out var ia) ? ia : (ft.TryGetProperty("is_accessory", out var iaProp) && iaProp.GetBoolean());
                         bool ftIsWeapon = itemIdToIsWeapon.TryGetValue(ftItemId, out var iw) ? iw : (ft.TryGetProperty("is_weapon", out var iwProp) && iwProp.GetBoolean());
                         string ftName = ft.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
                         string ftCaption = ft.TryGetProperty("caption", out var c) ? c.GetString() ?? "" : "";
                         string ftInfo = ft.TryGetProperty("info", out var inf) ? inf.GetString() ?? "" : "";
-                        allFmgTexts.Add(new FmgInjector.FmgTextSpec(ftItemId, ftVanillaId, ftIsWeapon, ftName, ftCaption, ftInfo));
+                        allFmgTexts.Add(new FmgInjector.FmgTextSpec(ftItemId, ftVanillaId, ftIsWeapon, ftName, ftCaption, ftInfo, ftIsAccessory));
                     }
                 }
             }

@@ -64,6 +64,23 @@ namespace LootForge.RegTool
             return true;
         }
 
+        public static bool IsValidAccessoryRow(PARAM.Row r)
+        {
+            if (r.ID <= 0 || r.ID >= 9000000) return false;
+            if (r.ID >= 9000000 && r.ID < 9900000 && r.Name != null && r.Name.Contains("[LootForge]")) return false;
+
+            if (string.IsNullOrWhiteSpace(r.Name)) return false;
+            if (r.Name.Contains("[ERROR]", StringComparison.OrdinalIgnoreCase)) return false;
+            if (r.Name.Contains("Dummy", StringComparison.OrdinalIgnoreCase)) return false;
+            if (r.Name.StartsWith("?")) return false;
+            if (r.Name.StartsWith("dummy", StringComparison.OrdinalIgnoreCase)) return false;
+
+            int icon = ParamHelper.GetCellInt(r, "iconId");
+            if (icon <= 0) return false;
+
+            return true;
+        }
+
         private static readonly Dictionary<string, Dictionary<int, PARAM.Row>> _rowMapByTable = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<(string, int, int, int), PARAM.Row> _baseRowCache = new();
 
@@ -79,7 +96,8 @@ namespace LootForge.RegTool
             Dictionary<int, bool> itemIdToIsProtector,
             Dictionary<int, bool> itemIdToIsWeapon,
             Dictionary<int, int> itemIdToVanillaSourceId,
-            ref int injectedEquipCount)
+            ref int injectedEquipCount,
+            Dictionary<int, bool>? itemIdToIsAccessory = null)
         {
             foreach (var ep in equipParamsEl.EnumerateArray())
             {
@@ -91,8 +109,13 @@ namespace LootForge.RegTool
                 string rowName = ep.TryGetProperty("row_name", out var rn) ? rn.GetString() ?? "" : "";
 
                 bool isProtector = tableName == "EquipParamProtector";
+                bool isAccessory = tableName == "EquipParamAccessory";
+                bool isWeapon = tableName == "EquipParamWeapon";
+
                 itemIdToIsProtector[newParamId] = isProtector;
-                itemIdToIsWeapon[newParamId] = !isProtector;
+                itemIdToIsWeapon[newParamId] = isWeapon;
+                if (itemIdToIsAccessory != null)
+                    itemIdToIsAccessory[newParamId] = isAccessory;
 
                 string defName = tableName;
                 var (param, _) = getOrLoadParam(tableName, defName);
@@ -146,13 +169,13 @@ namespace LootForge.RegTool
                 if (!_baseRowCache.TryGetValue(cacheKey, out PARAM.Row? baseRow))
                 {
                     // 1. Try by direct baseCloneId if valid
-                    if (baseCloneId > 0 && rowMap.TryGetValue(baseCloneId, out var cand) && (isProtector ? IsValidProtectorRow(cand) : IsValidWeaponRow(cand)))
+                    if (baseCloneId > 0 && rowMap.TryGetValue(baseCloneId, out var cand) && (isAccessory ? IsValidAccessoryRow(cand) : (isProtector ? IsValidProtectorRow(cand) : IsValidWeaponRow(cand))))
                     {
                         baseRow = cand;
                     }
 
                     // 2. Try by authentic equipModelId (matching targetModelId)
-                    if (baseRow == null && targetModelId > 0)
+                    if (baseRow == null && targetModelId > 0 && !isAccessory)
                     {
                         if (isProtector)
                         {
@@ -177,7 +200,12 @@ namespace LootForge.RegTool
                     // 3. Fallback: authentic vanilla row matching equipment slot and category
                     if (baseRow == null)
                     {
-                        if (isProtector)
+                        if (isAccessory)
+                        {
+                            baseRow = (rowMap.TryGetValue(1000, out var fb) ? fb : null)
+                                   ?? param.Rows.FirstOrDefault(r => IsValidAccessoryRow(r));
+                        }
+                        else if (isProtector)
                         {
                             baseRow = param.Rows.FirstOrDefault(r => IsValidProtectorRow(r) && ParamHelper.GetCellInt(r, "protectorCategory") == targetCat && r.ID % 1000 == slotOffset)
                                    ?? param.Rows.FirstOrDefault(r => IsValidProtectorRow(r) && ParamHelper.GetCellInt(r, "protectorCategory") == targetCat)
@@ -192,7 +220,12 @@ namespace LootForge.RegTool
                     // 4. Guaranteed retail fallbacks with verified non-placeholder textures
                     if (baseRow == null)
                     {
-                        if (isProtector)
+                        if (isAccessory)
+                        {
+                            baseRow = (rowMap.TryGetValue(1000, out var fb) ? fb : null)
+                                   ?? param.Rows.FirstOrDefault(r => IsValidAccessoryRow(r));
+                        }
+                        else if (isProtector)
                         {
                             int fallbackId = slotOffset switch
                             {
@@ -328,6 +361,20 @@ namespace LootForge.RegTool
                     {
                         ushort finalMIcon = (ushort)ParamHelper.GetCellInt(newRow, "iconIdM");
                         ParamHelper.SetCellIfExists(newRow, "iconIdF", finalMIcon > 0 ? finalMIcon : (ushort)13001);
+                    }
+                }
+                else if (isAccessory)
+                {
+                    int icon = ParamHelper.GetCellInt(newRow, "iconId");
+                    int baseIcon = ParamHelper.GetCellInt(baseRow, "iconId");
+                    if (icon <= 0 && baseIcon > 0)
+                    {
+                        ParamHelper.SetCellIfExists(newRow, "iconId", (ushort)baseIcon);
+                    }
+                    int curIcon = ParamHelper.GetCellInt(newRow, "iconId");
+                    if (curIcon <= 0)
+                    {
+                        ParamHelper.SetCellIfExists(newRow, "iconId", (ushort)1000); // Crimson Amber Medallion icon
                     }
                 }
                 else

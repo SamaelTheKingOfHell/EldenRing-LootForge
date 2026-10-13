@@ -69,25 +69,34 @@ class DiabloLootGenerator:
     def apply_affixes_to_equipment(
         field_updates: Dict[str, Any],
         affixes: List[AffixDefinition],
-        is_weapon: bool
+        is_weapon: bool,
+        is_accessory: bool = False
     ) -> None:
         """
         Applies affix modifiers to equip param dictionary.
         Routes status buildups to spEffectBehaviorId0..2 and WeaponEffect UI slots spEffectMsgId0..2.
         Routes resident passives to residentSpEffectId / residentSpEffectId1 / residentSpEffectId2 for weapons,
-        and residentSpEffectId / residentSpEffectId2 / residentSpEffectId3 for protectors.
+        residentSpEffectId / residentSpEffectId2 / residentSpEffectId3 for protectors,
+        and residentSpEffectId1..4 and refId for accessories (EquipParamAccessory).
         """
         wep_behavior_slot = 0
         wep_resident_slot = 0
         wep_msg_slot = 0
         armor_resident_slot = 0
+        acc_resident_slot = 1
 
         for aff in affixes:
             for field_name, delta in aff.field_modifiers.items():
                 field_updates[field_name] = field_updates.get(field_name, 0) + delta
 
             if aff.sp_effect_id:
-                if is_weapon:
+                if is_accessory:
+                    if acc_resident_slot <= 4:
+                        field_updates[f"residentSpEffectId{acc_resident_slot}"] = aff.sp_effect_id
+                        acc_resident_slot += 1
+                    if "refId" not in field_updates:
+                        field_updates["refId"] = aff.sp_effect_id
+                elif is_weapon:
                     if getattr(aff, "is_on_hit_effect", False):
                         if wep_behavior_slot < 3:
                             field_updates[f"spEffectBehaviorId{wep_behavior_slot}"] = aff.sp_effect_id
@@ -141,22 +150,40 @@ class DiabloLootGenerator:
         self,
         rarity: RarityTier,
         is_weapon: bool,
+        is_accessory: bool = False,
         is_boss: bool = False
     ) -> List[AffixDefinition]:
         """Rolls a balanced combination of prefixes and suffixes for the rarity tier."""
         if rarity == RarityTier.COMMON and not is_boss:
             return []
 
-        available_prefixes = [
-            a for a in AFFIX_POOL
-            if a.affix_type == AffixType.PREFIX and
-            (a.applies_to_weapon if is_weapon else a.applies_to_armor)
-        ]
-        available_suffixes = [
-            a for a in AFFIX_POOL
-            if a.affix_type == AffixType.SUFFIX and
-            (a.applies_to_weapon if is_weapon else a.applies_to_armor)
-        ]
+        if is_accessory:
+            available_prefixes = [
+                a for a in AFFIX_POOL
+                if a.affix_type == AffixType.PREFIX and getattr(a, "applies_to_accessory", False)
+            ]
+            available_suffixes = [
+                a for a in AFFIX_POOL
+                if a.affix_type == AffixType.SUFFIX and getattr(a, "applies_to_accessory", False)
+            ]
+        elif is_weapon:
+            available_prefixes = [
+                a for a in AFFIX_POOL
+                if a.affix_type == AffixType.PREFIX and a.applies_to_weapon
+            ]
+            available_suffixes = [
+                a for a in AFFIX_POOL
+                if a.affix_type == AffixType.SUFFIX and a.applies_to_weapon
+            ]
+        else:
+            available_prefixes = [
+                a for a in AFFIX_POOL
+                if a.affix_type == AffixType.PREFIX and a.applies_to_armor
+            ]
+            available_suffixes = [
+                a for a in AFFIX_POOL
+                if a.affix_type == AffixType.SUFFIX and a.applies_to_armor
+            ]
 
         rolled: List[AffixDefinition] = []
 
@@ -291,9 +318,10 @@ class DiabloLootGenerator:
                 roaming = pools.get("roaming", [])
                 enemy_pool = (elites + roaming) if (elites or roaming) else []
 
-                mod_bucket = v_idx % 5
+                # Rotation strictly prioritizes: Bosses (0) > Chests (1) > The Rest (2: Merchants, Elites, Roaming Mobs)
+                mod_bucket = v_idx % 3
                 if mod_bucket == 0 and boss_pool:
-                    boss = boss_pool[(v_idx // 5) % len(boss_pool)]
+                    boss = boss_pool[(v_idx // 3) % len(boss_pool)]
                     shop_id = boss["id"]
                     if not self.is_shop_capacity_exceeded(shop_id, is_enia=True):
                         is_boss = True
@@ -308,36 +336,23 @@ class DiabloLootGenerator:
                         self.record_shop_allocation(shop_id, is_enia=True)
                     else:
                         system_logger.info(
-                            f"Shop param row limit reached for Enia remembrance '{boss.get('name')}' "
-                            f"({self._shop_allocations.get('finger_reader_enia', 0)}/{self.max_enia_rows}). "
-                            f"Rotating overflowed item to alternate pool.",
+                            f"Shop param row limit reached for Enia remembrance '{boss.get('name')}'. "
+                            f"Cascading to Chests (Bosses -> Chests -> The Rest).",
                             source="DiabloGenerator"
                         )
+                        # Boss capacity limit reached: cascade to Chests
+                        if chest_pool:
+                            chest = chest_pool[(v_idx // 3) % len(chest_pool)]
+                            loot_spec = {
+                                "type": "map_pickup",
+                                "lot_id": chest["lotParamId"],
+                                "target_id": str(chest["lotParamId"]),
+                                "display_name": f"[World Discovery] {chest['name']}",
+                                "drop_rate_percent": 100.0
+                            }
 
-                elif mod_bucket == 1 and merchant_pool:
-                    merch = merchant_pool[(v_idx // 5) % len(merchant_pool)]
-                    shop_id = merch["id"]
-                    if not self.is_shop_capacity_exceeded(shop_id, is_enia=False):
-                        loot_spec = {
-                            "type": "merchant_shop",
-                            "shop_id": merch["id"],
-                            "target_id": merch["id"],
-                            "display_name": f"[Merchant Shop] {merch['name']}",
-                            "merchant_name": merch["name"],
-                            "cost_or_remembrance": float(merch.get("defaultRuneCost", 8000)),
-                            "rune_cost": int(merch.get("defaultRuneCost", 8000))
-                        }
-                        self.record_shop_allocation(shop_id)
-                    else:
-                        system_logger.info(
-                            f"Shop param row limit reached for merchant '{merch.get('name')}' "
-                            f"({self._shop_allocations.get(shop_id, 0)}/{self.max_shop_per_merchant}). "
-                            f"Rotating overflowed item to alternate pool.",
-                            source="DiabloGenerator"
-                        )
-
-                elif mod_bucket == 2 and chest_pool:
-                    chest = chest_pool[(v_idx // 5) % len(chest_pool)]
+                elif mod_bucket == 1 and chest_pool:
+                    chest = chest_pool[(v_idx // 3) % len(chest_pool)]
                     loot_spec = {
                         "type": "map_pickup",
                         "lot_id": chest["lotParamId"],
@@ -346,41 +361,47 @@ class DiabloLootGenerator:
                         "drop_rate_percent": 100.0
                     }
 
-                # If mod_bucket was >= 3 OR if a shop candidate overflowed and loot_spec is None:
+                # If mod_bucket == 2 OR if boss/chest was unavailable: cascade to The Rest (Merchants, Elites, Roaming Mobs)
                 if loot_spec is None:
-                    # Alternate pool rotation: distribute overflow into chests, elites, and roaming mobs
-                    alt_cycle = v_idx % 3
-                    if alt_cycle == 0 and chest_pool:
-                        chest = chest_pool[(v_idx // 3) % len(chest_pool)]
-                        loot_spec = {
-                            "type": "map_pickup",
-                            "lot_id": chest["lotParamId"],
-                            "target_id": str(chest["lotParamId"]),
-                            "display_name": f"[World Discovery] {chest['name']}",
-                            "drop_rate_percent": 100.0
-                        }
-                    elif elites:
-                        elite = elites[(v_idx // 2) % len(elites)]
-                        lot_id = elite.get("lotParamId", 380000000)
-                        loot_spec = {
-                            "type": "enemy_drop",
-                            "lot_id": lot_id,
-                            "target_id": str(elite.get("id", lot_id)),
-                            "target_enemy": elite["name"],
-                            "display_name": elite["name"],
-                            "drop_rate_percent": float(elite.get("defaultDropChance", 25.0))
-                        }
-                    elif enemy_pool:
-                        enemy = enemy_pool[v_idx % len(enemy_pool)]
-                        lot_id = enemy.get("lotParamId", 431100000)
-                        loot_spec = {
-                            "type": "enemy_drop",
-                            "lot_id": lot_id,
-                            "target_id": str(enemy.get("id", lot_id)),
-                            "target_enemy": enemy["name"],
-                            "display_name": enemy["name"],
-                            "drop_rate_percent": float(enemy.get("defaultDropChance", 20.0))
-                        }
+                    rest_cycle = (v_idx // 3) % 3
+                    if rest_cycle == 0 and merchant_pool:
+                        merch = merchant_pool[(v_idx // 3) % len(merchant_pool)]
+                        shop_id = merch["id"]
+                        if not self.is_shop_capacity_exceeded(shop_id, is_enia=False):
+                            loot_spec = {
+                                "type": "merchant_shop",
+                                "shop_id": merch["id"],
+                                "target_id": merch["id"],
+                                "display_name": f"[Merchant Shop] {merch['name']}",
+                                "merchant_name": merch["name"],
+                                "cost_or_remembrance": float(merch.get("defaultRuneCost", 8000)),
+                                "rune_cost": int(merch.get("defaultRuneCost", 8000))
+                            }
+                            self.record_shop_allocation(shop_id)
+
+                    if loot_spec is None:
+                        if elites:
+                            elite = elites[(v_idx // 2) % len(elites)]
+                            lot_id = elite.get("lotParamId", 380000000)
+                            loot_spec = {
+                                "type": "enemy_drop",
+                                "lot_id": lot_id,
+                                "target_id": str(elite.get("id", lot_id)),
+                                "target_enemy": elite["name"],
+                                "display_name": elite["name"],
+                                "drop_rate_percent": float(elite.get("defaultDropChance", 25.0))
+                            }
+                        elif enemy_pool:
+                            enemy = enemy_pool[v_idx % len(enemy_pool)]
+                            lot_id = enemy.get("lotParamId", 431100000)
+                            loot_spec = {
+                                "type": "enemy_drop",
+                                "lot_id": lot_id,
+                                "target_id": str(enemy.get("id", lot_id)),
+                                "target_enemy": enemy["name"],
+                                "display_name": enemy["name"],
+                                "drop_rate_percent": float(enemy.get("defaultDropChance", 20.0))
+                            }
 
             # 2. Modify Equip Params and FMG texts with rolled affixes
             variant_new_ids: List[int] = []
@@ -392,8 +413,9 @@ class DiabloLootGenerator:
                 variant_new_ids.append(new_id)
 
                 is_weapon = ep.get("param_table") == "EquipParamWeapon"
+                is_accessory = ep.get("param_table") == "EquipParamAccessory"
                 rarity = self.roll_rarity(is_boss=is_boss)
-                affixes = self.roll_affixes(rarity, is_weapon=is_weapon, is_boss=is_boss)
+                affixes = self.roll_affixes(rarity, is_weapon=is_weapon, is_accessory=is_accessory, is_boss=is_boss)
 
                 field_updates = ep.setdefault("field_updates", {})
                 field_updates["sortId"] = new_id
@@ -403,15 +425,64 @@ class DiabloLootGenerator:
                     rolled_skill = self.roll_weapon_skill()
                     field_updates["swordArtsParamId"] = rolled_skill.id
 
-                self.apply_affixes_to_equipment(field_updates, affixes, is_weapon=is_weapon)
+                self.apply_affixes_to_equipment(field_updates, affixes, is_weapon=is_weapon, is_accessory=is_accessory)
 
                 for fmg in spec_copy.get("fmg_texts", []):
                     if fmg["item_id"] == old_id:
                         fmg["item_id"] = new_id
+                        fmg["is_accessory"] = is_accessory
                         fmg["name"] = self.build_item_name(fmg["name"], rarity, affixes, is_boss=is_boss)
                         fmg["caption"] = self.build_caption_with_affixes(
                             fmg["caption"], rarity, affixes, boss_name=boss_name, skill=rolled_skill
                         )
+
+            # Multi-drop for Bosses and Chests: award multiple drops (include accessories into the pool)
+            is_chest_drop = loot_spec is not None and loot_spec.get("type") in ("map_pickup", "world_chest")
+            if (is_boss or is_chest_drop) and kb and variant_new_ids:
+                acc_catalog = kb.list_all_vanilla_accessories() if hasattr(kb, "list_all_vanilla_accessories") else {}
+                if acc_catalog:
+                    acc_keys = list(acc_catalog.keys())
+                    comp_key = acc_keys[(v_idx + len(variant_new_ids)) % len(acc_keys)]
+                    comp_info = acc_catalog[comp_key]
+                    comp_base_id = comp_info.get("baseParamId", 1000)
+                    comp_name = comp_info.get("name", "Talisman")
+
+                    comp_param_id = variant_new_ids[0] + 50
+                    if comp_param_id not in variant_new_ids:
+                        comp_rarity = self.roll_rarity(is_boss=is_boss)
+                        comp_affixes = self.roll_affixes(comp_rarity, is_weapon=False, is_accessory=True, is_boss=is_boss)
+                        comp_field_updates = {"sortId": comp_param_id, "isDeposit": 1}
+                        self.apply_affixes_to_equipment(comp_field_updates, comp_affixes, is_weapon=False, is_accessory=True)
+
+                        comp_fmg_name = self.build_item_name(f"[LootForge] {comp_name}", comp_rarity, comp_affixes, is_boss=is_boss)
+                        comp_fmg_caption = self.build_caption_with_affixes(
+                            f"Companion talisman awarded with {spec_copy.get('set_id')}.",
+                            comp_rarity, comp_affixes, boss_name=boss_name
+                        )
+
+                        spec_copy.setdefault("equip_params", []).append({
+                            "param_table": "EquipParamAccessory",
+                            "new_param_id": comp_param_id,
+                            "base_clone_id": comp_base_id,
+                            "slot": "accessory",
+                            "slot_offset": 50,
+                            "row_name": f"[LootForge] {comp_name}",
+                            "field_updates": comp_field_updates
+                        })
+
+                        spec_copy.setdefault("fmg_texts", []).append({
+                            "item_id": comp_param_id,
+                            "vanilla_source_id": comp_base_id,
+                            "slot": "accessory",
+                            "slot_offset": 50,
+                            "is_weapon": False,
+                            "is_accessory": True,
+                            "name": comp_fmg_name,
+                            "caption": comp_fmg_caption,
+                            "info": f"Origin: Vanilla {comp_name} (Companion Drop)"
+                        })
+
+                        variant_new_ids.append(comp_param_id)
 
             # 3. Synchronize loot distribution
             if loot_spec:
@@ -529,6 +600,45 @@ class DiabloLootGenerator:
                     }],
                     "loot_distribution": None
                 })
+
+        # 3. Vanilla accessories (talismans)
+        accessories = kb.list_all_vanilla_accessories() if hasattr(kb, "list_all_vanilla_accessories") else getattr(kb, "_accessories", {})
+        for model_id, a_info in accessories.items():
+            base_param_id = a_info.get("baseParamId")
+            if not base_param_id:
+                continue
+
+            clean_name = a_info.get("name", "Talisman")
+            clean_desc = a_info.get("description", "")
+
+            rarity = self.roll_rarity(is_boss=False)
+            affixes = self.roll_affixes(rarity, is_weapon=False, is_accessory=True, is_boss=False)
+
+            field_updates: Dict[str, Any] = {}
+            self.apply_affixes_to_equipment(field_updates, affixes, is_weapon=False, is_accessory=True)
+
+            fmg_name = f"[{rarity.display_name}] {clean_name}" if rarity != RarityTier.COMMON else clean_name
+            fmg_caption = self.build_caption_with_affixes(clean_desc, rarity, affixes)
+
+            specs.append({
+                "set_id": f"vanilla_accessory_inject_{base_param_id}",
+                "equip_params": [{
+                    "param_table": "EquipParamAccessory",
+                    "new_param_id": base_param_id,
+                    "update_existing": True,
+                    "field_updates": field_updates,
+                    "row_name": f"[Vanilla Infused] {clean_name}"
+                }],
+                "fmg_texts": [{
+                    "item_id": base_param_id,
+                    "is_weapon": False,
+                    "is_accessory": True,
+                    "name": fmg_name,
+                    "caption": fmg_caption,
+                    "info": "Origin: Vanilla Elden Ring (Diablo Infused)"
+                }],
+                "loot_distribution": None
+            })
 
         return specs
 
@@ -676,6 +786,59 @@ class DiabloLootGenerator:
                     "target_id": str(alloc.new_item_lot_id),
                     "drop_rate_percent": 20.0,
                     "awarded_items": awarded_ids
+                }
+            }
+
+            if variants_per_item > 1:
+                variants = self.generate_variants_for_spec(base_spec, variants_per_item=variants_per_item, knowledge_base=kb)
+                all_specs.extend(variants)
+            else:
+                all_specs.append(base_spec)
+
+        # 3. Vanilla accessories (talismans)
+        accessories = kb.list_all_vanilla_accessories() if hasattr(kb, "list_all_vanilla_accessories") else getattr(kb, "_accessories", {})
+        for model_id, a_info in accessories.items():
+            base_clone_id = a_info.get("baseParamId")
+            if not base_clone_id:
+                continue
+
+            set_id = f"vanilla_base_accessory_{model_id}"
+            alloc = id_allocator.allocate(set_id)
+            clean_name = a_info.get("name", "Talisman")
+            clean_desc = a_info.get("description", "A classic talisman of the Lands Between.")
+
+            base_spec = {
+                "set_id": set_id,
+                "equip_params": [{
+                    "param_table": "EquipParamAccessory",
+                    "new_param_id": alloc.new_equip_param_id,
+                    "base_clone_id": base_clone_id,
+                    "target_model_id": int(model_id) if model_id.isdigit() else 0,
+                    "slot": "accessory",
+                    "slot_offset": 0,
+                    "row_name": f"[LootForge] {clean_name}",
+                    "field_updates": {
+                        "sortId": alloc.new_equip_param_id,
+                        "isDeposit": 1
+                    }
+                }],
+                "fmg_texts": [{
+                    "item_id": alloc.new_equip_param_id,
+                    "vanilla_source_id": base_clone_id,
+                    "slot": "accessory",
+                    "slot_offset": 0,
+                    "is_weapon": False,
+                    "is_accessory": True,
+                    "name": f"[LootForge] {clean_name}",
+                    "caption": f"Standalone relic forged by LootForge from vanilla {clean_name}.\n\n{clean_desc}",
+                    "info": f"Origin: Vanilla {clean_name}"
+                }],
+                "loot_distribution": {
+                    "type": "map_pickup",
+                    "lot_id": 102100,
+                    "target_id": "102100",
+                    "drop_rate_percent": 100.0,
+                    "awarded_items": [alloc.new_equip_param_id]
                 }
             }
 

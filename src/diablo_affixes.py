@@ -40,6 +40,7 @@ class AffixDefinition:
     tier_min: RarityTier
     applies_to_weapon: bool
     applies_to_armor: bool
+    applies_to_accessory: bool = False
     field_modifiers: Dict[str, Any] = field(default_factory=dict)
     sp_effect_id: Optional[int] = None
     sp_effect_msg_id: Optional[int] = None
@@ -162,13 +163,14 @@ AFFIX_POOL: List[AffixDefinition] = [
         description="+20 Physical Attack & Enhanced Dexterity Scaling"
     ),
 
-    # ── PREFIXES: ARMOR (DEFENSES, POISE, ATTRIBUTES) ──
+    # ── PREFIXES: ARMOR & ACCESSORIES (DEFENSES, POISE, ATTRIBUTES, RECOVERY) ──
     AffixDefinition(
         name="Ironclad",
         affix_type=AffixType.PREFIX,
         tier_min=RarityTier.MAGIC,
         applies_to_weapon=False,
         applies_to_armor=True,
+        applies_to_accessory=True,
         field_modifiers={"defensePhysics": 15, "defenseSlash": 15},
         description="+15 Physical & Slash Damage Negation"
     ),
@@ -178,6 +180,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         tier_min=RarityTier.RARE,
         applies_to_weapon=False,
         applies_to_armor=True,
+        applies_to_accessory=True,
         field_modifiers={"defensePhysics": 25, "poise": 10},
         sp_effect_id=311000,
         description="+25 Physical Defense & Bull-Goat Poise (+33%)"
@@ -188,6 +191,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         tier_min=RarityTier.MAGIC,
         applies_to_weapon=False,
         applies_to_armor=True,
+        applies_to_accessory=True,
         field_modifiers={"defenseFire": 20},
         sp_effect_id=314200,
         description="+20 Fire Defense & Flamedrake Ward (+20% Negation)"
@@ -198,6 +202,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         tier_min=RarityTier.MAGIC,
         applies_to_weapon=False,
         applies_to_armor=True,
+        applies_to_accessory=True,
         field_modifiers={"defenseMagic": 20},
         sp_effect_id=314100,
         description="+20 Magic Defense & Spelldrake Ward (+20% Negation)"
@@ -208,6 +213,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         tier_min=RarityTier.RARE,
         applies_to_weapon=False,
         applies_to_armor=True,
+        applies_to_accessory=True,
         field_modifiers={"resistBlood": 40},
         sp_effect_id=310400,
         description="+40 Robustness & Boosts Maximum HP (+6%)"
@@ -218,6 +224,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         tier_min=RarityTier.RARE,
         applies_to_weapon=False,
         applies_to_armor=True,
+        applies_to_accessory=True,
         field_modifiers={"resistCurse": 40},
         sp_effect_id=310500,
         description="+40 Focus & Boosts Maximum FP (+7%)"
@@ -228,18 +235,50 @@ AFFIX_POOL: List[AffixDefinition] = [
         tier_min=RarityTier.MAGIC,
         applies_to_weapon=False,
         applies_to_armor=True,
+        applies_to_accessory=True,
         field_modifiers={"resistBlood": 60, "resistFreeze": 60},
         sp_effect_id=315100,
         description="+60 Robustness & Stalwart Charm (Frost/Bleed Resist)"
     ),
+    AffixDefinition(
+        name="Erdtree's",
+        affix_type=AffixType.PREFIX,
+        tier_min=RarityTier.LEGENDARY,
+        applies_to_weapon=False,
+        applies_to_armor=True,
+        applies_to_accessory=True,
+        sp_effect_id=310300,
+        description="Erdtree's Favor: Raises maximum HP, Stamina, and Equip Load"
+    ),
+    AffixDefinition(
+        name="Radagon's",
+        affix_type=AffixType.PREFIX,
+        tier_min=RarityTier.LEGENDARY,
+        applies_to_weapon=False,
+        applies_to_armor=False,
+        applies_to_accessory=True,
+        sp_effect_id=313000,
+        description="Radagon's Soreseal: Greatly raises physical attributes"
+    ),
+    AffixDefinition(
+        name="Godfrey's",
+        affix_type=AffixType.PREFIX,
+        tier_min=RarityTier.LEGENDARY,
+        applies_to_weapon=True,
+        applies_to_armor=False,
+        applies_to_accessory=True,
+        sp_effect_id=312000,
+        description="Godfrey Icon: Enhances charged attack and spell power (+15%)"
+    ),
 
-    # ── SUFFIXES: WEAPONS & ARMOR (COMBAT PASSIVES & RECOVERY) ──
+    # ── SUFFIXES: WEAPONS, ARMOR & ACCESSORIES (COMBAT PASSIVES & RECOVERY) ──
     AffixDefinition(
         name="of the Leech",
         affix_type=AffixType.SUFFIX,
         tier_min=RarityTier.MAGIC,
         applies_to_weapon=True,
         applies_to_armor=True,
+        applies_to_accessory=True,
         sp_effect_id=316000,
         sp_effect_msg_id=1001,
         description="Taker's Cameo: Restores 3% HP + 30 HP upon slaying foes"
@@ -250,6 +289,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         tier_min=RarityTier.RARE,
         applies_to_weapon=True,
         applies_to_armor=True,
+        applies_to_accessory=True,
         sp_effect_id=310000,
         sp_effect_msg_id=1005,
         description="Blessed Dew: Continuously regenerates HP (+2 HP/sec)"
@@ -260,6 +300,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         tier_min=RarityTier.MAGIC,
         applies_to_weapon=True,
         applies_to_armor=True,
+        applies_to_accessory=True,
         sp_effect_id=310100,
         sp_effect_msg_id=1002,
         description="Ancestral Spirit: Restores 3 FP upon defeating enemies"
@@ -270,6 +311,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         tier_min=RarityTier.MAGIC,
         applies_to_weapon=True,
         applies_to_armor=True,
+        applies_to_accessory=True,
         sp_effect_id=310200,
         description="Green Turtle: Greatly accelerates Stamina recovery speed"
     ),
@@ -279,6 +321,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         tier_min=RarityTier.RARE,
         applies_to_weapon=True,
         applies_to_armor=False,
+        applies_to_accessory=True,
         sp_effect_id=316200,
         description="Rotten Winged Insignia: Successive attacks boost power up to 13%"
     ),
@@ -288,6 +331,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         tier_min=RarityTier.RARE,
         applies_to_weapon=True,
         applies_to_armor=True,
+        applies_to_accessory=True,
         sp_effect_id=316500,
         description="Branchsword: Grants +20% attack power when HP is critically low"
     ),
@@ -297,6 +341,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         tier_min=RarityTier.MAGIC,
         applies_to_weapon=True,
         applies_to_armor=True,
+        applies_to_accessory=True,
         sp_effect_id=311100,
         description="Claw Talisman: Jump attacks deal +15% damage"
     ),
@@ -306,6 +351,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         tier_min=RarityTier.LEGENDARY,
         applies_to_weapon=True,
         applies_to_armor=False,
+        applies_to_accessory=True,
         sp_effect_id=312500,
         description="Shard of Alexander: Weapon skills deal +15% damage"
     ),
@@ -315,6 +361,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         tier_min=RarityTier.MAGIC,
         applies_to_weapon=True,
         applies_to_armor=True,
+        applies_to_accessory=True,
         sp_effect_id=317200,
         description="Silver Scarab: Boosts item discovery by +75"
     ),
@@ -324,8 +371,39 @@ AFFIX_POOL: List[AffixDefinition] = [
         tier_min=RarityTier.MAGIC,
         applies_to_weapon=True,
         applies_to_armor=True,
+        applies_to_accessory=True,
         sp_effect_id=317100,
         description="Gold Scarab: Increases runes gained from enemies by +20%"
+    ),
+    AffixDefinition(
+        name="of the Sorcerer",
+        affix_type=AffixType.SUFFIX,
+        tier_min=RarityTier.MAGIC,
+        applies_to_weapon=False,
+        applies_to_armor=False,
+        applies_to_accessory=True,
+        sp_effect_id=318000,
+        description="Graven-School: Raises potency of sorceries (+4%)"
+    ),
+    AffixDefinition(
+        name="of the Faithful",
+        affix_type=AffixType.SUFFIX,
+        tier_min=RarityTier.MAGIC,
+        applies_to_weapon=False,
+        applies_to_armor=False,
+        applies_to_accessory=True,
+        sp_effect_id=318100,
+        description="Flock's Canvas: Greatly raises potency of incantations (+8%)"
+    ),
+    AffixDefinition(
+        name="of Swift Casting",
+        affix_type=AffixType.SUFFIX,
+        tier_min=RarityTier.RARE,
+        applies_to_weapon=False,
+        applies_to_armor=False,
+        applies_to_accessory=True,
+        sp_effect_id=318200,
+        description="Radagon Icon: Shortens spell casting time"
     )
 ]
 

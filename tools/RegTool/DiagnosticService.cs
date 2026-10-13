@@ -61,7 +61,8 @@ namespace LootForge.RegTool
                 {
                     string fname = Path.GetFileNameWithoutExtension(file.Name ?? "");
                     if (fname.Equals("WeaponName", StringComparison.OrdinalIgnoreCase) ||
-                        fname.Equals("ProtectorName", StringComparison.OrdinalIgnoreCase))
+                        fname.Equals("ProtectorName", StringComparison.OrdinalIgnoreCase) ||
+                        fname.Equals("AccessoryName", StringComparison.OrdinalIgnoreCase))
                     {
                         var fmg = FMG.Read(file.Bytes);
                         var entries = new Dictionary<int, string>();

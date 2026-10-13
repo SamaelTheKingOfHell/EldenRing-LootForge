@@ -30,6 +30,7 @@ namespace LootForge.RegTool
             Func<string, string, (PARAM Param, BinderFile File)> getOrLoadParam,
             Dictionary<int, bool> itemIdToIsProtector,
             Dictionary<int, bool> itemIdToIsWeapon,
+            Dictionary<int, bool> itemIdToIsAccessory,
             ref int injectedLootCount)
         {
             string lootType = lootEl.TryGetProperty("type", out var lt) ? lt.GetString() ?? "" : "";
@@ -42,15 +43,15 @@ namespace LootForge.RegTool
 
             if (lootType == "enemy_drop" && awardedItems.Count > 0)
             {
-                InjectItemLotDrop("ItemLotParam_enemy", ref _enemyLotRowMap, lootEl, getOrLoadParam, itemIdToIsProtector, itemIdToIsWeapon, awardedItems, ref injectedLootCount);
+                InjectItemLotDrop("ItemLotParam_enemy", ref _enemyLotRowMap, lootEl, getOrLoadParam, itemIdToIsProtector, itemIdToIsWeapon, itemIdToIsAccessory, awardedItems, ref injectedLootCount);
             }
             else if ((lootType == "map_pickup" || lootType == "world_chest" || lootType == "map_drop") && awardedItems.Count > 0)
             {
-                InjectItemLotDrop("ItemLotParam_map", ref _mapLotRowMap, lootEl, getOrLoadParam, itemIdToIsProtector, itemIdToIsWeapon, awardedItems, ref injectedLootCount);
+                InjectItemLotDrop("ItemLotParam_map", ref _mapLotRowMap, lootEl, getOrLoadParam, itemIdToIsProtector, itemIdToIsWeapon, itemIdToIsAccessory, awardedItems, ref injectedLootCount);
             }
             else if ((lootType == "shop_lineup" || lootType == "merchant_shop") && awardedItems.Count > 0)
             {
-                InjectShopLineup(lootEl, getOrLoadParam, itemIdToIsProtector, itemIdToIsWeapon, awardedItems, ref injectedLootCount);
+                InjectShopLineup(lootEl, getOrLoadParam, itemIdToIsProtector, itemIdToIsWeapon, itemIdToIsAccessory, awardedItems, ref injectedLootCount);
             }
         }
 
@@ -61,6 +62,7 @@ namespace LootForge.RegTool
             Func<string, string, (PARAM Param, BinderFile File)> getOrLoadParam,
             Dictionary<int, bool> itemIdToIsProtector,
             Dictionary<int, bool> itemIdToIsWeapon,
+            Dictionary<int, bool> itemIdToIsAccessory,
             List<int> awardedItems,
             ref int injectedLootCount)
         {
@@ -92,7 +94,7 @@ namespace LootForge.RegTool
             if (candidateRows.Count == 0)
             {
                 // Fallback: If not found in this lot table, spill over to Twin Maiden Husks in ShopLineupParam
-                InjectShopLineup(lootEl, getOrLoadParam, itemIdToIsProtector, itemIdToIsWeapon, awardedItems, ref injectedLootCount);
+                InjectShopLineup(lootEl, getOrLoadParam, itemIdToIsProtector, itemIdToIsWeapon, itemIdToIsAccessory, awardedItems, ref injectedLootCount);
                 return;
             }
 
@@ -102,8 +104,9 @@ namespace LootForge.RegTool
 
             foreach (int itemId in awardedItems)
             {
-                bool isArmor = itemIdToIsProtector.TryGetValue(itemId, out var ip) ? ip : !itemIdToIsWeapon.GetValueOrDefault(itemId, false);
-                int lotCategory = isArmor ? 3 : 2;
+                bool isAccessory = itemIdToIsAccessory.TryGetValue(itemId, out var ia) && ia;
+                bool isArmor = itemIdToIsProtector.TryGetValue(itemId, out var ip) ? ip : (!isAccessory && !itemIdToIsWeapon.GetValueOrDefault(itemId, false));
+                int lotCategory = isAccessory ? 4 : (isArmor ? 3 : 2);
                 bool placed = false;
 
                 if (isMapTable)
@@ -238,7 +241,7 @@ namespace LootForge.RegTool
 
             if (overflowItems.Count > 0)
             {
-                InjectShopLineup(lootEl, getOrLoadParam, itemIdToIsProtector, itemIdToIsWeapon, overflowItems, ref injectedLootCount);
+                InjectShopLineup(lootEl, getOrLoadParam, itemIdToIsProtector, itemIdToIsWeapon, itemIdToIsAccessory, overflowItems, ref injectedLootCount);
             }
 
             injectedLootCount++;
@@ -272,6 +275,7 @@ namespace LootForge.RegTool
             Func<string, string, (PARAM Param, BinderFile File)> getOrLoadParam,
             Dictionary<int, bool> itemIdToIsProtector,
             Dictionary<int, bool> itemIdToIsWeapon,
+            Dictionary<int, bool> itemIdToIsAccessory,
             List<int> awardedItems,
             ref int injectedLootCount)
         {
@@ -365,7 +369,7 @@ namespace LootForge.RegTool
                 if (shopRowId == -1)
                 {
                     Console.WriteLine($"[RegTool WARN] ShopLineupParam capacity limit reached. Rotating overflowed item ID {itemId} to ItemLotParam_enemy pool.");
-                    RotateOverflowToEnemyDrop(itemId, getOrLoadParam, itemIdToIsProtector, itemIdToIsWeapon, ref injectedLootCount);
+                    RotateOverflowToEnemyDrop(itemId, getOrLoadParam, itemIdToIsProtector, itemIdToIsWeapon, itemIdToIsAccessory, ref injectedLootCount);
                     continue;
                 }
 
@@ -378,9 +382,11 @@ namespace LootForge.RegTool
                 };
                 shopParam.Rows.Add(targetShopRow);
 
-                bool isArmor = itemIdToIsProtector.TryGetValue(itemId, out var ip) ? ip : !itemIdToIsWeapon.GetValueOrDefault(itemId, false);
+                bool isAccessory = itemIdToIsAccessory.TryGetValue(itemId, out var ia) && ia;
+                bool isArmor = itemIdToIsProtector.TryGetValue(itemId, out var ip) ? ip : (!isAccessory && !itemIdToIsWeapon.GetValueOrDefault(itemId, false));
+                byte equipType = isAccessory ? (byte)2 : (isArmor ? (byte)1 : (byte)0);
                 ParamHelper.SetCellIfExists(targetShopRow, "equipId", itemId);
-                ParamHelper.SetCellIfExists(targetShopRow, "equipType", (byte)(isArmor ? 1 : 0));
+                ParamHelper.SetCellIfExists(targetShopRow, "equipType", equipType);
                 ParamHelper.SetCellIfExists(targetShopRow, "value", cost);
                 ParamHelper.SetCellIfExists(targetShopRow, "mtrlId", -1);
                 ParamHelper.SetCellIfExists(targetShopRow, "eventFlag_forRelease", 0u);
@@ -404,6 +410,7 @@ namespace LootForge.RegTool
             Func<string, string, (PARAM Param, BinderFile File)> getOrLoadParam,
             Dictionary<int, bool> itemIdToIsProtector,
             Dictionary<int, bool> itemIdToIsWeapon,
+            Dictionary<int, bool> itemIdToIsAccessory,
             ref int injectedLootCount)
         {
             var (itemLotParam, _) = getOrLoadParam("ItemLotParam_enemy", "ItemLotParam_enemy");
@@ -434,8 +441,9 @@ namespace LootForge.RegTool
 
             if (targetRow != null)
             {
-                bool isArmor = itemIdToIsProtector.TryGetValue(itemId, out var ip) ? ip : !itemIdToIsWeapon.GetValueOrDefault(itemId, false);
-                int lotCategory = isArmor ? 3 : 2;
+                bool isAccessory = itemIdToIsAccessory.TryGetValue(itemId, out var ia) && ia;
+                bool isArmor = itemIdToIsProtector.TryGetValue(itemId, out var ip) ? ip : (!isAccessory && !itemIdToIsWeapon.GetValueOrDefault(itemId, false));
+                int lotCategory = isAccessory ? 4 : (isArmor ? 3 : 2);
                 int slotToUse = 1;
                 for (int s = 1; s <= 8; s++)
                 {
