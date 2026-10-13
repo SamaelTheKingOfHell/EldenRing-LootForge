@@ -7,6 +7,7 @@ Cross-platform desktop application and mod engine for *Elden Ring*. Converts rep
 | Path | Purpose |
 | :--- | :--- |
 | `INDEX.md` | Index of LootForge components and documentation. |
+| `LICENSE.md` | Source-Available & Commercial Royalty License (Option A model). |
 | `DESIGN.md` | Detailed architectural design document for Qt UI, Enums, and distribution algorithms. |
 | `OBJECTIVE.md` | Mission statement, technical boundaries, and system goals. |
 | `ROADMAP.md` | Development phases, milestones, and deliverables. |
