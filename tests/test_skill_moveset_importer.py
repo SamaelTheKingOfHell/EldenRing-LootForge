@@ -641,3 +641,118 @@ def test_global_boolean_toggle_disables_all_movesets_and_skills():
     assert "custom_skills" not in spec
     assert "custom_behaviors" not in spec
     assert "custom_attacks" not in spec
+
+
+def test_two_tier_lazy_loading_and_fast_inspection(temp_env):
+    """Validates that fast inspection (deep=False) returns lightweight metadata without subprocess delay."""
+    mod_dir = temp_env / "LazyKatanaMod"
+    chr_dir = mod_dir / "chr"
+    chr_dir.mkdir(parents=True)
+    (chr_dir / "c0000_a1x.anibnd.dcx").write_bytes(b"DUMMY_ANIM")
+
+    # Create dummy regulation.bin > 100KB
+    reg_file = mod_dir / "regulation.bin"
+    reg_file.write_bytes(b"X" * 150000)
+
+    importer = SkillMovesetImporter(temp_env)
+    # Tier 1 fast inspection
+    meta = importer.introspect_mod_folder(mod_dir, "0556", deep=False)
+
+    assert meta is not None
+    assert meta.is_deep_introspected is False
+    assert meta.has_custom_skill is True
+    assert meta.has_custom_moveset is True
+    assert "c0000_a1x.anibnd.dcx" in meta.animation_banks
+    assert meta.regulation_path == str(reg_file.resolve())
+    # Subprocess was not run, so deep fields remain empty/default
+    assert meta.skill_id == 0
+    assert meta.custom_skills_spec == []
+
+
+def test_in_memory_regulation_cache(temp_env):
+    """Validates that extracted regulation payloads are cached in-memory and cleared appropriately."""
+    importer = SkillMovesetImporter(temp_env)
+    importer.clear_cache()
+    assert len(importer._regulation_cache) == 0
+
+    fake_reg = temp_env / "fake_reg.bin"
+    fake_reg.write_bytes(b"DATA")
+
+    fake_data = {
+        "Weapons": [{"ModelId": 556, "SwordArtsParamId": 22080, "SkillName": "Moonglow", "BehaviorVariationId": 900}],
+        "CustomSkills": {"22080": {"swordArtsType": 10}},
+        "CustomBehaviors": {},
+        "CustomAttacks": {}
+    }
+
+    # Seed cache
+    cache_key = str(fake_reg.resolve())
+    importer._regulation_cache[cache_key] = fake_data
+
+    # Reading should return cached dict directly
+    extracted = importer.extract_regulation_data(fake_reg)
+    assert extracted == fake_data
+    assert extracted["Weapons"][0]["SkillName"] == "Moonglow"
+
+    importer.clear_cache()
+    assert len(importer._regulation_cache) == 0
+
+
+def test_ensure_deep_introspected_in_place(temp_env):
+    """Validates ensure_deep_introspected updates a mod set's metadata in-place."""
+    mod_dir = temp_env / "input_mods" / "InPlaceKatana"
+    mod_dir.mkdir(parents=True)
+    reg_file = mod_dir / "regulation.bin"
+    reg_file.write_bytes(b"X" * 150000)
+
+    part = ModPartFile(
+        file_name="wp_a_0556.partsbnd.dcx",
+        relative_path="parts/wp_a_0556.partsbnd.dcx",
+        slot=EquipmentSlot.WEAPON,
+        target_model_id="556"
+    )
+
+    shallow_meta = SkillMovesetMetadata(
+        has_custom_skill=True,
+        has_custom_moveset=False,
+        is_deep_introspected=False,
+        regulation_path=str(reg_file.resolve())
+    )
+
+    mod_set = DetectedModSet(
+        set_id="mod_inplace",
+        folder_or_archive_name="InPlaceKatana",
+        target_model_id="556",
+        target_vanilla_name="Uchigatana",
+        parts=[part],
+        is_weapon=True,
+        skill_moveset=shallow_meta
+    )
+
+    importer = SkillMovesetImporter(temp_env)
+    # Pre-seed cache with weapon specs
+    importer._regulation_cache[str(reg_file.resolve())] = {
+        "Weapons": [{
+            "ModelId": 556,
+            "SwordArtsParamId": 4110,
+            "SkillName": "Overhead Stance",
+            "SkillCaption": "A stance used by warriors of the reed.",
+            "BehaviorVariationId": 905,
+            "WepmotionCategory": 60,
+            "WepmotionOneHandId": 3,
+            "WepmotionBothHandId": 12,
+            "SpAtkCategory": 641
+        }],
+        "CustomSkills": {"4110": {"iconId": 100}},
+        "CustomBehaviors": {},
+        "CustomAttacks": {}
+    }
+
+    success = importer.ensure_deep_introspected(mod_set, temp_env / "input_mods")
+    assert success is True
+    assert mod_set.skill_moveset.is_deep_introspected is True
+    assert mod_set.skill_moveset.skill_name == "Overhead Stance"
+    assert mod_set.skill_moveset.skill_id == 4110
+    assert mod_set.skill_moveset.behavior_variation_id == 905
+    assert mod_set.skill_moveset.wepmotion_category == 60
+    assert len(mod_set.skill_moveset.custom_skills_spec) == 1

@@ -22,7 +22,16 @@ class SkillMovesetImporter:
     """
     Introspects mod directories for custom weapon skills, animations, and movesets,
     and deploys them into Mod Engine 2 staging directories alongside standalone parameter specs.
+    Adheres to [CS-MODULAR] and [CS-GRANULARITY].
     """
+
+    # In-memory regulation data cache mapping regulation path -> parsed JSON dict
+    _regulation_cache: Dict[str, Dict[str, Any]] = {}
+
+    @classmethod
+    def clear_cache(cls):
+        """Clears the in-memory regulation extraction cache."""
+        cls._regulation_cache.clear()
 
     def __init__(self, base_dir: Path):
         self.base_dir = Path(base_dir).resolve()
@@ -32,15 +41,79 @@ class SkillMovesetImporter:
         self.regtool_debug_dll = self.base_dir / "tools" / "RegTool" / "bin" / "Debug" / "net9.0" / "RegTool.dll"
         self.regtool_proj = self.base_dir / "tools" / "RegTool" / "RegTool.csproj"
 
+    def extract_regulation_data(
+        self,
+        reg_file: Path,
+        msg_candidate: Optional[Path] = None
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Executes RegTool extract-skills-movesets on a mod's regulation.bin, caching
+        the result in-memory so subsequent weapon lookups from the same mod regulation
+        are instantaneous.
+        """
+        reg_path = Path(reg_file).resolve()
+        cache_key = str(reg_path)
+        if cache_key in self._regulation_cache:
+            return self._regulation_cache[cache_key]
+
+        scratch_dir = self.base_dir / "scratch"
+        scratch_dir.mkdir(parents=True, exist_ok=True)
+        file_hash = f"{reg_path.stem}_{reg_path.stat().st_size}"
+        out_json = scratch_dir / f"extracted_{file_hash}.json"
+
+        # If scratch json already exists and is newer than reg_file, reuse it directly
+        if out_json.exists() and out_json.stat().st_mtime >= reg_path.stat().st_mtime:
+            try:
+                with open(out_json, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    self._regulation_cache[cache_key] = data
+                    return data
+            except Exception:
+                pass
+
+        msg_dir_arg = []
+        if msg_candidate and Path(msg_candidate).exists():
+            msg_dir_arg = ["--msg", str(msg_candidate)]
+
+        if sys.platform.startswith("win") and self.regtool_exe.exists():
+            cmd = [str(self.regtool_exe), "extract-skills-movesets", "--input", str(reg_path), "--defs", str(self.defs_dir), "--output", str(out_json)] + msg_dir_arg
+        elif self.regtool_dll.exists():
+            cmd = ["dotnet", str(self.regtool_dll), "extract-skills-movesets", "--input", str(reg_path), "--defs", str(self.defs_dir), "--output", str(out_json)] + msg_dir_arg
+        elif self.regtool_debug_dll.exists():
+            cmd = ["dotnet", str(self.regtool_debug_dll), "extract-skills-movesets", "--input", str(reg_path), "--defs", str(self.defs_dir), "--output", str(out_json)] + msg_dir_arg
+        else:
+            cmd = ["dotnet", "run", "--project", str(self.regtool_proj), "--", "extract-skills-movesets", "--input", str(reg_path), "--defs", str(self.defs_dir), "--output", str(out_json)] + msg_dir_arg
+
+        try:
+            res = subprocess.run(cmd, capture_output=True, text=True, cwd=str(self.base_dir), check=False)
+            if res.returncode != 0:
+                system_logger.warning(f"RegTool extract-skills-movesets failed: {res.stderr or res.stdout}", source="SkillMovesetImporter")
+                return None
+
+            if not out_json.exists():
+                return None
+
+            with open(out_json, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            self._regulation_cache[cache_key] = data
+            return data
+        except Exception as ex:
+            system_logger.error(f"Failed to extract mod regulation data: {ex}", source="SkillMovesetImporter")
+            return None
+
     def introspect_mod_folder(
         self,
         mod_folder: Path,
-        target_model_id: Optional[str] = None
+        target_model_id: Optional[str] = None,
+        deep: bool = True
     ) -> Optional[SkillMovesetMetadata]:
         """
         Scans a mod directory for custom animations, moveset parameters, and skills.
-        If a mod regulation.bin is present, executes RegTool extract-skills-movesets
-        to retrieve authentic weapon and skill metadata.
+        If deep=False (used for initial fast directory scan), executes purely in-memory
+        and filesystem checks (<1ms) without spinning up the .NET runtime.
+        If deep=True (lazy loaded on modal open or forge), extracts authentic weapon
+        and skill metadata from regulation.bin.
         """
         mod_path = Path(mod_folder).resolve()
         if not mod_path.exists():
@@ -101,47 +174,52 @@ class SkillMovesetImporter:
                     animation_banks=animation_banks,
                     has_behavior_graph=has_behavior_graph,
                     has_sfx=has_sfx,
-                    has_action_scripts=has_action_scripts
+                    has_action_scripts=has_action_scripts,
+                    is_deep_introspected=True
                 )
             return None
 
-        # Execute RegTool extract-skills-movesets
-        scratch_dir = self.base_dir / "scratch"
-        scratch_dir.mkdir(parents=True, exist_ok=True)
-        out_json = scratch_dir / f"extracted_{mod_path.name}_{target_model_id or 'all'}.json"
+        # If regulation.bin exists, but deep is False (e.g. initial fast scan):
+        # Return lightweight metadata immediately without launching .NET subprocess!
+        if not deep:
+            return SkillMovesetMetadata(
+                has_custom_skill=True,
+                has_custom_moveset=has_custom_moveset_assets,
+                animation_banks=animation_banks,
+                has_behavior_graph=has_behavior_graph,
+                has_sfx=has_sfx,
+                has_action_scripts=has_action_scripts,
+                is_deep_introspected=False,
+                regulation_path=str(reg_file.resolve())
+            )
 
+        # Deep introspection requested:
         # Check for optional mod msg directory
-        msg_dir_arg = []
         msg_candidate = mod_path / "msg"
         if not msg_candidate.exists():
             for sub in mod_path.rglob("msg"):
                 if sub.is_dir():
                     msg_candidate = sub
                     break
-        if msg_candidate.exists():
-            msg_dir_arg = ["--msg", str(msg_candidate)]
 
-        if sys.platform.startswith("win") and self.regtool_exe.exists():
-            cmd = [str(self.regtool_exe), "extract-skills-movesets", "--input", str(reg_file), "--defs", str(self.defs_dir), "--output", str(out_json)] + msg_dir_arg
-        elif self.regtool_dll.exists():
-            cmd = ["dotnet", str(self.regtool_dll), "extract-skills-movesets", "--input", str(reg_file), "--defs", str(self.defs_dir), "--output", str(out_json)] + msg_dir_arg
-        elif self.regtool_debug_dll.exists():
-            cmd = ["dotnet", str(self.regtool_debug_dll), "extract-skills-movesets", "--input", str(reg_file), "--defs", str(self.defs_dir), "--output", str(out_json)] + msg_dir_arg
-        else:
-            cmd = ["dotnet", "run", "--project", str(self.regtool_proj), "--", "extract-skills-movesets", "--input", str(reg_file), "--defs", str(self.defs_dir), "--output", str(out_json)] + msg_dir_arg
+        data = self.extract_regulation_data(
+            reg_file,
+            msg_candidate if msg_candidate and msg_candidate.exists() else None
+        )
+        if not data:
+            if has_custom_moveset_assets:
+                return SkillMovesetMetadata(
+                    has_custom_moveset=True,
+                    animation_banks=animation_banks,
+                    has_behavior_graph=has_behavior_graph,
+                    has_sfx=has_sfx,
+                    has_action_scripts=has_action_scripts,
+                    is_deep_introspected=True,
+                    regulation_path=str(reg_file.resolve())
+                )
+            return None
 
         try:
-            res = subprocess.run(cmd, capture_output=True, text=True, cwd=str(self.base_dir), check=False)
-            if res.returncode != 0:
-                system_logger.warning(f"RegTool extract-skills-movesets failed: {res.stderr or res.stdout}", source="SkillMovesetImporter")
-                return None
-
-            if not out_json.exists():
-                return None
-
-            with open(out_json, "r", encoding="utf-8") as f:
-                data = json.load(f)
-
             weapons = data.get("Weapons", [])
             custom_skills = data.get("CustomSkills", {})
             custom_behaviors = data.get("CustomBehaviors", {})
@@ -163,6 +241,16 @@ class SkillMovesetImporter:
                 matched_weapon = weapons[0]
 
             if not matched_weapon:
+                if has_custom_moveset_assets:
+                    return SkillMovesetMetadata(
+                        has_custom_moveset=True,
+                        animation_banks=animation_banks,
+                        has_behavior_graph=has_behavior_graph,
+                        has_sfx=has_sfx,
+                        has_action_scripts=has_action_scripts,
+                        is_deep_introspected=True,
+                        regulation_path=str(reg_file.resolve())
+                    )
                 return None
 
             skill_id = matched_weapon.get("SwordArtsParamId", 0)
@@ -217,7 +305,9 @@ class SkillMovesetImporter:
                 has_action_scripts=has_action_scripts,
                 custom_skills_spec=skills_spec,
                 custom_behaviors_spec=behaviors_spec,
-                custom_attacks_spec=attacks_spec
+                custom_attacks_spec=attacks_spec,
+                is_deep_introspected=True,
+                regulation_path=str(reg_file.resolve())
             )
 
             system_logger.info(
@@ -229,6 +319,73 @@ class SkillMovesetImporter:
         except Exception as ex:
             system_logger.error(f"Failed to introspect mod skills and movesets: {ex}", source="SkillMovesetImporter")
             return None
+
+    def ensure_deep_introspected(
+        self,
+        mod_set: DetectedModSet,
+        input_base_dir: Optional[Path] = None
+    ) -> bool:
+        """
+        Lazily ensures that a mod set's skill_moveset metadata has been fully introspected
+        from regulation.bin if it hasn't been already.
+        Returns True if deep introspection succeeded or was already done.
+        """
+        if not mod_set.is_weapon or not mod_set.skill_moveset:
+            return False
+
+        if mod_set.skill_moveset.is_deep_introspected:
+            return True
+
+        mod_dir = None
+        if mod_set.skill_moveset.regulation_path:
+            reg_p = Path(mod_set.skill_moveset.regulation_path)
+            if reg_p.exists():
+                mod_dir = reg_p.parent
+
+        if not mod_dir or not mod_dir.exists():
+            if input_base_dir:
+                candidate = Path(input_base_dir) / mod_set.folder_or_archive_name
+                if candidate.exists():
+                    mod_dir = candidate
+            if not mod_dir:
+                candidate = self.base_dir / "input_mods" / mod_set.folder_or_archive_name
+                if candidate.exists():
+                    mod_dir = candidate
+                else:
+                    candidate = self.base_dir / mod_set.folder_or_archive_name
+                    if candidate.exists():
+                        mod_dir = candidate
+
+        if not mod_dir or not mod_dir.exists():
+            mod_set.skill_moveset.is_deep_introspected = True
+            return False
+
+        deep_meta = self.introspect_mod_folder(mod_dir, mod_set.target_model_id, deep=True)
+        if deep_meta:
+            mod_set.skill_moveset.has_custom_skill = deep_meta.has_custom_skill
+            mod_set.skill_moveset.skill_id = deep_meta.skill_id
+            mod_set.skill_moveset.skill_name = deep_meta.skill_name
+            mod_set.skill_moveset.skill_caption = deep_meta.skill_caption
+            mod_set.skill_moveset.has_custom_moveset = deep_meta.has_custom_moveset
+            mod_set.skill_moveset.behavior_variation_id = deep_meta.behavior_variation_id
+            mod_set.skill_moveset.wepmotion_category = deep_meta.wepmotion_category
+            mod_set.skill_moveset.wepmotion_one_hand_id = deep_meta.wepmotion_one_hand_id
+            mod_set.skill_moveset.wepmotion_both_hand_id = deep_meta.wepmotion_both_hand_id
+            mod_set.skill_moveset.sp_atk_category = deep_meta.sp_atk_category
+            mod_set.skill_moveset.animation_banks = deep_meta.animation_banks
+            mod_set.skill_moveset.has_behavior_graph = deep_meta.has_behavior_graph
+            mod_set.skill_moveset.has_sfx = deep_meta.has_sfx
+            mod_set.skill_moveset.has_action_scripts = deep_meta.has_action_scripts
+            mod_set.skill_moveset.custom_skills_spec = deep_meta.custom_skills_spec
+            mod_set.skill_moveset.custom_behaviors_spec = deep_meta.custom_behaviors_spec
+            mod_set.skill_moveset.custom_attacks_spec = deep_meta.custom_attacks_spec
+            mod_set.skill_moveset.is_deep_introspected = True
+            mod_set.skill_moveset.regulation_path = deep_meta.regulation_path
+            return True
+
+        mod_set.skill_moveset.is_deep_introspected = True
+        return False
+
 
     def deploy_moveset_assets(
         self,

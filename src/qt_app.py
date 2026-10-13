@@ -336,7 +336,34 @@ class LootForgeMainWindow(QMainWindow):
         c_btns.addWidget(close_btn)
         c_layout.addLayout(c_btns)
 
+    def _ensure_all_deep_introspected(self):
+        """
+        Lazily runs deep regulation introspection for any scanned weapons that have
+        not yet been deep-introspected, extracting authentic custom skills and movesets.
+        """
+        try:
+            from src.skill_moveset_importer import SkillMovesetImporter
+            input_p = Path(self.config.input_directory)
+            if not input_p.is_absolute():
+                input_p = self.base_dir / input_p
+            importer = SkillMovesetImporter(input_p.parent if input_p.name == "input_mods" else input_p)
+            updated = False
+            for s in self.scanned_sets:
+                if s.is_weapon and s.skill_moveset and not s.skill_moveset.is_deep_introspected:
+                    if importer.ensure_deep_introspected(s, input_p):
+                        updated = True
+
+            if updated:
+                for s, cfg in zip(self.scanned_sets, self.drop_configs):
+                    if s.skill_moveset:
+                        if s.skill_moveset.has_custom_skill and s.skill_moveset.skill_name:
+                            cfg.custom_skill_name = s.skill_moveset.skill_name
+                        cfg.has_custom_moveset = s.skill_moveset.has_custom_moveset
+        except Exception as ex:
+            system_logger.warning(f"Error during deep moveset introspection: {ex}", source="QtApp")
+
     def _open_loot_modal(self):
+        self._ensure_all_deep_introspected()
         self._sync_modal_data()
         self.loot_modal.exec()
 
@@ -563,6 +590,7 @@ class LootForgeMainWindow(QMainWindow):
             return
 
         self._recalculate_distribution()
+        self._ensure_all_deep_introspected()
         active_input = self.active_reg_input.text().strip()
 
         if self.config.game_directory:

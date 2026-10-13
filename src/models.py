@@ -191,6 +191,8 @@ class SkillMovesetMetadata:
     custom_skills_spec: List[Dict[str, Any]] = field(default_factory=list)
     custom_behaviors_spec: List[Dict[str, Any]] = field(default_factory=list)
     custom_attacks_spec: List[Dict[str, Any]] = field(default_factory=list)
+    is_deep_introspected: bool = False
+    regulation_path: Optional[str] = None
 
 
 @dataclass

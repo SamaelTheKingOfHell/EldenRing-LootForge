@@ -167,6 +167,14 @@ class ParamBuilder:
             else:
                 # If weapon has custom skill or moveset metadata, apply it
                 if getattr(mod_set, "import_custom_moveset", True) and mod_set.skill_moveset:
+                    if not mod_set.skill_moveset.is_deep_introspected and mod_set.skill_moveset.regulation_path:
+                        try:
+                            from src.skill_moveset_importer import SkillMovesetImporter
+                            reg_p = Path(mod_set.skill_moveset.regulation_path)
+                            importer = SkillMovesetImporter(reg_p.parent.parent if reg_p.parent.name == "input_mods" else reg_p.parent)
+                            importer.ensure_deep_introspected(mod_set)
+                        except Exception:
+                            pass
                     sm = mod_set.skill_moveset
                     if sm.has_custom_skill and sm.skill_id > 0:
                         field_updates["swordArtsParamId"] = sm.skill_id
