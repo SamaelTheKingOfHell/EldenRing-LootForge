@@ -161,6 +161,14 @@ def get_generator_param_descriptors() -> List[ParamDescriptor]:
             description="Randomly rolls authentic Ashes of War and unique boss weapon skills (SwordArtsParam) on Diablo weapon variants.",
             default=False
         ),
+        ParamDescriptor(
+            key="diablo_balance_weapon_skills_by_progression",
+            label="Balance Weapon Skills by Progression",
+            param_type=ParamType.BOOL,
+            purpose=ParamPurpose.DIABLO_ARPG,
+            description="Restricts randomized weapon skills (Ashes of War) to match the progression tier of the region/drop source, preventing end-game boss skills from appearing early.",
+            default=True
+        ),
 
         # --- Group 3: Paths & Installation ---
         ParamDescriptor(

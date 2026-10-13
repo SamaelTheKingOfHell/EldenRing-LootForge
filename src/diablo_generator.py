@@ -7,7 +7,8 @@ SpEffectParam passive buffs, dynamic item naming, and detailed Diablo-style lore
 
 import copy
 import random
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
+from src.models import ProgressionTier
 from src.diablo_affixes import (
     RarityTier, AffixType, AffixDefinition, AFFIX_POOL,
     WeaponSkill, WEAPON_SKILL_POOL
@@ -49,6 +50,7 @@ class DiabloLootGenerator:
         max_enia_rows: int = DEFAULT_MAX_ENIA_SHOP_ROWS,
         max_total_shop_rows: int = DEFAULT_MAX_TOTAL_SHOP_ROWS,
         randomize_weapon_skills: bool = False,
+        balance_weapon_skills_by_progression: bool = True,
         weapon_skills_pool: Optional[List[WeaponSkill]] = None
     ):
         self._rng = random.Random(seed)
@@ -57,13 +59,53 @@ class DiabloLootGenerator:
         self.max_enia_rows = max_enia_rows
         self.max_total_shop_rows = max_total_shop_rows
         self.randomize_weapon_skills = randomize_weapon_skills
+        self.balance_weapon_skills_by_progression = balance_weapon_skills_by_progression
         self._weapon_skills_pool = list(weapon_skills_pool or WEAPON_SKILL_POOL)
         self._shop_allocations: Dict[str, int] = {}
         self._total_shop_allocations: int = 0
 
-    def roll_weapon_skill(self) -> WeaponSkill:
-        """Rolls a random authentic Ash of War or weapon skill from the weapon skill pool."""
-        return self._rng.choice(self._weapon_skills_pool)
+    def roll_weapon_skill(self, tier: Optional[Union[ProgressionTier, int]] = None) -> WeaponSkill:
+        """
+        Rolls an authentic Ash of War or weapon skill from the weapon skill pool.
+
+        If balance_weapon_skills_by_progression is True and tier is provided:
+        Restricts and weights the selection by progression tier so early game regions/drops
+        only receive early game skills, preventing overpowered end-game/boss weapon skills
+        from dropping in early regions.
+
+        If balance_weapon_skills_by_progression is False (or tier is None):
+        Performs pure random selection across all weapon skills without progression restrictions.
+        """
+        if not self.balance_weapon_skills_by_progression or tier is None:
+            return self._rng.choice(self._weapon_skills_pool)
+
+        if isinstance(tier, int) and not isinstance(tier, ProgressionTier):
+            try:
+                tier = ProgressionTier(tier)
+            except ValueError:
+                return self._rng.choice(self._weapon_skills_pool)
+
+        tier_map: Dict[ProgressionTier, List[WeaponSkill]] = {
+            t: [s for s in self._weapon_skills_pool if s.tier == t]
+            for t in ProgressionTier
+        }
+
+        tier_weights = {
+            ProgressionTier.EARLY: {ProgressionTier.EARLY: 1.0},
+            ProgressionTier.MID: {ProgressionTier.MID: 0.75, ProgressionTier.EARLY: 0.25},
+            ProgressionTier.LATE: {ProgressionTier.LATE: 0.70, ProgressionTier.MID: 0.20, ProgressionTier.EARLY: 0.10},
+            ProgressionTier.ENDGAME: {ProgressionTier.ENDGAME: 0.65, ProgressionTier.LATE: 0.20, ProgressionTier.MID: 0.10, ProgressionTier.EARLY: 0.05},
+        }
+
+        weights_for_target = tier_weights.get(tier, {tier: 1.0})
+        active_tiers = [t for t in weights_for_target if tier_map.get(t)]
+        if not active_tiers:
+            eligible = [s for s in self._weapon_skills_pool if s.tier.value <= tier.value]
+            return self._rng.choice(eligible) if eligible else self._rng.choice(self._weapon_skills_pool)
+
+        active_weights = [weights_for_target[t] for t in active_tiers]
+        chosen_tier = self._rng.choices(active_tiers, weights=active_weights, k=1)[0]
+        return self._rng.choice(tier_map[chosen_tier])
 
     @staticmethod
     def apply_affixes_to_equipment(
@@ -302,7 +344,9 @@ class DiabloLootGenerator:
 
         variant_specs: List[Dict[str, Any]] = []
 
-        tier = kb.get_progression_tier_for_spec(base_spec) if (kb and hasattr(kb, "get_progression_tier_for_spec")) else None
+        tier = base_spec.get("tier")
+        if tier is None and kb and hasattr(kb, "get_progression_tier_for_spec"):
+            tier = kb.get_progression_tier_for_spec(base_spec)
 
         for v_idx in range(variants_per_item):
             spec_copy = copy.deepcopy(base_spec)
@@ -442,14 +486,25 @@ class DiabloLootGenerator:
 
                 rolled_skill: Optional[WeaponSkill] = None
                 if is_weapon and self.randomize_weapon_skills:
-                    rolled_skill = self.roll_weapon_skill()
+                    effective_tier = tier
+                    if not effective_tier and loot_spec and kb and hasattr(kb, "get_progression_tier"):
+                        target_id = loot_spec.get("target_id") or loot_spec.get("shop_id") or loot_spec.get("lot_id")
+                        if target_id:
+                            effective_tier = kb.get_progression_tier(str(target_id))
+                    if not effective_tier and kb and hasattr(kb, "get_progression_tier_for_spec"):
+                        effective_tier = kb.get_progression_tier_for_spec(spec_copy)
+                    rolled_skill = self.roll_weapon_skill(tier=effective_tier)
                     field_updates["swordArtsParamId"] = rolled_skill.id
 
                 self.apply_affixes_to_equipment(field_updates, affixes, is_weapon=is_weapon, is_accessory=is_accessory)
 
                 for fmg in spec_copy.get("fmg_texts", []):
-                    if fmg["item_id"] == old_id:
-                        fmg["item_id"] = new_id
+                    fmg_id = fmg.get("item_id", fmg.get("param_id"))
+                    if fmg_id == old_id:
+                        if "item_id" in fmg:
+                            fmg["item_id"] = new_id
+                        if "param_id" in fmg:
+                            fmg["param_id"] = new_id
                         fmg["is_accessory"] = is_accessory
                         fmg["name"] = self.build_item_name(fmg["name"], rarity, affixes, is_boss=is_boss)
                         fmg["caption"] = self.build_caption_with_affixes(
@@ -551,7 +606,8 @@ class DiabloLootGenerator:
             field_updates: Dict[str, Any] = {}
             rolled_skill: Optional[WeaponSkill] = None
             if self.randomize_weapon_skills:
-                rolled_skill = self.roll_weapon_skill()
+                w_tier = kb.get_progression_tier(w_info) if (kb and hasattr(kb, "get_progression_tier")) else None
+                rolled_skill = self.roll_weapon_skill(tier=w_tier)
                 field_updates["swordArtsParamId"] = rolled_skill.id
 
             self.apply_affixes_to_equipment(field_updates, affixes, is_weapon=True)

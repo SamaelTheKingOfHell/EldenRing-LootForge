@@ -592,7 +592,8 @@ class LootForgeMainWindow(QMainWindow):
                     diablo_gen = DiabloLootGenerator(
                         seed=self.config.diablo_seed,
                         knowledge_base=self.knowledge_base,
-                        randomize_weapon_skills=self.config.diablo_randomize_weapon_skills
+                        randomize_weapon_skills=self.config.diablo_randomize_weapon_skills,
+                        balance_weapon_skills_by_progression=self.config.diablo_balance_weapon_skills_by_progression
                     )
                     variants = diablo_gen.generate_variants_for_spec(
                         base_spec, variants_per_item=self.config.diablo_variants_per_item
@@ -611,7 +612,8 @@ class LootForgeMainWindow(QMainWindow):
                 diablo_gen = DiabloLootGenerator(
                     seed=self.config.diablo_seed,
                     knowledge_base=self.knowledge_base,
-                    randomize_weapon_skills=self.config.diablo_randomize_weapon_skills
+                    randomize_weapon_skills=self.config.diablo_randomize_weapon_skills,
+                    balance_weapon_skills_by_progression=self.config.diablo_balance_weapon_skills_by_progression
                 )
                 vanilla_dist_specs = diablo_gen.generate_vanilla_base_distribution_specs(
                     knowledge_base=self.knowledge_base,
@@ -629,7 +631,8 @@ class LootForgeMainWindow(QMainWindow):
                 diablo_gen = DiabloLootGenerator(
                     seed=self.config.diablo_seed,
                     knowledge_base=self.knowledge_base,
-                    randomize_weapon_skills=self.config.diablo_randomize_weapon_skills
+                    randomize_weapon_skills=self.config.diablo_randomize_weapon_skills,
+                    balance_weapon_skills_by_progression=self.config.diablo_balance_weapon_skills_by_progression
                 )
                 vanilla_stat_specs = diablo_gen.generate_vanilla_stat_injections(knowledge_base=self.knowledge_base)
                 patch_specs.extend(vanilla_stat_specs)

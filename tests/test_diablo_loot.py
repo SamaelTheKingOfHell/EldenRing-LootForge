@@ -8,7 +8,7 @@ from src.diablo_generator import DiabloLootGenerator
 from src.param_builder import ParamBuilder
 from src.models import (
     DetectedModSet, ModPartFile, EquipmentSlot, StandaloneAllocation,
-    LootTarget, LootDistributionType
+    LootTarget, LootDistributionType, ProgressionTier
 )
 
 
@@ -250,11 +250,15 @@ class TestDiabloLoot(unittest.TestCase):
         self.assertFalse(cfg.diablo_inject_vanilla_stats)
         self.assertFalse(cfg.diablo_use_vanilla_base_items)
         self.assertFalse(cfg.diablo_randomize_weapon_skills)
+        self.assertTrue(cfg.diablo_balance_weapon_skills_by_progression)
 
         cfg_dict = cfg.to_dict()
         self.assertIn("diablo_inject_vanilla_stats", cfg_dict)
         self.assertIn("diablo_use_vanilla_base_items", cfg_dict)
         self.assertIn("diablo_randomize_weapon_skills", cfg_dict)
+        self.assertIn("diablo_balance_weapon_skills_by_progression", cfg_dict)
+        self.assertTrue(cfg_dict["diablo_balance_weapon_skills_by_progression"])
+
 
     def test_shop_capacity_limitation_and_pool_overflow_rotation(self):
         """Verifies that shop param row limits are strictly respected and overflowed items rotate to other pools."""
@@ -686,6 +690,94 @@ class TestDiabloLoot(unittest.TestCase):
             self.assertTrue(fmg.get("is_accessory"))
             self.assertIn("[LootForge]", fmg["name"])
 
+    def test_weapon_skill_progression_balance_early_tier(self):
+        """Verifies early tier weapon skill rolls strictly yield Tier 1 skills and never endgame boss skills."""
+        gen = DiabloLootGenerator(seed=12345, balance_weapon_skills_by_progression=True)
+        rolled_skills = [gen.roll_weapon_skill(tier=ProgressionTier.EARLY) for _ in range(150)]
+        for skill in rolled_skills:
+            self.assertEqual(
+                skill.tier, ProgressionTier.EARLY,
+                f"Early progression tier must strictly roll Early tier weapon skills! Got: {skill.name} (Tier: {skill.tier})"
+            )
+            # Explicitly guard against endgame/boss arts
+            self.assertNotIn(
+                skill.name,
+                {"Waterfowl Dance", "Destined Death", "Corpse Piler", "Bloodboon Ritual", "Wave of Gold", "Swift Slash"},
+                f"Endgame ash of war '{skill.name}' must never roll in early progression!"
+            )
+
+    def test_weapon_skill_progression_balance_mid_tier(self):
+        """Verifies mid tier weapon skill rolls yield Tier 1 or Tier 2 skills, never late or endgame skills."""
+        gen = DiabloLootGenerator(seed=54321, balance_weapon_skills_by_progression=True)
+        rolled_skills = [gen.roll_weapon_skill(tier=ProgressionTier.MID) for _ in range(150)]
+        for skill in rolled_skills:
+            self.assertIn(
+                skill.tier, (ProgressionTier.EARLY, ProgressionTier.MID),
+                f"Mid tier must only roll Early or Mid skills! Got: {skill.name} (Tier: {skill.tier})"
+            )
+            self.assertNotIn(
+                skill.tier, (ProgressionTier.LATE, ProgressionTier.ENDGAME),
+                f"Mid tier must never roll Late or Endgame skills! Got: {skill.name}"
+            )
+
+    def test_weapon_skill_progression_balance_late_tier(self):
+        """Verifies late tier weapon skill rolls never yield endgame skills."""
+        gen = DiabloLootGenerator(seed=99999, balance_weapon_skills_by_progression=True)
+        rolled_skills = [gen.roll_weapon_skill(tier=ProgressionTier.LATE) for _ in range(150)]
+        for skill in rolled_skills:
+            self.assertNotEqual(
+                skill.tier, ProgressionTier.ENDGAME,
+                f"Late tier must never roll Endgame skills! Got: {skill.name}"
+            )
+
+    def test_weapon_skill_progression_balance_disabled_unbound(self):
+        """Verifies that disabling progression balance allows full-pool rolling even at early tier."""
+        unbound_gen = DiabloLootGenerator(seed=42, balance_weapon_skills_by_progression=False)
+        rolled_skills = [unbound_gen.roll_weapon_skill(tier=ProgressionTier.EARLY) for _ in range(200)]
+        tiers_rolled = {s.tier for s in rolled_skills}
+        # With 200 rolls across the full pool, multiple tiers including LATE and ENDGAME should appear
+        self.assertIn(
+            ProgressionTier.ENDGAME, tiers_rolled,
+            "When balance_weapon_skills_by_progression=False, full pool (including ENDGAME) should be reachable at any tier."
+        )
+
+    def test_weapon_skill_variant_generation_progression_balance(self):
+        """Verifies generate_variants_for_spec respects progression tier when balancing is enabled."""
+        gen = DiabloLootGenerator(
+            seed=777,
+            randomize_weapon_skills=True,
+            balance_weapon_skills_by_progression=True
+        )
+        early_spec = {
+            "set_id": "test_iron_sword",
+            "tier": ProgressionTier.EARLY,
+            "equip_params": [{
+                "param_table": "EquipParamWeapon",
+                "original_param_id": 2000000,
+                "new_param_id": 9001000,
+                "field_updates": {}
+            }],
+            "fmg_texts": [{
+                "entry_type": "weapon_name",
+                "param_id": 9001000,
+                "name": "Iron Sword",
+                "caption": "A standard straight sword."
+            }]
+        }
+        variants = gen.generate_variants_for_spec(early_spec, variants_per_item=5)
+        from src.diablo_affixes import WEAPON_SKILL_POOL
+        for v in variants:
+            ep = v["equip_params"][0]
+            self.assertIn("swordArtsParamId", ep["field_updates"])
+            skill_id = ep["field_updates"]["swordArtsParamId"]
+            matching_skills = [s for s in WEAPON_SKILL_POOL if s.id == skill_id]
+            self.assertTrue(len(matching_skills) > 0)
+            self.assertEqual(
+                matching_skills[0].tier, ProgressionTier.EARLY,
+                f"Spec with early tier must produce early tier skill variant! Got: {matching_skills[0].name}"
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
+

@@ -269,7 +269,8 @@ class ParamBuilder:
         mod_set: DetectedModSet,
         variants_count: int = 3,
         seed: Optional[int] = None,
-        randomize_weapon_skills: bool = False
+        randomize_weapon_skills: bool = False,
+        balance_weapon_skills_by_progression: bool = True
     ) -> List[Dict[str, Any]]:
         """
         Builds multiple procedural Diablo-style patch specifications for a mod set.
@@ -279,6 +280,7 @@ class ParamBuilder:
         generator = DiabloLootGenerator(
             seed=seed,
             knowledge_base=self.kb,
-            randomize_weapon_skills=randomize_weapon_skills
+            randomize_weapon_skills=randomize_weapon_skills,
+            balance_weapon_skills_by_progression=balance_weapon_skills_by_progression
         )
         return generator.generate_variants_for_spec(base_spec, variants_per_item=variants_count)
