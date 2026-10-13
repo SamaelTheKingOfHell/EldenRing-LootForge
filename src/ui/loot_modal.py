@@ -73,6 +73,7 @@ class LootReviewModal(QDialog):
         self.current_page: int = 1
         self.items_per_page: int = 8
         self.filter_query: str = ""
+        self.skills_movesets_enabled: bool = True
 
         self._build_ui()
 
@@ -170,13 +171,15 @@ class LootReviewModal(QDialog):
         global_multiplier: float,
         global_spoiled: bool,
         items_per_page: int = 8,
-        diablo_enabled: bool = False
+        diablo_enabled: bool = False,
+        skills_movesets_enabled: bool = True
     ):
         """Populates modal dataset and updates display controls."""
         self.drop_configs = drop_configs
         self.global_multiplier_percent = global_multiplier
         self.global_spoiled = global_spoiled
         self.diablo_enabled = diablo_enabled
+        self.skills_movesets_enabled = skills_movesets_enabled
         self.items_per_page = items_per_page
 
         idx = self.page_size_combo.findData(items_per_page)
@@ -228,7 +231,8 @@ class LootReviewModal(QDialog):
             ]
         self.current_page = 1
         diablo_tag = " • Diablo ARPG: Active" if self.diablo_enabled else ""
-        self.stats_badge.setText(f"{len(self.drop_configs)} Total Items ({len(self.filtered_configs)} Shown){diablo_tag}")
+        skills_tag = "" if getattr(self, "skills_movesets_enabled", True) else " • Custom Movesets: Disabled (Testing Mode)"
+        self.stats_badge.setText(f"{len(self.drop_configs)} Total Items ({len(self.filtered_configs)} Shown){diablo_tag}{skills_tag}")
         self.render_table_page()
 
     def render_table_page(self):
@@ -314,7 +318,13 @@ class LootReviewModal(QDialog):
             # Custom Moveset / Skill Action Toggle
             if has_skill or has_moveset:
                 art_btn = QPushButton()
-                if getattr(cfg, "import_custom_art", True):
+                globally_enabled = getattr(self, "skills_movesets_enabled", True)
+                if not globally_enabled:
+                    art_btn.setText("Disabled (Global Settings Bool)")
+                    art_btn.setStyleSheet("color: #777777; border: 1px solid rgba(119, 119, 119, 0.3); background-color: #12141a; font-size: 11px; padding: 2px 6px;")
+                    art_btn.setEnabled(False)
+                    art_btn.setToolTip("Custom skills & movesets are globally disabled in settings for bug testing.")
+                elif getattr(cfg, "import_custom_art", True):
                     if has_skill:
                         label = f"✦ Active: {cfg.custom_skill_name}"
                     elif has_moveset:
@@ -323,10 +333,13 @@ class LootReviewModal(QDialog):
                         label = "✦ Active"
                     art_btn.setText(label)
                     art_btn.setStyleSheet("color: #ffd475; border: 1px solid rgba(197, 160, 89, 0.6); background-color: #1a1e2b; font-size: 11px; padding: 2px 6px;")
+                    art_btn.setEnabled(True)
+                    art_btn.clicked.connect(lambda _, c=cfg: self._on_toggle_custom_art(c))
                 else:
                     art_btn.setText("Default (Vanilla/ARPG)")
                     art_btn.setStyleSheet("color: #9e9a91; border: 1px solid rgba(158, 154, 145, 0.3); background-color: #12141a; font-size: 11px; padding: 2px 6px;")
-                art_btn.clicked.connect(lambda _, c=cfg: self._on_toggle_custom_art(c))
+                    art_btn.setEnabled(True)
+                    art_btn.clicked.connect(lambda _, c=cfg: self._on_toggle_custom_art(c))
                 self.items_table.setCellWidget(row_idx, 7, art_btn)
             else:
                 dash_item = QTableWidgetItem("-")

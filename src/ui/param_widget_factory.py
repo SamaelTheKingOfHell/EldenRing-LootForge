@@ -249,7 +249,7 @@ class ParamWidgetFactory:
                 row.addLayout(mult_vbox, stretch=1)
                 controls[d.key] = slider
                 controls["mult_label"] = mult_label
-            else:
+            elif d.param_type != ParamType.BOOL:
                 vbox = QVBoxLayout()
                 vbox.setSpacing(4)
                 vbox.addWidget(QLabel(f"<b>{d.label}</b>:"))
@@ -260,6 +260,17 @@ class ParamWidgetFactory:
                 controls[d.key] = ctrl
 
         layout.addLayout(row)
+
+        bool_row = QHBoxLayout()
+        for d in descriptors:
+            if d.purpose == ParamPurpose.DROP_STYLE and d.param_type == ParamType.BOOL:
+                initial_val = getattr(config, d.key, d.default)
+                _, ctrl = cls.create_control(d, initial_val, on_change, parent=card)
+                bool_row.addWidget(ctrl)
+                controls[d.key] = ctrl
+        if bool_row.count() > 0:
+            layout.addLayout(bool_row)
+
         return card, controls
 
     @classmethod

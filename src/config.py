@@ -59,7 +59,8 @@ class LootForgeConfig:
         diablo_inject_vanilla_stats: bool = False,
         diablo_use_vanilla_base_items: bool = False,
         diablo_randomize_weapon_skills: bool = False,
-        item_custom_art_toggles: Optional[Dict[str, bool]] = None
+        item_custom_art_toggles: Optional[Dict[str, bool]] = None,
+        import_custom_skills_movesets: bool = True
     ):
         self.game_directory = game_directory
         self.input_directory = input_directory
@@ -84,6 +85,7 @@ class LootForgeConfig:
         self.user_drop_rates = user_drop_rates if user_drop_rates is not None else {}
         self.item_spoiled_states = item_spoiled_states if item_spoiled_states is not None else {}
         self.item_custom_art_toggles = item_custom_art_toggles if item_custom_art_toggles is not None else {}
+        self.import_custom_skills_movesets = import_custom_skills_movesets
         self.diablo_loot_enabled = diablo_loot_enabled
         self.diablo_variants_per_item = diablo_variants_per_item
         self.diablo_seed = diablo_seed
@@ -198,6 +200,7 @@ class LootForgeConfig:
             "user_drop_rates": self.user_drop_rates,
             "item_spoiled_states": self.item_spoiled_states,
             "item_custom_art_toggles": self.item_custom_art_toggles,
+            "import_custom_skills_movesets": self.import_custom_skills_movesets,
             "diablo_loot_enabled": self.diablo_loot_enabled,
             "diablo_variants_per_item": self.diablo_variants_per_item,
             "diablo_seed": self.diablo_seed,
@@ -253,6 +256,7 @@ class LootForgeConfig:
                 user_drop_rates=data.get("user_drop_rates", {}),
                 item_spoiled_states=data.get("item_spoiled_states", {}),
                 item_custom_art_toggles=data.get("item_custom_art_toggles", {}),
+                import_custom_skills_movesets=bool(data.get("import_custom_skills_movesets", True)),
                 diablo_loot_enabled=bool(data.get("diablo_loot_enabled", False)),
                 diablo_variants_per_item=int(data.get("diablo_variants_per_item", 3)),
                 diablo_seed=data.get("diablo_seed", None),

@@ -527,3 +527,117 @@ def test_regulation_manager_rollback_all_cleans_moveset_assets(temp_env):
     assert not sfx_dir.exists()
     assert not action_dir.exists()
     assert not parts_dir.exists()
+
+
+def test_config_roundtrip_includes_master_bool(temp_env):
+    """Validates import_custom_skills_movesets boolean survives save and load cycles in LootForgeConfig."""
+    from src.config import LootForgeConfig
+
+    cfg_file = temp_env / "config.json"
+    cfg = LootForgeConfig(import_custom_skills_movesets=False)
+    assert cfg.import_custom_skills_movesets is False
+    cfg.save(str(cfg_file))
+
+    loaded = LootForgeConfig.load(str(cfg_file))
+    assert loaded.import_custom_skills_movesets is False
+
+    # Flip to True and verify round-trip
+    loaded.import_custom_skills_movesets = True
+    loaded.save(str(cfg_file))
+    reloaded = LootForgeConfig.load(str(cfg_file))
+    assert reloaded.import_custom_skills_movesets is True
+
+
+def test_loot_review_modal_global_boolean_disabled(temp_env):
+    """Validates LootReviewModal handles master boolean disabled state for bug testing isolation."""
+    os.environ["QT_QPA_PLATFORM"] = "offscreen"
+    try:
+        from PySide6.QtWidgets import QApplication
+    except (ImportError, Exception):
+        from PyQt6.QtWidgets import QApplication
+    from src.models import ItemDropConfig
+    from src.ui.loot_modal import LootReviewModal
+
+    app = QApplication.instance()
+    if not app:
+        app = QApplication(["test", "-platform", "offscreen"])
+
+    modal = LootReviewModal()
+    items = [
+        ItemDropConfig(
+            item_key="katana_test",
+            name="Test Katana",
+            vanilla_rate=10.0,
+            user_rate=10.0,
+            custom_skill_name="Test Slash",
+            has_custom_moveset=True,
+            import_custom_art=True
+        )
+    ]
+
+    # Load with master boolean = False (testing mode)
+    modal.set_data(
+        items,
+        global_multiplier=100.0,
+        global_spoiled=True,
+        items_per_page=8,
+        skills_movesets_enabled=False
+    )
+
+    assert "Custom Movesets: Disabled (Testing Mode)" in modal.stats_badge.text()
+    art_btn = modal.items_table.cellWidget(0, 7)
+    assert art_btn is not None
+    assert "Disabled (Global Settings Bool)" in art_btn.text()
+    assert not art_btn.isEnabled()
+
+
+def test_global_boolean_toggle_disables_all_movesets_and_skills():
+    """Validates that turning off the master boolean toggle disables custom skills and movesets in the pipeline."""
+    part = ModPartFile(
+        file_name="wp_a_0556.partsbnd.dcx",
+        relative_path="wp_a_0556.partsbnd.dcx",
+        slot=EquipmentSlot.WEAPON,
+        target_model_id="556"
+    )
+
+    skill_meta = SkillMovesetMetadata(
+        has_custom_skill=True,
+        skill_id=22080,
+        skill_name="Moonglow",
+        has_custom_moveset=True,
+        behavior_variation_id=900,
+        custom_skills_spec=[{"skill_id": 22080, "name": "Moonglow", "fields": {}}],
+        custom_behaviors_spec=[{"id": 900010, "fields": {}}],
+        custom_attacks_spec=[{"id": 90010, "fields": {}}]
+    )
+
+    mod_set = DetectedModSet(
+        set_id="mod_kuro_master_disabled",
+        folder_or_archive_name="BlackLotusMod",
+        target_model_id="556",
+        target_vanilla_name="Uchigatana",
+        parts=[part],
+        loot_target=LootTarget(
+            route_type=LootDistributionType.BOSS_REMEMBRANCE,
+            target_id="remembrance_malenia",
+            display_name="Remembrance of the Rot Goddess"
+        ),
+        allocation=StandaloneAllocation("9085", 9085000, 9100085),
+        is_weapon=True,
+        skill_moveset=skill_meta
+    )
+
+    # Master bool = False
+    master_toggle_enabled = False
+    mod_set.import_custom_moveset = master_toggle_enabled
+
+    builder = ParamBuilder()
+    spec = builder.build_patch_spec(mod_set)
+
+    ep = spec["equip_params"][0]
+    updates = ep["field_updates"]
+    assert "swordArtsParamId" not in updates
+    assert "behaviorVariationId" not in updates
+    assert "custom_skills" not in spec
+    assert "custom_behaviors" not in spec
+    assert "custom_attacks" not in spec

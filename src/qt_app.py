@@ -346,7 +346,8 @@ class LootForgeMainWindow(QMainWindow):
             global_multiplier=self.global_multiplier_percent,
             global_spoiled=self.global_spoiled,
             items_per_page=self.items_per_page,
-            diablo_enabled=self.config.diablo_loot_enabled
+            diablo_enabled=self.config.diablo_loot_enabled,
+            skills_movesets_enabled=getattr(self.config, "import_custom_skills_movesets", True)
         )
 
     def _render_table_page(self):
@@ -366,7 +367,7 @@ class LootForgeMainWindow(QMainWindow):
             if not out_p.is_absolute():
                 out_p = self.base_dir / out_p
             self.asset_renumberer.output_dir = out_p
-        elif key == "diablo_loot_enabled":
+        elif key in ("diablo_loot_enabled", "import_custom_skills_movesets"):
             self._sync_modal_data()
 
     def _on_page_size_changed_from_modal(self, val: int):
@@ -452,7 +453,7 @@ class LootForgeMainWindow(QMainWindow):
                 saved_user_rate = self.config.user_drop_rates.get(s.set_id, 20.0)
                 saved_spoil = self.config.item_spoiled_states.get(s.set_id, False)
                 saved_art_toggle = self.config.item_custom_art_toggles.get(s.set_id, True)
-                s.import_custom_moveset = saved_art_toggle
+                s.import_custom_moveset = getattr(self.config, "import_custom_skills_movesets", True) and saved_art_toggle
 
                 skill_name = ""
                 has_moveset = False
@@ -600,7 +601,7 @@ class LootForgeMainWindow(QMainWindow):
             diablo_total_variants = 0
 
             for s, cfg in zip(self.scanned_sets, self.drop_configs):
-                s.import_custom_moveset = getattr(cfg, "import_custom_art", True)
+                s.import_custom_moveset = getattr(self.config, "import_custom_skills_movesets", True) and getattr(cfg, "import_custom_art", True)
                 if s.loot_target:
                     s.loot_target.chance_or_cost = self.distributor.calculate_final_rate(
                         cfg.user_rate, self.global_multiplier_percent
