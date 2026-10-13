@@ -13,6 +13,8 @@ namespace LootForge.RegTool
     {
         static int Main(string[] args)
         {
+            EnsureOodleLoaded();
+
             if (args.Length == 0 || args[0] == "--help" || args[0] == "-h")
             {
                 PrintUsage();
@@ -79,6 +81,44 @@ namespace LootForge.RegTool
             Console.WriteLine("  RegTool dump-reg --input <regulation.bin> [--defs <paramdex_defs>]");
         }
 
+        static void EnsureOodleLoaded()
+        {
+            if (SoulsFormats.Oodle.Oodle6Ptr != IntPtr.Zero || SoulsFormats.Oodle.Oodle8Ptr != IntPtr.Zero || SoulsFormats.Oodle.Oodle9Ptr != IntPtr.Zero)
+                return;
+
+            string[] searchDirs = [
+                AppContext.BaseDirectory,
+                Path.Combine(AppContext.BaseDirectory, "..", "..", ".."),
+                Directory.GetCurrentDirectory()
+            ];
+
+            string[] oodleDlls = ["oo2core_9_win64.dll", "oo2core_8_win64.dll", "oo2core_6_win64.dll"];
+
+            foreach (var dir in searchDirs)
+            {
+                if (!Directory.Exists(dir)) continue;
+                foreach (var dll in oodleDlls)
+                {
+                    string fullPath = Path.Combine(dir, dll);
+                    if (File.Exists(fullPath))
+                    {
+                        try
+                        {
+                            IntPtr ptr = System.Runtime.InteropServices.NativeLibrary.Load(fullPath);
+                            if (ptr != IntPtr.Zero)
+                            {
+                                if (dll.Contains("_9_")) SoulsFormats.Oodle.Oodle9Ptr = ptr;
+                                else if (dll.Contains("_8_")) SoulsFormats.Oodle.Oodle8Ptr = ptr;
+                                else if (dll.Contains("_6_")) SoulsFormats.Oodle.Oodle6Ptr = ptr;
+                                return;
+                            }
+                        }
+                        catch { }
+                    }
+                }
+            }
+        }
+
         static Dictionary<string, string> ParseArguments(string[] args)
         {
             var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -89,6 +129,11 @@ namespace LootForge.RegTool
                     string key = args[i].Substring(2).ToLowerInvariant();
                     dict[key] = args[i + 1];
                     i++;
+                }
+                else if (args[i].StartsWith("--"))
+                {
+                    string key = args[i].Substring(2).ToLowerInvariant();
+                    dict[key] = "true";
                 }
             }
             return dict;

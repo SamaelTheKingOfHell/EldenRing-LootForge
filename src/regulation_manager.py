@@ -614,7 +614,7 @@ class RegulationManager:
         if not reg_path.exists():
             raise FileNotFoundError(f"Regulation file not found: {reg_path}")
 
-        out_path = output_json or (self.base_dir / "data" / "world_snapshot.json")
+        out_path = output_json
         cmd = [str(self.regtool_exe)] if (sys.platform.startswith("win") and self.regtool_exe.exists()) else (
             ["dotnet", str(self.regtool_dll)] if self.regtool_dll.exists() else
             ["dotnet", "run", "--project", str(self.regtool_proj), "--"]
@@ -622,9 +622,13 @@ class RegulationManager:
         cmd.extend([
             "introspect-world",
             "--input", str(reg_path),
-            "--defs", str(self.defs_dir),
-            "--output", str(out_path)
+            "--defs", str(self.defs_dir)
         ])
+        if out_path:
+            cmd.extend(["--output", str(out_path)])
+        else:
+            cmd.append("--stdout")
+
         if msg_dir and Path(msg_dir).exists():
             cmd.extend(["--msg", str(msg_dir)])
 
@@ -632,12 +636,21 @@ class RegulationManager:
         if res.returncode != 0:
             system_logger.warning(f"Introspect world returned non-zero code {res.returncode}: {res.stderr or res.stdout}", source="RegulationManager")
 
-        if out_path.exists():
+        if out_path and Path(out_path).exists():
             try:
                 with open(out_path, "r", encoding="utf-8") as f:
                     return json.load(f)
             except Exception as e:
-                system_logger.warning(f"Failed to load world snapshot JSON: {e}", source="RegulationManager")
+                system_logger.warning(f"Failed to load snapshot JSON: {e}", source="RegulationManager")
+        else:
+            try:
+                out_text = res.stdout.strip()
+                start = out_text.find("{")
+                end = out_text.rfind("}")
+                if start != -1 and end != -1 and end > start:
+                    return json.loads(out_text[start:end+1])
+            except Exception as e:
+                system_logger.warning(f"Failed to parse live table snapshot from memory: {e}", source="RegulationManager")
 
         return {}
 

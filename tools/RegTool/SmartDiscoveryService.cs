@@ -132,8 +132,10 @@ namespace LootForge.RegTool
             string defsDir = options.TryGetValue("defs", out string? dd) && !string.IsNullOrEmpty(dd) ? dd : @"tools\vendor\Paramdex\ER\Defs";
             string? msgDir = options.TryGetValue("msg", out string? md) ? md : null;
             string? outputPath = options.TryGetValue("output", out string? op) ? op : null;
+            bool isStdout = options.ContainsKey("stdout") || outputPath == "-";
+            Action<string> log = isStdout ? Console.Error.WriteLine : Console.WriteLine;
 
-            Console.WriteLine($"[SmartDiscovery] Decrypting regulation: {inputPath}...");
+            log($"[SmartDiscovery] Decrypting regulation: {inputPath}...");
             BND4 bnd = RegulationDecryptor.DecryptERRegulation(inputPath);
 
             PARAM LoadParam(string tableName)
@@ -158,8 +160,8 @@ namespace LootForge.RegTool
 
             if (!string.IsNullOrEmpty(msgDir) && Directory.Exists(msgDir))
             {
-                string msgFile = Path.Combine(msgDir, "item.msgbnd.dcx");
-                if (File.Exists(msgFile))
+                var msgFiles = Directory.GetFiles(msgDir, "item*.msgbnd.dcx", SearchOption.AllDirectories);
+                foreach (var msgFile in msgFiles)
                 {
                     try
                     {
@@ -180,13 +182,13 @@ namespace LootForge.RegTool
                         PopulateFmg("WeaponName", weaponNames);
                         PopulateFmg("ProtectorName", protectorNames);
                         PopulateFmg("AccessoryName", accessoryNames);
-                        Console.WriteLine($"[SmartDiscovery] Loaded FMG strings: {weaponNames.Count} weapons, {protectorNames.Count} protectors, {accessoryNames.Count} accessories.");
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"[SmartDiscovery WARN] Could not read FMGs: {ex.Message}");
+                        log($"[SmartDiscovery WARN] Could not read FMG file {msgFile}: {ex.Message}");
                     }
                 }
+                log($"[SmartDiscovery] Loaded FMG strings across {msgFiles.Length} message archives: {weaponNames.Count} weapons, {protectorNames.Count} protectors, {accessoryNames.Count} accessories.");
             }
 
             var wepParam = LoadParam("EquipParamWeapon");
@@ -322,21 +324,29 @@ namespace LootForge.RegTool
                 discoveredBossLots
             );
 
-            Console.WriteLine($"\n=== [SmartDiscovery RESULTS] ===");
-            Console.WriteLine($"Total Player Weapons Discovered: {snapshot.TotalWeapons} ({snapshot.BaseWeapons} base weapon archetypes)");
-            Console.WriteLine($"Total Player Protectors Discovered: {snapshot.TotalProtectors}");
-            Console.WriteLine($"Total Accessories Discovered: {snapshot.TotalAccessories}");
-            Console.WriteLine($"Total 100% Boss / Event Lots Discovered: {snapshot.TotalBossLots}");
-
-            if (!string.IsNullOrEmpty(outputPath))
+            if (isStdout)
             {
-                string? dir = Path.GetDirectoryName(outputPath);
-                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-                    Directory.CreateDirectory(dir);
+                var jsonOptions = new JsonSerializerOptions { WriteIndented = false };
+                Console.Out.WriteLine(JsonSerializer.Serialize(snapshot, jsonOptions));
+            }
+            else
+            {
+                Console.WriteLine($"\n=== [SmartDiscovery RESULTS] ===");
+                Console.WriteLine($"Total Player Weapons Discovered: {snapshot.TotalWeapons} ({snapshot.BaseWeapons} base weapon archetypes)");
+                Console.WriteLine($"Total Player Protectors Discovered: {snapshot.TotalProtectors}");
+                Console.WriteLine($"Total Accessories Discovered: {snapshot.TotalAccessories}");
+                Console.WriteLine($"Total 100% Boss / Event Lots Discovered: {snapshot.TotalBossLots}");
 
-                var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
-                File.WriteAllText(outputPath, JsonSerializer.Serialize(snapshot, jsonOptions));
-                Console.WriteLine($"[SmartDiscovery SUCCESS] Saved world snapshot to: {outputPath}");
+                if (!string.IsNullOrEmpty(outputPath) && outputPath != "-")
+                {
+                    string? dir = Path.GetDirectoryName(outputPath);
+                    if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                        Directory.CreateDirectory(dir);
+
+                    var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
+                    File.WriteAllText(outputPath, JsonSerializer.Serialize(snapshot, jsonOptions));
+                    Console.WriteLine($"[SmartDiscovery SUCCESS] Saved world snapshot to: {outputPath}");
+                }
             }
 
             return 0;
