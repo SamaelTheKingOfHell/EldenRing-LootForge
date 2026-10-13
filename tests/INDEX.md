@@ -18,4 +18,7 @@ Automated verification suites adhering to `[CS-NO-MOCK]`. Tests exercise concret
 | `test_injection_harness.py` | Synthetic injection harness testing all loot pools and distribution modes. |
 | `test_regulation_manager.py` | Validates non-destructive regulation decryption, parameter injection, and encryption. |
 | `test_localization_parity.py` | Verifies 100% string key parity across all localization dictionaries (`[CS-LOCALIZATION]`). |
+| `test_pricing_engine.py` | Validates power-scaled rune pricing, regional progression tiers, rarity multipliers, affixes, boss prestige, and sell ratios (`[CS-NO-MOCK]`). |
 | `verify_server.py` | End-to-end integration test validating HTTP API endpoints and UI asset serving (`[CS-NO-MOCK]`). |
+
+

@@ -51,7 +51,8 @@ class DiabloLootGenerator:
         max_total_shop_rows: int = DEFAULT_MAX_TOTAL_SHOP_ROWS,
         randomize_weapon_skills: bool = False,
         balance_weapon_skills_by_progression: bool = True,
-        weapon_skills_pool: Optional[List[WeaponSkill]] = None
+        weapon_skills_pool: Optional[List[WeaponSkill]] = None,
+        pricing_engine: Optional[Any] = None
     ):
         self._rng = random.Random(seed)
         self._knowledge_base = knowledge_base
@@ -63,6 +64,8 @@ class DiabloLootGenerator:
         self._weapon_skills_pool = list(weapon_skills_pool or WEAPON_SKILL_POOL)
         self._shop_allocations: Dict[str, int] = {}
         self._total_shop_allocations: int = 0
+        from src.pricing_engine import PricingEngine
+        self.pricing_engine = pricing_engine if pricing_engine is not None else PricingEngine()
 
     def roll_weapon_skill(self, tier: Optional[Union[ProgressionTier, int]] = None) -> WeaponSkill:
         """
@@ -299,7 +302,8 @@ class DiabloLootGenerator:
         rarity: RarityTier,
         affixes: List[AffixDefinition],
         boss_name: Optional[str] = None,
-        skill: Optional[WeaponSkill] = None
+        skill: Optional[WeaponSkill] = None,
+        pricing: Optional[Dict[str, Any]] = None
     ) -> str:
         """Appends formatted rarity, skill, and affix breakdown to the bottom of item description."""
         lines = [base_caption.rstrip(), ""]
@@ -312,6 +316,9 @@ class DiabloLootGenerator:
 
         if boss_name:
             lines.append(f"[BOSS TROPHY] Claimed from {boss_name}")
+
+        if pricing and pricing.get("buy_price"):
+            lines.append(f"VALUE: {pricing['buy_price']:,} Runes (Sell: {pricing.get('sell_price', 0):,})")
 
         if affixes:
             lines.append("----------------------------------------")
@@ -469,6 +476,7 @@ class DiabloLootGenerator:
 
             # 2. Modify Equip Params and FMG texts with rolled affixes (Chests are highly valuable: guaranteed high rarity)
             variant_new_ids: List[int] = []
+            variant_item_prices: Dict[str, int] = {}
 
             for ep in spec_copy.get("equip_params", []):
                 old_id = ep["new_param_id"]
@@ -485,8 +493,8 @@ class DiabloLootGenerator:
                 field_updates["sortId"] = new_id
 
                 rolled_skill: Optional[WeaponSkill] = None
+                effective_tier = tier
                 if is_weapon and self.randomize_weapon_skills:
-                    effective_tier = tier
                     if not effective_tier and loot_spec and kb and hasattr(kb, "get_progression_tier"):
                         target_id = loot_spec.get("target_id") or loot_spec.get("shop_id") or loot_spec.get("lot_id")
                         if target_id:
@@ -498,6 +506,22 @@ class DiabloLootGenerator:
 
                 self.apply_affixes_to_equipment(field_updates, affixes, is_weapon=is_weapon, is_accessory=is_accessory)
 
+                pricing = self.pricing_engine.calculate_item_prices(
+                    slot=ep.get("slot"),
+                    tier=effective_tier or tier or 1,
+                    rarity=rarity,
+                    affixes=affixes,
+                    weapon_skill=rolled_skill,
+                    is_weapon=is_weapon,
+                    is_accessory=is_accessory,
+                    is_boss=is_boss
+                )
+                field_updates["sellValue"] = pricing["sell_price"]
+                field_updates["saleValue"] = pricing["buy_price"]
+                if not is_weapon:
+                    field_updates["basicPrice"] = pricing["buy_price"]
+                variant_item_prices[str(new_id)] = pricing["buy_price"]
+
                 for fmg in spec_copy.get("fmg_texts", []):
                     fmg_id = fmg.get("item_id", fmg.get("param_id"))
                     if fmg_id == old_id:
@@ -508,7 +532,7 @@ class DiabloLootGenerator:
                         fmg["is_accessory"] = is_accessory
                         fmg["name"] = self.build_item_name(fmg["name"], rarity, affixes, is_boss=is_boss)
                         fmg["caption"] = self.build_caption_with_affixes(
-                            fmg["caption"], rarity, affixes, boss_name=boss_name, skill=rolled_skill
+                            fmg["caption"], rarity, affixes, boss_name=boss_name, skill=rolled_skill, pricing=pricing
                         )
 
             # Multi-drop for Bosses and Chests: award multiple drops
@@ -535,11 +559,24 @@ class DiabloLootGenerator:
                             comp_field_updates = {"sortId": comp_param_id, "isDeposit": 1}
                             self.apply_affixes_to_equipment(comp_field_updates, comp_affixes, is_weapon=False, is_accessory=True)
 
+                            comp_pricing = self.pricing_engine.calculate_item_prices(
+                                slot="accessory",
+                                tier=tier or 1,
+                                rarity=comp_rarity,
+                                affixes=comp_affixes,
+                                is_accessory=True,
+                                is_boss=is_boss or is_chest_drop
+                            )
+                            comp_field_updates["sellValue"] = comp_pricing["sell_price"]
+                            comp_field_updates["saleValue"] = comp_pricing["buy_price"]
+                            comp_field_updates["basicPrice"] = comp_pricing["buy_price"]
+                            variant_item_prices[str(comp_param_id)] = comp_pricing["buy_price"]
+
                             chest_tag = "Chest Discovery" if is_chest_drop else "Encounter Trophy"
                             comp_fmg_name = self.build_item_name(f"[LootForge] {comp_name}", comp_rarity, comp_affixes, is_boss=is_boss or is_chest_drop)
                             comp_fmg_caption = self.build_caption_with_affixes(
                                 f"Extra treasure ({chest_tag}) awarded with {spec_copy.get('set_id')}.",
-                                comp_rarity, comp_affixes, boss_name=boss_name
+                                comp_rarity, comp_affixes, boss_name=boss_name, pricing=comp_pricing
                             )
 
                             spec_copy.setdefault("equip_params", []).append({
@@ -569,9 +606,16 @@ class DiabloLootGenerator:
             # 3. Synchronize loot distribution
             if loot_spec:
                 loot_spec["awarded_items"] = variant_new_ids
+                loot_spec["item_prices"] = variant_item_prices
+                if loot_spec.get("type") in ("merchant_shop", "shop_lineup") and variant_item_prices:
+                    avg_cost = int(sum(variant_item_prices.values()) / max(1, len(variant_item_prices)))
+                    loot_spec["cost_or_remembrance"] = float(avg_cost)
+                    if "rune_cost" in loot_spec:
+                        loot_spec["rune_cost"] = avg_cost
                 spec_copy["loot_distribution"] = loot_spec
-            elif "loot_distribution" in spec_copy and "awarded_items" in spec_copy["loot_distribution"]:
+            elif "loot_distribution" in spec_copy and spec_copy["loot_distribution"]:
                 spec_copy["loot_distribution"]["awarded_items"] = variant_new_ids
+                spec_copy["loot_distribution"]["item_prices"] = variant_item_prices
 
             variant_specs.append(spec_copy)
 
@@ -605,17 +649,29 @@ class DiabloLootGenerator:
 
             field_updates: Dict[str, Any] = {}
             rolled_skill: Optional[WeaponSkill] = None
+            w_tier = kb.get_progression_tier(w_info) if (kb and hasattr(kb, "get_progression_tier")) else None
             if self.randomize_weapon_skills:
-                w_tier = kb.get_progression_tier(w_info) if (kb and hasattr(kb, "get_progression_tier")) else None
                 rolled_skill = self.roll_weapon_skill(tier=w_tier)
                 field_updates["swordArtsParamId"] = rolled_skill.id
 
             self.apply_affixes_to_equipment(field_updates, affixes, is_weapon=True)
 
+            pricing = self.pricing_engine.calculate_item_prices(
+                slot="weapon",
+                tier=w_tier or 1,
+                rarity=rarity,
+                affixes=affixes,
+                weapon_skill=rolled_skill,
+                is_weapon=True,
+                is_boss=False
+            )
+            field_updates["sellValue"] = pricing["sell_price"]
+            field_updates["saleValue"] = pricing["buy_price"]
+
             clean_name = w_info.get("name", "Weapon")
             clean_desc = w_info.get("description", "")
             fmg_name = f"[{rarity.display_name}] {clean_name}" if rarity != RarityTier.COMMON else clean_name
-            fmg_caption = self.build_caption_with_affixes(clean_desc, rarity, affixes, skill=rolled_skill)
+            fmg_caption = self.build_caption_with_affixes(clean_desc, rarity, affixes, skill=rolled_skill, pricing=pricing)
 
             specs.append({
                 "set_id": f"vanilla_weapon_inject_{base_param_id}",
@@ -645,14 +701,13 @@ class DiabloLootGenerator:
 
             clean_set_name = p_info.get("name", "Armor Set")
             clean_desc = p_info.get("description", "")
+            p_tier = kb.get_progression_tier(p_info) if (kb and hasattr(kb, "get_progression_tier")) else None
 
             rarity = self.roll_rarity(is_boss=False)
             affixes = self.roll_affixes(rarity, is_weapon=False, is_boss=False)
 
             field_updates: Dict[str, Any] = {}
             self.apply_affixes_to_equipment(field_updates, affixes, is_weapon=False)
-
-            fmg_caption = self.build_caption_with_affixes(clean_desc, rarity, affixes)
 
             explicit_pieces = p_info.get("pieces")
             if explicit_pieces and isinstance(explicit_pieces, dict):
@@ -664,6 +719,27 @@ class DiabloLootGenerator:
                 ]
 
             for piece_id, slot_name in pieces_to_process:
+                slot_key = {
+                    "Helm": "head",
+                    "Armor": "body",
+                    "Gauntlets": "arms",
+                    "Greaves": "legs"
+                }.get(slot_name, slot_name.lower())
+
+                piece_pricing = self.pricing_engine.calculate_item_prices(
+                    slot=slot_key,
+                    tier=p_tier or 1,
+                    rarity=rarity,
+                    affixes=affixes,
+                    is_weapon=False,
+                    is_boss=False
+                )
+                piece_field_updates = dict(field_updates)
+                piece_field_updates["sellValue"] = piece_pricing["sell_price"]
+                piece_field_updates["saleValue"] = piece_pricing["buy_price"]
+                piece_field_updates["basicPrice"] = piece_pricing["buy_price"]
+
+                piece_fmg_caption = self.build_caption_with_affixes(clean_desc, rarity, affixes, pricing=piece_pricing)
                 piece_name = f"[{rarity.display_name}] {clean_set_name} ({slot_name})" if rarity != RarityTier.COMMON else f"{clean_set_name} ({slot_name})"
 
                 specs.append({
@@ -672,14 +748,14 @@ class DiabloLootGenerator:
                         "param_table": "EquipParamProtector",
                         "new_param_id": piece_id,
                         "update_existing": True,
-                        "field_updates": dict(field_updates),
+                        "field_updates": piece_field_updates,
                         "row_name": f"[Vanilla Infused] {clean_set_name} ({slot_name})"
                     }],
                     "fmg_texts": [{
                         "item_id": piece_id,
                         "is_weapon": False,
                         "name": piece_name,
-                        "caption": fmg_caption,
+                        "caption": piece_fmg_caption,
                         "info": f"Origin: Vanilla Elden Ring (Diablo Infused)"
                     }],
                     "loot_distribution": None
@@ -694,6 +770,7 @@ class DiabloLootGenerator:
 
             clean_name = a_info.get("name", "Talisman")
             clean_desc = a_info.get("description", "")
+            a_tier = kb.get_progression_tier(a_info) if (kb and hasattr(kb, "get_progression_tier")) else None
 
             rarity = self.roll_rarity(is_boss=False)
             affixes = self.roll_affixes(rarity, is_weapon=False, is_accessory=True, is_boss=False)
@@ -701,8 +778,20 @@ class DiabloLootGenerator:
             field_updates: Dict[str, Any] = {}
             self.apply_affixes_to_equipment(field_updates, affixes, is_weapon=False, is_accessory=True)
 
+            pricing = self.pricing_engine.calculate_item_prices(
+                slot="accessory",
+                tier=a_tier or 1,
+                rarity=rarity,
+                affixes=affixes,
+                is_accessory=True,
+                is_boss=False
+            )
+            field_updates["sellValue"] = pricing["sell_price"]
+            field_updates["saleValue"] = pricing["buy_price"]
+            field_updates["basicPrice"] = pricing["buy_price"]
+
             fmg_name = f"[{rarity.display_name}] {clean_name}" if rarity != RarityTier.COMMON else clean_name
-            fmg_caption = self.build_caption_with_affixes(clean_desc, rarity, affixes)
+            fmg_caption = self.build_caption_with_affixes(clean_desc, rarity, affixes, pricing=pricing)
 
             specs.append({
                 "set_id": f"vanilla_accessory_inject_{base_param_id}",

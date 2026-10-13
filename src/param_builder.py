@@ -8,6 +8,7 @@ EquipParamWeapon, ItemLotParam_enemy, ShopLineupParam, and FMG item text.
 from typing import Dict, Any, List, Optional
 from src.models import DetectedModSet, LootDistributionType, EquipmentSlot
 from src.logger import system_logger
+from src.pricing_engine import PricingEngine
 
 
 def _clean_mod_folder_name(folder_name: str) -> str:
@@ -63,8 +64,9 @@ class ParamBuilder:
         EquipmentSlot.WEAPON: (1000, 0),
     }
 
-    def __init__(self, knowledge_base: Optional[Any] = None):
+    def __init__(self, knowledge_base: Optional[Any] = None, pricing_engine: Optional[Any] = None):
         self.kb = knowledge_base
+        self.pricing_engine = pricing_engine if pricing_engine is not None else PricingEngine()
 
 
     def build_patch_spec(self, mod_set: DetectedModSet) -> Dict[str, Any]:
@@ -80,6 +82,7 @@ class ParamBuilder:
 
         equip_params: List[Dict[str, Any]] = []
         fmg_texts: List[Dict[str, Any]] = []
+        item_prices: Dict[str, int] = {}
 
         # Determine slots and gender coverage present in the mod set
         slots_present = {part.slot for part in mod_set.parts}
@@ -97,10 +100,19 @@ class ParamBuilder:
         # with both gender variants in every Elden Ring version including DLC.
         VANILLA_FALLBACK_MODEL_ID = 220
 
+        is_boss_route = (mod_set.loot_target.route_type == LootDistributionType.BOSS_REMEMBRANCE) if mod_set.loot_target else False
+        prog_tier = 1
+        if self.kb and hasattr(self.kb, "get_progression_tier"):
+            prog_tier = self.kb.get_progression_tier(str(mod_set.target_model_id)) or 1
+
         for slot in slots_present:
             slot_offset = self.SLOT_ID_OFFSET.get(slot, 0)
             item_id = base_param_id + slot_offset
             slot_name = slot.value.capitalize()
+
+            multiplier, vanilla_offset = self.VANILLA_CLONE_OFFSETS.get(
+                slot, (1000, 0) if mod_set.is_weapon else (100, 0)
+            )
 
             # Compute the correct vanilla EquipParam row ID for cloning
             base_clone_id = None
@@ -112,24 +124,34 @@ class ParamBuilder:
                 else:
                     prot = self.kb.lookup_protector(str(mod_set.target_model_id))
                     if prot and prot.get("baseParamId"):
-                        multiplier, vanilla_offset = self.VANILLA_CLONE_OFFSETS.get(slot, (100, 0))
                         base_clone_id = prot["baseParamId"] + vanilla_offset
 
             if base_clone_id is None:
-                multiplier, vanilla_offset = self.VANILLA_CLONE_OFFSETS.get(slot, (100, 0))
                 base_clone_id = int(mod_set.target_model_id) * multiplier + vanilla_offset
 
             # Item display name with marker tag
             cleaned_title = _clean_mod_folder_name(mod_set.folder_or_archive_name)
             item_display_name = f"{alloc.marker_tag} {cleaned_title} ({slot_name})".strip()
 
+            # Dynamic power-based buy and sell pricing
+            pricing = self.pricing_engine.calculate_item_prices(
+                slot=slot.value,
+                tier=prog_tier,
+                is_weapon=mod_set.is_weapon,
+                is_boss=is_boss_route
+            )
+            item_prices[str(item_id)] = pricing["buy_price"]
+
             # Field updates for EquipParam (equipModelGender = 0: unisex for both Type A and Type B)
             field_updates: Dict[str, Any] = {
                 "sortId": item_id,
                 "isDeposit": 1,
+                "sellValue": pricing["sell_price"],
+                "saleValue": pricing["buy_price"],
             }
 
             if not mod_set.is_weapon:
+                field_updates["basicPrice"] = pricing["buy_price"]
                 field_updates["equipModelGender"] = 0
                 # Emit gender coverage flags so EquipInjector knows which file variant
                 # the mod actually provides. When only one gender is present the injector
@@ -179,7 +201,8 @@ class ParamBuilder:
                 "target_id": target.target_id,
                 "display_name": target.display_name,
                 "cost_or_remembrance": target.chance_or_cost,
-                "awarded_items": [ep["new_param_id"] for ep in equip_params]
+                "awarded_items": [ep["new_param_id"] for ep in equip_params],
+                "item_prices": item_prices
             }
         elif target.route_type == LootDistributionType.ENEMY_DROP:
             resolved_lot = self.kb.get_enemy_lot_id(str(target.target_id)) if self.kb else None
@@ -209,6 +232,13 @@ class ParamBuilder:
                         comp_base_id = comp.get("baseParamId", 1000)
                         comp_param_id = base_param_id + 50 + i
                         if comp_param_id not in awarded:
+                            acc_pricing = self.pricing_engine.calculate_item_prices(
+                                slot="accessory",
+                                tier=tier or 1,
+                                is_accessory=True,
+                                is_boss=False
+                            )
+                            item_prices[str(comp_param_id)] = acc_pricing["buy_price"]
                             equip_params.append({
                                 "param_table": "EquipParamAccessory",
                                 "new_param_id": comp_param_id,
@@ -216,7 +246,13 @@ class ParamBuilder:
                                 "slot": "accessory",
                                 "slot_offset": 50 + i,
                                 "row_name": f"[LootForge] {comp.get('name', 'Talisman')}",
-                                "field_updates": {"sortId": comp_param_id, "isDeposit": 1}
+                                "field_updates": {
+                                    "sortId": comp_param_id,
+                                    "isDeposit": 1,
+                                    "sellValue": acc_pricing["sell_price"],
+                                    "saleValue": acc_pricing["buy_price"],
+                                    "basicPrice": acc_pricing["buy_price"]
+                                }
                             })
                             fmg_texts.append({
                                 "item_id": comp_param_id,
@@ -237,7 +273,8 @@ class ParamBuilder:
                 "target_id": str(target.target_id),
                 "display_name": target.display_name,
                 "drop_rate_percent": float(target.chance_or_cost or 100.0),
-                "awarded_items": awarded
+                "awarded_items": awarded,
+                "item_prices": item_prices
             }
 
         else:
@@ -249,7 +286,8 @@ class ParamBuilder:
                 "merchant_name": target.display_name,
                 "cost_or_remembrance": target.chance_or_cost,
                 "rune_cost": int(target.chance_or_cost),
-                "awarded_items": [ep["new_param_id"] for ep in equip_params]
+                "awarded_items": [ep["new_param_id"] for ep in equip_params],
+                "item_prices": item_prices
             }
 
         system_logger.info(

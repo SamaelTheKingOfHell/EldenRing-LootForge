@@ -39,3 +39,9 @@ Develop a cross-platform desktop application and mod engine for *Elden Ring* tha
    - Optional procedural ARPG loot generator that transforms standalone mod items into multi-tier relics.
    - Generates multiple distinct instances per item with randomized rarity tiers (Common to Mythic), prefix/suffix stat infusions, and authentic FromSoftware `SpEffectParam` passives (HP regen, FP on kill, successive attack multipliers, resistance charms).
    - Dynamically titles items based on rolled affixes and formats rarity and combat perks at the bottom of in-game lore descriptions.
+
+8. **Dynamic Power-Scaled Economy & Valuation**:
+   - Items scale rune purchase costs in shops (`ShopLineupParam.value`, `saleValue`) and resale returns (`sellValue`) dynamically based on their combat potency.
+   - Valuation engine integrates slot impact (weapon > body > head/legs > arms), regional progression tier (Early to Endgame), Diablo rarity tier (Common to Mythic), rolled affix stat points and passive buffs, weapon skill tiers, and boss remembrance prestige.
+   - Granular piece pricing ensures multi-piece sets price high-stat armor appropriately relative to minor accessories or gauntlets.
+

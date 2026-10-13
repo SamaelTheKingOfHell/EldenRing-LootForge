@@ -159,6 +159,43 @@ class TestParamBuilder(unittest.TestCase):
         # Must be 9000000 (Uchigatana Katana), NEVER 90000000 (Knife/Cirque)!
         self.assertEqual(wep_param["base_clone_id"], 9000000)
 
+    def test_weapon_build_patch_spec_with_knowledge_base_no_unbound_local_error(self):
+        """Verifies build_patch_spec for weapons with knowledge base populated executes without UnboundLocalError on vanilla_offset."""
+        from src.knowledge_base import VanillaKnowledgeBase
+        kb = VanillaKnowledgeBase.from_data_dir("data")
+        builder_with_kb = ParamBuilder(knowledge_base=kb)
+
+        mod_set = DetectedModSet(
+            set_id="mod_uchigatana_kb",
+            folder_or_archive_name="CustomUchigatana",
+            target_model_id="9000",
+            target_vanilla_name="Uchigatana",
+            is_weapon=True,
+            parts=[
+                ModPartFile("wp_a_9000.partsbnd.dcx", "parts/wp_a_9000.partsbnd.dcx", EquipmentSlot.WEAPON, "9000")
+            ],
+            allocation=StandaloneAllocation(
+                new_model_id="9006",
+                new_equip_param_id=9006000,
+                new_item_lot_id=9100006,
+                marker_tag="[LootForge]"
+            ),
+            loot_target=LootTarget(
+                route_type=LootDistributionType.ENEMY_DROP,
+                target_id="godrick_soldier",
+                display_name="Godrick Soldier",
+                chance_or_cost=25.0
+            )
+        )
+
+        spec = builder_with_kb.build_patch_spec(mod_set)
+        self.assertIsNotNone(spec)
+        wep_param = spec["equip_params"][0]
+        self.assertEqual(wep_param["slot_offset"], 0)
+        self.assertEqual(wep_param["base_clone_id"], 9000000)
+        fmg = spec["fmg_texts"][0]
+        self.assertEqual(fmg["slot_offset"], 0)
+
 
 if __name__ == "__main__":
     unittest.main()

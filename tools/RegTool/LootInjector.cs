@@ -387,7 +387,16 @@ namespace LootForge.RegTool
                 byte equipType = isAccessory ? (byte)2 : (isArmor ? (byte)1 : (byte)0);
                 ParamHelper.SetCellIfExists(targetShopRow, "equipId", itemId);
                 ParamHelper.SetCellIfExists(targetShopRow, "equipType", equipType);
-                ParamHelper.SetCellIfExists(targetShopRow, "value", cost);
+
+                int itemCost = cost;
+                if (lootEl.TryGetProperty("item_prices", out var pricesEl) && pricesEl.ValueKind == JsonValueKind.Object)
+                {
+                    if (pricesEl.TryGetProperty(itemId.ToString(), out var pEl) && pEl.TryGetInt32(out int parsedCost))
+                    {
+                        itemCost = parsedCost;
+                    }
+                }
+                ParamHelper.SetCellIfExists(targetShopRow, "value", itemCost);
                 ParamHelper.SetCellIfExists(targetShopRow, "mtrlId", -1);
                 ParamHelper.SetCellIfExists(targetShopRow, "eventFlag_forRelease", 0u);
                 ParamHelper.SetCellIfExists(targetShopRow, "eventFlag_forStock", 0u);

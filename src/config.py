@@ -61,7 +61,10 @@ class LootForgeConfig:
         diablo_randomize_weapon_skills: bool = False,
         diablo_balance_weapon_skills_by_progression: bool = True,
         boss_loot_pools_enabled: bool = True,
-        boss_weapons_per_pool: int = 3
+        boss_weapons_per_pool: int = 3,
+        price_power_scaling_enabled: bool = True,
+        price_multiplier: float = 1.0,
+        sell_price_ratio: float = 0.30
     ):
         self.game_directory = game_directory
         self.input_directory = input_directory
@@ -94,6 +97,9 @@ class LootForgeConfig:
         self.diablo_balance_weapon_skills_by_progression = diablo_balance_weapon_skills_by_progression
         self.boss_loot_pools_enabled = boss_loot_pools_enabled
         self.boss_weapons_per_pool = boss_weapons_per_pool
+        self.price_power_scaling_enabled = price_power_scaling_enabled
+        self.price_multiplier = price_multiplier
+        self.sell_price_ratio = sell_price_ratio
 
         # Auto-discover game directory if not specified
         if not self.game_directory:
@@ -210,6 +216,9 @@ class LootForgeConfig:
             "diablo_balance_weapon_skills_by_progression": self.diablo_balance_weapon_skills_by_progression,
             "boss_loot_pools_enabled": self.boss_loot_pools_enabled,
             "boss_weapons_per_pool": self.boss_weapons_per_pool,
+            "price_power_scaling_enabled": self.price_power_scaling_enabled,
+            "price_multiplier": self.price_multiplier,
+            "sell_price_ratio": self.sell_price_ratio,
             "is_windows": self.is_windows,
             "is_steam_deck": self.is_steam_deck
         }
@@ -266,7 +275,10 @@ class LootForgeConfig:
                 diablo_randomize_weapon_skills=bool(data.get("diablo_randomize_weapon_skills", False)),
                 diablo_balance_weapon_skills_by_progression=bool(data.get("diablo_balance_weapon_skills_by_progression", True)),
                 boss_loot_pools_enabled=bool(data.get("boss_loot_pools_enabled", True)),
-                boss_weapons_per_pool=int(data.get("boss_weapons_per_pool", 3))
+                boss_weapons_per_pool=int(data.get("boss_weapons_per_pool", 3)),
+                price_power_scaling_enabled=bool(data.get("price_power_scaling_enabled", True)),
+                price_multiplier=float(data.get("price_multiplier", 1.0)),
+                sell_price_ratio=float(data.get("sell_price_ratio", 0.30))
             )
         except Exception as e:
             system_logger.warning(f"Error reading {file_path}; using defaults: {e}", source="Config")

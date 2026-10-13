@@ -106,3 +106,26 @@ Add the following keys to `config.json` to enable or tune the system:
 * `diablo_loot_enabled`: `true` enables procedural variant generation during the Forge pipeline; `false` keeps standard 1:1 standalone items.
 * `diablo_variants_per_item`: Number of randomized rolls generated per standalone mod item (e.g. 5, 10, or up to 1,000).
 * `diablo_seed`: Optional integer seed for deterministic rolls across builds.
+
+---
+
+## 6. Dynamic Power-Scaled Economy & Rune Valuation
+
+Implemented in [`src/pricing_engine.py`](file:///d:/The%20Order's%20Operations/Projects/modding/FromSoftware/Elden%20Ring/LootForge/src/pricing_engine.py), all forged items have their merchant purchase price (`ShopLineupParam.value`, `saleValue`, `basicPrice`) and vendor resale return (`EquipParamWeapon.sellValue`, `EquipParamProtector.sellValue`, `EquipParamAccessory.sellValue`) dynamically computed based on their combat potency:
+
+### A. Power Calculation Formula
+$$\text{Scaled Base} = \text{Slot Base} \times \text{Tier Mult} \times \text{Rarity Mult} \times \text{Boss Mult}$$
+$$\text{Total Power} = \text{Scaled Base} + \text{Affix Power} + \text{Skill Power}$$
+
+* **Slot Base Values**: Weapon ($3,000$), Body Armor ($2,400$), Accessory ($2,500$), Helm / Leggings ($1,600$), Gauntlets ($1,200$).
+* **Progression Tier Multipliers**: Early ($1.0\times$), Mid ($1.75\times$), Late ($2.8\times$), Endgame ($4.2\times$).
+* **Rarity Tier Multipliers**: Common ($1.0\times$), Magic ($1.5\times$), Rare ($2.4\times$), Legendary ($4.5\times$), Mythic ($8.0\times$).
+* **Boss Remembrance Prestige**: $1.8\times$ multiplier applied to boss trophies.
+* **Affix Power Points**: $+40$ Runes per attack point, $+35$ per defense point, $+50$ per poise point, $+2,500$ for passive `SpEffect` charms.
+* **Weapon Skill (Ash of War) Tiers**: $+1,500$ to $+7,500$ Runes based on skill tier.
+
+### B. Buy and Sell Prices
+* **Buy Price**: Total power multiplied by `price_multiplier`, rounded cleanly to authentic Elden Ring increments ($50, 100, 500, 1000$ Runes), with a minimum floor of $500$ Runes.
+* **Sell Price**: $30\%$ of the buy price (`sell_price_ratio`), rounded to clean intervals, with a minimum floor of $150$ Runes.
+* **Granular Multi-Piece Sets**: Supported via `item_prices` dictionary, pricing high-poise chest armors higher than gauntlets within the same set.
+

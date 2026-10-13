@@ -130,6 +130,19 @@ This roadmap defines the implementation phases for the cross-platform Standalone
   - Added boolean toggle (defaults to `True`) enabling players to preserve progression balance or opt into unbound chaotic rolls across all tiers.
   - Fully integrated across `LootForgeConfig`, UI schema (`ParamDescriptor`), and Qt app.
 
+## Phase 14: Dynamic Power-Scaled Economy & Pricing Engine
+- [x] **Modular Pricing Engine (`src/pricing_engine.py`)**:
+  - Calculates dynamic, authentic Rune valuations for buying (`ShopLineupParam.value`, `saleValue`, `basicPrice`) and selling (`EquipParamWeapon.sellValue`, `EquipParamProtector.sellValue`, `EquipParamAccessory.sellValue`).
+  - Multi-tier power evaluation scaling across equipment slot category (weapon > body > head/legs > arms), regional progression tier (Early 1.0x to Endgame 4.2x), Diablo procedural rarity (Common 1.0x to Mythic 8.0x), affix stat point bonuses (+40 runes per attack point, +35 per defense point, +2,500 for SpEffect passives), weapon skill tiers (+1,500 to +7,500 runes), and boss remembrance prestige (1.8x).
+- [x] **Granular Multi-Piece Set Valuation (`tools/RegTool/LootInjector.cs`)**:
+  - Implemented per-item pricing support via `item_prices` dictionary in `loot_distribution`. Chest armor commands higher value than gauntlets within the same set, with seamless fallback for standard standalone sets.
+- [x] **In-Game Economy Integration & FMG Lore Presentation**:
+  - Both standalone Diablo variants (`generate_variants_for_spec`) and vanilla Diablo infusions (`generate_vanilla_stat_injections`) update vendor buy and sell parameter values.
+  - Automatically formats rune appraisal at the bottom of in-game lore descriptions: `VALUE: {buy_price:,} Runes (Sell: {sell_price:,})`.
+- [x] **Full Config & Regression Suite**:
+  - Configurable scaling parameters (`price_power_scaling_enabled`, `price_multiplier`, `sell_price_ratio`) in `src/config.py`.
+  - Comprehensive unit and integration test suite in `tests/test_pricing_engine.py` verifying mathematical bounds, rounding, and patch spec integrations (`[CS-NO-MOCK]`).
+
 ## Phase 13: Dark Souls 1/2/3 Legacy Armor Porting Subsystem (Research Phase)
 - [ ] **Client-Side Game Installation Discovery**:
   - Automated detection of Steam/local installations of DS1 (PTDE/DSR), DS2 (SOTFS), and DS3 via registry and `libraryfolders.vdf`.
@@ -141,6 +154,7 @@ This roadmap defines the implementation phases for the cross-platform Standalone
   - Translating legacy Havok skeleton nodes to Elden Ring's `c0000` player skeleton, with automated cross-gender mesh mirroring.
 - [ ] **Pre-Diablo Integration & Drop Distribution**:
   - Ingesting ported sets as authentic `DetectedModSet` objects into LootForge's standalone ID allocator, boss remembrance exchanges, post-boss chests, and optional Diablo procedural ARPG stat infusion.
+
 
 
 
