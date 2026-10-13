@@ -106,6 +106,8 @@ namespace LootForge.RegTool
             int injectedEquipCount = 0;
             int injectedLootCount = 0;
             int injectedFmgCount = 0;
+            int injectedCustomSkillCount = 0;
+            int injectedCustomMovesetCount = 0;
 
             var allFmgTexts = new List<FmgInjector.FmgTextSpec>();
             var itemIdToIsWeapon = new Dictionary<int, bool>();
@@ -155,6 +157,25 @@ namespace LootForge.RegTool
                         itemIdToIsWeapon,
                         itemIdToIsAccessory,
                         ref injectedLootCount
+                    );
+                }
+
+                // 2b. Custom Skills & Movesets Injection
+                if (setSpec.TryGetProperty("custom_skills", out var customSkillsEl) ||
+                    setSpec.TryGetProperty("custom_behaviors", out var customBehEl) ||
+                    setSpec.TryGetProperty("custom_attacks", out var customAtkEl))
+                {
+                    var csEl = setSpec.TryGetProperty("custom_skills", out var s) ? s : default;
+                    var cbEl = setSpec.TryGetProperty("custom_behaviors", out var b) ? b : default;
+                    var caEl = setSpec.TryGetProperty("custom_attacks", out var a) ? a : default;
+
+                    SkillMovesetService.InjectSkillsAndMovesets(
+                        csEl,
+                        cbEl,
+                        caEl,
+                        GetOrLoadParam,
+                        ref injectedCustomSkillCount,
+                        ref injectedCustomMovesetCount
                     );
                 }
 
@@ -209,6 +230,8 @@ namespace LootForge.RegTool
             Console.WriteLine($"[RegTool SUCCESS] Successfully patched regulation.bin!");
             Console.WriteLine($" - Injected equipment entries: {injectedEquipCount}");
             Console.WriteLine($" - Injected loot/shop entries: {injectedLootCount}");
+            Console.WriteLine($" - Injected custom skills:     {injectedCustomSkillCount}");
+            Console.WriteLine($" - Injected custom movesets:   {injectedCustomMovesetCount}");
             Console.WriteLine($" - Injected FMG text entries:  {injectedFmgCount}");
             Console.WriteLine($" - Output file size: {new FileInfo(outputPath).Length} bytes");
             return 0;

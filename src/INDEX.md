@@ -22,6 +22,7 @@ This directory contains the core Python engine implementation for LootForge, org
 | `diablo_generator.py` | `DiabloLootGenerator` | Procedural multi-tier variant generator, affix roll engine, weapon skills randomization, and dynamic lore injector. |
 | `regulation_manager.py` | `RegulationManager` | Non-destructive regulation.bin decryptor, param patcher, and AES-256 encryptor. |
 | `parts_deployer.py` | `PartsDeployer` | Standalone .partsbnd.dcx model deployment and cross-gender mesh mirroring service. |
+| `skill_moveset_importer.py` | `SkillMovesetImporter` | Mod regulation introspection, custom weapon skill & moveset extraction, and chr/sfx/action asset deployment. |
 | `ui/` | UI Components | Themed styles (`theme.py`), modular parameter schema, widget factory, and modals. |
 | `qt_app.py` | `LootForgeMainWindow` | Full Qt desktop GUI with schema-driven settings, Diablo ARPG card, and loot modal launcher. |
 | `server.py` | `LootForgeServer` | Lightweight cross-platform local HTTP server serving UI and REST APIs. |

@@ -40,6 +40,8 @@ namespace LootForge.RegTool
                         return TpfService.ExecuteDumpTpf(options);
                     case "add-shop-item":
                         return ShopService.ExecuteAddShopItem(options);
+                    case "extract-skills-movesets":
+                        return SkillMovesetService.ExecuteExtractSkillsMovesets(options);
                     default:
                         Console.Error.WriteLine($"Unknown command: '{command}'");
                         PrintUsage();
@@ -63,6 +65,7 @@ namespace LootForge.RegTool
             Console.WriteLine("  RegTool extract-msg --game-dir <elden_ring_game_dir> --output <backup_msg_dir>");
             Console.WriteLine("  RegTool dump-fmg --input <item.msgbnd.dcx> [--search <query>]");
             Console.WriteLine("  RegTool dump-reg --input <regulation.bin> [--defs <paramdex_defs>]");
+            Console.WriteLine("  RegTool extract-skills-movesets --input <mod_regulation.bin> [--defs <defs>] [--output <out.json>] [--msg <msg_dir>]");
         }
 
         static Dictionary<string, string> ParseArguments(string[] args)

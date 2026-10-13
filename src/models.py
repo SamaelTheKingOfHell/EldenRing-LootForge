@@ -78,6 +78,9 @@ class ItemDropConfig:
     is_spoiled: bool = False
     source_entity: str = ""
     is_100_percent: bool = False
+    custom_skill_name: str = ""
+    has_custom_moveset: bool = False
+    import_custom_art: bool = True
 
 
 @dataclass
@@ -148,6 +151,31 @@ class StandaloneAllocation:
 
 
 @dataclass
+class SkillMovesetMetadata:
+    """
+    Metadata for custom skills (SwordArtsParam) and movesets (BehaviorParam_PC, animations)
+    introspected and extracted from a weapon mod.
+    """
+    has_custom_skill: bool = False
+    skill_id: int = 0
+    skill_name: str = ""
+    skill_caption: str = ""
+    has_custom_moveset: bool = False
+    behavior_variation_id: int = 0
+    wepmotion_category: int = 0
+    wepmotion_one_hand_id: int = 0
+    wepmotion_both_hand_id: int = 0
+    sp_atk_category: int = 0
+    animation_banks: List[str] = field(default_factory=list)
+    has_behavior_graph: bool = False
+    has_sfx: bool = False
+    has_action_scripts: bool = False
+    custom_skills_spec: List[Dict[str, Any]] = field(default_factory=list)
+    custom_behaviors_spec: List[Dict[str, Any]] = field(default_factory=list)
+    custom_attacks_spec: List[Dict[str, Any]] = field(default_factory=list)
+
+
+@dataclass
 class DetectedModSet:
     """
     A cohesive group of replacement parts comprising an armor set or weapon.
@@ -173,6 +201,8 @@ class DetectedModSet:
     allocation: Optional[StandaloneAllocation] = None
     is_weapon: bool = False
     is_enabled: bool = True
+    import_custom_moveset: bool = True
+    skill_moveset: Optional[SkillMovesetMetadata] = None
 
     @property
     def gender_restriction(self) -> Optional[str]:
@@ -203,6 +233,9 @@ class ManifestRecord:
     loot_route: str
     loot_target_name: str
     staged_files: List[str] = field(default_factory=list)
+    custom_skill_name: Optional[str] = None
+    custom_skill_id: Optional[int] = None
+    has_custom_moveset: bool = False
 
 
 @dataclass

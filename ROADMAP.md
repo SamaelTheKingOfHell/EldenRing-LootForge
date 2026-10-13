@@ -106,4 +106,25 @@ This roadmap defines the implementation phases for the cross-platform Standalone
   - Explicitly sets `equipModelGender = 0` on all forged and cloned `EquipParamProtector` rows, eliminating equip lockouts.
   - Cleansed title and lore descriptions of gender-restriction tags.
 
+## Phase 11: Custom Skills & Movesets Porting Engine
+- [x] **Mod Regulation Introspection (`tools/RegTool/SkillMovesetService.cs`)**:
+  - Discovers and decrypts mod `regulation.bin` in intake directories.
+  - Extracts custom weapon definitions, `swordArtsParamId`, `behaviorVariationId`, and animation category mappings (`wepmotionCategory`, `wepmotionOneHandId`, `wepmotionBothHandId`, `spAtkCategory`).
+  - Traces and extracts custom `SwordArtsParam`, `EquipParamGem`, `BehaviorParam_PC`, `AtkParam_Pc`, `SpEffectParam`, and `Bullet` records.
+  - Ingests custom skill titles and descriptions from mod FMGs (`item.msgbnd.dcx`).
+- [x] **Moveset & Animation Asset Deployment (`src/skill_moveset_importer.py` & `src/parts_deployer.py`)**:
+  - Discovers player character animation containers (`chr/c0000_a*.anibnd.dcx`, `chr/c0000.behbnd.dcx`), visual effects (`sfx/`), and action dictionaries (`action/`).
+  - Safely deploys them into Mod Engine 2 staging directories with case normalization.
+- [x] **Parameter Injection & Standalone Binding (`tools/RegTool/PatchService.cs` & `src/param_builder.py`)**:
+  - Binds standalone forged weapons to custom skill IDs and behavior variations.
+  - Injects extracted skill and moveset parameter rows into the target `regulation.bin`.
+  - Injects skill name and caption texts into `item.msgbnd.dcx`.
+  - Supports clean purge and uninstallation tracking via `lootforge_manifest.json`.
+- [x] **UI & Review Table Custom Art Controls (`src/ui/loot_modal.py` & `src/qt_app.py`)**:
+  - Real-time badges for custom skills (`✦ Skill: <Name>`) and movesets (`✦ Moveset`) in the review table.
+  - Per-item action toggle allowing players to choose between custom mod art vs default vanilla/Diablo roll.
+- [x] **Audit Logging & Clean Rollback (`src/manifest_store.py` & `src/regulation_manager.py`)**:
+  - Full audit logging of custom skill names, IDs, and moveset flags in `lootforge_manifest.json`.
+  - 1-click comprehensive rollback unlinks deployed moveset files across `chr/`, `sfx/`, and `action/`, and prunes empty folders.
+
 

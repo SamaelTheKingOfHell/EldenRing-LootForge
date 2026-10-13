@@ -162,6 +162,18 @@ class ModScanner:
                 is_weapon=is_weapon,
                 is_enabled=True
             )
+
+            # Introspect weapon for custom skills and moveset animations
+            if is_weapon:
+                try:
+                    from src.skill_moveset_importer import SkillMovesetImporter
+                    importer = SkillMovesetImporter(base.parent if base.name == "input_mods" else base)
+                    mod_subfolder = base / detected_set.folder_or_archive_name
+                    if mod_subfolder.exists():
+                        detected_set.skill_moveset = importer.introspect_mod_folder(mod_subfolder, model_id)
+                except Exception as ex:
+                    system_logger.warning(f"Could not introspect weapon skill/moveset for {group_key}: {ex}", source="Scanner")
+
             detected_sets.append(detected_set)
 
         system_logger.info(f"Scan found {len(detected_sets)} distinct mod set(s).", source="Scanner")
