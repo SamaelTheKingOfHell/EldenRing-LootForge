@@ -432,6 +432,66 @@ namespace LootForge.RegTool
             return 0;
         }
 
+        public static int ExecuteFindMultiSlotLots(Dictionary<string, string> options)
+        {
+            if (!options.TryGetValue("input", out string? inputPath)) return 1;
+            string defsDir = options.TryGetValue("defs", out string? dd) && !string.IsNullOrEmpty(dd) ? dd : @"tools\vendor\Paramdex\ER\Defs";
+            BND4 bnd = RegulationDecryptor.DecryptERRegulation(inputPath);
+
+            PARAM LoadParam(string tableName)
+            {
+                var file = bnd.Files.FirstOrDefault(f => f.Name.EndsWith($"{tableName}.param", StringComparison.OrdinalIgnoreCase));
+                if (file == null) throw new Exception($"Table {tableName} not found");
+                var param = PARAM.Read(file.Bytes);
+                string xmlFile = Path.Combine(defsDir, "ItemLotParam.xml");
+                if (File.Exists(xmlFile))
+                {
+                    var def = PARAMDEF.XmlDeserialize(xmlFile, false, false);
+                    param.ApplyParamdefSomewhatCarefully(def);
+                }
+                return param;
+            }
+
+            void InspectMulti(string tableName)
+            {
+                var param = LoadParam(tableName);
+                Console.WriteLine($"\n=== {tableName}: Rows with multiple slots filled ===");
+                int count = 0;
+                foreach (var r in param.Rows)
+                {
+                    int itm1 = ParamHelper.GetCellInt(r, "lotItemId01");
+                    int itm2 = ParamHelper.GetCellInt(r, "lotItemId02");
+                    int p1 = ParamHelper.GetCellInt(r, "lotItemBasePoint01");
+                    int p2 = ParamHelper.GetCellInt(r, "lotItemBasePoint02");
+                    if (itm1 > 0 && itm2 > 0)
+                    {
+                        count++;
+                        if (count <= 25)
+                        {
+                            Console.WriteLine($"Row ID={r.ID} Name='{r.Name}'");
+                            for (int s = 1; s <= 8; s++)
+                            {
+                                int itm = ParamHelper.GetCellInt(r, $"lotItemId0{s}");
+                                if (itm > 0)
+                                {
+                                    int cat = ParamHelper.GetCellInt(r, $"lotItemCategory0{s}");
+                                    int pts = ParamHelper.GetCellInt(r, $"lotItemBasePoint0{s}");
+                                    int num = ParamHelper.GetCellInt(r, $"lotItemNum0{s}");
+                                    int flag = ParamHelper.GetCellInt(r, $"getItemFlagId0{s}");
+                                    Console.WriteLine($"   Slot {s}: item={itm} cat={cat} pts={pts} num={num} flag={flag}");
+                                }
+                            }
+                        }
+                    }
+                }
+                Console.WriteLine($"Total rows with multiple slots in {tableName}: {count}");
+            }
+
+            InspectMulti("ItemLotParam_map");
+            InspectMulti("ItemLotParam_enemy");
+            return 0;
+        }
+
         public static int ExecuteDumpEmevd(Dictionary<string, string> options)
         {
             if (!options.TryGetValue("input", out string? inputPath)) return 1;
@@ -439,20 +499,13 @@ namespace LootForge.RegTool
             Console.WriteLine($"[EMEVD] Loaded {inputPath}, total events: {emevd.Events.Count}");
             foreach (var ev in emevd.Events)
             {
-                Console.WriteLine($"\n--- Event ID: {ev.ID} (instructions: {ev.Instructions.Count}) ---");
                 foreach (var ins in ev.Instructions)
                 {
-                    string hex = BitConverter.ToString(ins.ArgData).Replace("-", " ");
-                    Console.WriteLine($"  Bank={ins.Bank,-4} ID={ins.ID,-4} Length={ins.ArgData.Length,-3} Args: {hex}");
-                    for (int i = 0; i <= ins.ArgData.Length - 4; i += 4)
+                    if (ins.Bank == 2003 && ins.ID == 66)
                     {
-                        int val = BitConverter.ToInt32(ins.ArgData, i);
-                        if (val > 1000 && val < 2000000000)
-                        {
-                            Console.Write($" [int@{i}={val}]");
-                        }
+                        int lotId = BitConverter.ToInt32(ins.ArgData, 4);
+                        Console.WriteLine($"[AWARD ITEM LOT] Event {ev.ID}: lotId={lotId}");
                     }
-                    Console.WriteLine();
                 }
             }
             return 0;

@@ -46,6 +46,8 @@ namespace LootForge.RegTool
                         return DiagnosticService.ExecuteDumpBossLots(options);
                     case "dump-emevd":
                         return DiagnosticService.ExecuteDumpEmevd(options);
+                    case "find-multi-lots":
+                        return DiagnosticService.ExecuteFindMultiSlotLots(options);
                     default:
                         Console.Error.WriteLine($"Unknown command: '{command}'");
                         PrintUsage();
