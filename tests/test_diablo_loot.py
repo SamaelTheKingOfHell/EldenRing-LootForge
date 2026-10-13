@@ -606,9 +606,10 @@ class TestDiabloLoot(unittest.TestCase):
             )
         )
 
+        base_spec = self.builder.build_patch_spec(armor_set)
         variants = self.generator.generate_variants_for_spec(
-            armor_set=armor_set,
-            num_variants=6,
+            base_spec=base_spec,
+            variants_per_item=6,
             knowledge_base=kb
         )
         self.assertEqual(len(variants), 6)
