@@ -11,6 +11,19 @@ obj/
 *.user
 *.suo
 
+# Native binaries & third-party libraries (e.g. Oodle)
+*.dll
+*.exe
+oo2core*.dll
+
+# Proprietary FromSoftware game archives & data files
+*.dcx
+*.msgbnd
+*.msgbnd.dcx
+*.bdt
+*.bhd
+*.bin
+
 # Local user data and mod staging
 mod/
 input_mods/
@@ -20,5 +33,6 @@ config.json
 tests/injection_output/
 scratch/
 data/*.dcx
+data/*.msgbnd*
 data/world_snapshot.json
 research/
