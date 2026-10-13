@@ -31,6 +31,7 @@ namespace LootForge.RegTool
             int WepType,
             int SortId,
             int ReinforceTypeId,
+            int ModelId,
             EntityProgressionTier Tier,
             bool IsBaseWeapon
         );
@@ -221,6 +222,7 @@ namespace LootForge.RegTool
                         wepType,
                         sortId,
                         reinforceType,
+                        modelId,
                         tier,
                         isBase
                     ));

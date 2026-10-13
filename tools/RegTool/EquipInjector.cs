@@ -168,13 +168,17 @@ namespace LootForge.RegTool
                 var cacheKey = (tableName, baseCloneId, targetModelId, slotOffset);
                 if (!_baseRowCache.TryGetValue(cacheKey, out PARAM.Row? baseRow))
                 {
-                    // 1. Try by direct baseCloneId if valid
+                    // 1. Try by direct baseCloneId if valid AND matching targetModelId (if specified)
                     if (baseCloneId > 0 && rowMap.TryGetValue(baseCloneId, out var cand) && (isAccessory ? IsValidAccessoryRow(cand) : (isProtector ? IsValidProtectorRow(cand) : IsValidWeaponRow(cand))))
                     {
-                        baseRow = cand;
+                        int candModel = isAccessory ? 0 : ParamHelper.GetCellInt(cand, "equipModelId");
+                        if (targetModelId <= 0 || isAccessory || candModel == targetModelId)
+                        {
+                            baseRow = cand;
+                        }
                     }
 
-                    // 2. Try by authentic equipModelId (matching targetModelId)
+                    // 2. Try by authentic equipModelId (matching targetModelId) directly from game table
                     if (baseRow == null && targetModelId > 0 && !isAccessory)
                     {
                         if (isProtector)
@@ -184,7 +188,9 @@ namespace LootForge.RegTool
                         }
                         else
                         {
-                            baseRow = param.Rows.FirstOrDefault(r => IsValidWeaponRow(r) && ParamHelper.GetCellInt(r, "equipModelId") == targetModelId);
+                            // Prefer base uninfused weapon (ID % 100 == 0) matching targetModelId
+                            baseRow = param.Rows.FirstOrDefault(r => IsValidWeaponRow(r) && ParamHelper.GetCellInt(r, "equipModelId") == targetModelId && (r.ID % 100 == 0))
+                                   ?? param.Rows.FirstOrDefault(r => IsValidWeaponRow(r) && ParamHelper.GetCellInt(r, "equipModelId") == targetModelId);
                         }
                     }
 

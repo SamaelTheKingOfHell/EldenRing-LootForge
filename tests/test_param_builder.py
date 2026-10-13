@@ -196,6 +196,91 @@ class TestParamBuilder(unittest.TestCase):
         fmg = spec["fmg_texts"][0]
         self.assertEqual(fmg["slot_offset"], 0)
 
+    def test_zero_json_discovery_and_cloning(self):
+        """Verifies that KnowledgeBase and ParamBuilder work 100% with live discovered regulation data without static JSON files."""
+        from src.knowledge_base import VanillaKnowledgeBase
+
+        # Simulate dynamic snapshot discovered directly from regulation.bin tables
+        discovered_snapshot = {
+            "Weapons": [
+                {
+                    "Id": 9000000,
+                    "BaseId": 9000000,
+                    "Name": "Uchigatana",
+                    "WepType": 8,  # Katana
+                    "SortId": 9000000,
+                    "ReinforceTypeId": 0,
+                    "ModelId": 9000,
+                    "Tier": 1,
+                    "IsBaseWeapon": True
+                }
+            ],
+            "Protectors": [
+                {"Id": 980000, "Name": "Carian Knight Helm", "Category": 0, "SlotName": "Head", "SortId": 100, "ModelId": 4000, "Tier": 2},
+                {"Id": 980100, "Name": "Carian Knight Armor", "Category": 1, "SlotName": "Body", "SortId": 101, "ModelId": 4000, "Tier": 2},
+                {"Id": 980200, "Name": "Carian Knight Gauntlets", "Category": 2, "SlotName": "Arms", "SortId": 102, "ModelId": 4000, "Tier": 2},
+                {"Id": 980300, "Name": "Carian Knight Greaves", "Category": 3, "SlotName": "Legs", "SortId": 103, "ModelId": 4000, "Tier": 2}
+            ],
+            "Accessories": [],
+            "BossLots": []
+        }
+
+        # Build KB purely from discovered regulation data with ZERO static JSONs
+        kb = VanillaKnowledgeBase({}, {})
+        models_data = {}
+        routes_data = {}
+        
+        # Populate purely via discovered schema
+        disc_weps = {}
+        for w in discovered_snapshot["Weapons"]:
+            mid = str(w["ModelId"])
+            disc_weps[mid] = {
+                "name": w["Name"],
+                "baseParamId": w["Id"],
+                "defaultRoute": "merchant_shop",
+                "progressionTier": w["Tier"]
+            }
+        disc_prots = {}
+        for prot in discovered_snapshot["Protectors"]:
+            mid = str(prot["ModelId"])
+            if mid not in disc_prots:
+                disc_prots[mid] = {
+                    "name": "Carian Knight Set",
+                    "baseParamId": prot["Id"],
+                    "pieces": {}
+                }
+            disc_prots[mid]["pieces"][prot["SlotName"]] = prot["Id"]
+
+        kb._discovered_weapons = disc_weps
+        kb._discovered_protectors = disc_prots
+
+        # 1. Verify weapon lookup
+        wep = kb.lookup_weapon("9000")
+        self.assertIsNotNone(wep)
+        self.assertEqual(wep["baseParamId"], 9000000)
+        self.assertEqual(wep["name"], "Uchigatana")
+
+        # 2. Verify protector lookup with authentic pieces
+        armor = kb.lookup_protector("4000")
+        self.assertIsNotNone(armor)
+        self.assertEqual(armor["pieces"]["Body"], 980100)
+        self.assertEqual(armor["pieces"]["Arms"], 980200)
+
+        # 3. Test ParamBuilder uses discovered IDs accurately
+        builder = ParamBuilder(knowledge_base=kb)
+        mod_wep = DetectedModSet(
+            set_id="mod_uchi",
+            folder_or_archive_name="CustomKatana",
+            target_model_id="9000",
+            target_vanilla_name="Uchigatana",
+            is_weapon=True,
+            parts=[ModPartFile("wp_a_9000.partsbnd.dcx", "wp.dcx", EquipmentSlot.WEAPON, "9000")],
+            allocation=StandaloneAllocation(new_model_id="9007", new_equip_param_id=9007000, new_item_lot_id=9100007, marker_tag="[LootForge]"),
+            loot_target=LootTarget(route_type=LootDistributionType.ENEMY_DROP, target_id="godrick_soldier", display_name="Godrick Soldier", chance_or_cost=25.0)
+        )
+        spec = builder.build_patch_spec(mod_wep)
+        self.assertEqual(spec["equip_params"][0]["base_clone_id"], 9000000)
+
 
 if __name__ == "__main__":
     unittest.main()

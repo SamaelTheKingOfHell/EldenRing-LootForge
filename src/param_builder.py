@@ -123,8 +123,12 @@ class ParamBuilder:
                         base_clone_id = wep["baseParamId"]
                 else:
                     prot = self.kb.lookup_protector(str(mod_set.target_model_id))
-                    if prot and prot.get("baseParamId"):
-                        base_clone_id = prot["baseParamId"] + vanilla_offset
+                    if prot:
+                        pieces = prot.get("pieces", {})
+                        if slot_name in pieces:
+                            base_clone_id = pieces[slot_name]
+                        elif prot.get("baseParamId"):
+                            base_clone_id = prot["baseParamId"] + vanilla_offset
 
             if base_clone_id is None:
                 base_clone_id = int(mod_set.target_model_id) * multiplier + vanilla_offset

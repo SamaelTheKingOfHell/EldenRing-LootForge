@@ -76,35 +76,48 @@ class VanillaKnowledgeBase:
                 disc_weps: Dict[str, Any] = {}
                 for w in snap.get("Weapons", []):
                     wid = str(w.get("Id", ""))
+                    mid = str(w.get("ModelId", ""))
                     if wid:
                         entry = {
                             "name": w.get("Name", f"Weapon {wid}"),
                             "baseParamId": w.get("Id"),
                             "defaultRoute": "merchant_shop",
-                            "progressionTier": w.get("Tier", 1)
+                            "progressionTier": w.get("Tier", 1),
+                            "modelId": w.get("ModelId"),
+                            "wepType": w.get("WepType", 0)
                         }
                         disc_weps[wid] = entry
-                        w_id_int = w.get("Id", 0)
-                        if w_id_int >= 1000:
-                            model_key = str(w_id_int // 1000)
-                            if model_key not in disc_weps:
-                                disc_weps[model_key] = entry
+                        if mid:
+                            if mid not in disc_weps or w.get("IsBaseWeapon"):
+                                disc_weps[mid] = entry
                 models_data["_discovered_weapons"] = disc_weps
 
                 disc_prots: Dict[str, Any] = {}
                 for prot in snap.get("Protectors", []):
                     pid = str(prot.get("Id", ""))
+                    mid = str(prot.get("ModelId", ""))
+                    slot_name = prot.get("SlotName", "Armor")
                     if pid:
                         entry = {
                             "name": prot.get("Name", f"Armor {pid}"),
                             "baseParamId": prot.get("Id"),
                             "defaultRoute": "enemy_drop",
-                            "progressionTier": prot.get("Tier", 1)
+                            "progressionTier": prot.get("Tier", 1),
+                            "modelId": prot.get("ModelId"),
+                            "pieces": {}
                         }
                         disc_prots[pid] = entry
-                        mid = str(prot.get("ModelId", ""))
-                        if mid and mid not in disc_prots:
-                            disc_prots[mid] = entry
+                        if mid:
+                            if mid not in disc_prots:
+                                disc_prots[mid] = {
+                                    "name": prot.get("Name", f"Set {mid}"),
+                                    "baseParamId": prot.get("Id"),
+                                    "defaultRoute": "enemy_drop",
+                                    "progressionTier": prot.get("Tier", 1),
+                                    "modelId": prot.get("ModelId"),
+                                    "pieces": {}
+                                }
+                            disc_prots[mid]["pieces"][slot_name] = prot.get("Id")
                 models_data["_discovered_protectors"] = disc_prots
 
                 disc_accs: Dict[str, Any] = {}
