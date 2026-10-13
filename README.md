@@ -17,10 +17,14 @@
    - **Boss Soul Remembrances**: Boss-themed sets (Radahn, Malenia, Mohg, Maliketh, etc.) are routed to Finger Reader Enia's trade menu (`ShopLineupParam`).
    - **Enemy Drop Tables**: Knight/mob sets (Cleanrot, Crucible, Banished, Tree Sentinel, etc.) are injected into enemy drop tables (`ItemLotParam_enemy`).
    - **Full UI Customization**: Easily change any mod's target boss or drop chance in the interactive table.
-4. **Safety & 1-Click Rollback**:
+4. **High-Value Post-Boss Chests & Progression Locking**:
+   - **Chest After Boss (`AntiDup.CHEST_AFTER_BOSS`)**: Directly routes standalone gear to canonical post-boss treasure chambers or cascades from occupied bosses.
+   - **Multi-Relic Drops**: Chests guarantee elevated rarity (Legendary/Mythic) and always drop multiple companion accessories ($\ge 3$ items awarded simultaneously) via non-destructive `ItemLotParam_map` lot chaining.
+   - **Strict 4-Tier Progression Locking**: Items strictly match regional tiers (`EARLY`, `MID`, `LATE`, `ENDGAME`), preventing endgame gear from appearing in starting areas.
+5. **Safety & 1-Click Rollback**:
    - Timestamped pre-write snapshots of `regulation.bin` with SHA-256 verification.
    - Reversible manifest (`lootforge_manifest.json`) enabling clean 1-click uninstallation.
-5. **Cross-Platform & Modern Souls-Themed GUI**:
+6. **Cross-Platform & Modern Souls-Themed GUI**:
    - Deep obsidian slate surfaces, antique gold accents, and glowing rune status indicators.
    - Glowing circular floating developer console button (`[CS-DEBUG]`) with real-time log streaming.
    - Full universal localization (`[CS-LOCALIZATION]`) supporting English and Portuguese (BR).
@@ -81,6 +85,7 @@ LootForge/
   ├── README.md              # Project documentation
   ├── run_lootforge.py       # Application launcher
   ├── data/                  # Knowledge base (models, loot tables, i18n)
+  ├── docs/                  # Architectural specs & design guides
   ├── src/                   # Core Python engine
   ├── ui/                    # Modern Souls-themed interface
   ├── input_mods/            # Mod ingestion dropzone

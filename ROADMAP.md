@@ -106,4 +106,15 @@ This roadmap defines the implementation phases for the cross-platform Standalone
   - Explicitly sets `equipModelGender = 0` on all forged and cloned `EquipParamProtector` rows, eliminating equip lockouts.
   - Cleansed title and lore descriptions of gender-restriction tags.
 
+## Phase 11: High-Value Post-Boss Chests & Progression-Locked Anti-Duplication
+- [x] **Post-Boss Chest Routing (`AntiDup.CHEST_AFTER_BOSS`)**:
+  - Direct routing of custom items into canonical treasure chests located in or after major boss chambers.
+  - Automatic boss rotation cascade directly to post-boss chests when tier boss capacity (1 set per boss) is exhausted.
+- [x] **High-Value Multi-Injection Chests**:
+  - Guaranteed Legendary / Mythic tier rolls in Diablo procedural mode (`roll_rarity(..., is_chest=True)`).
+  - Bundled multi-companion accessory injections (`num_extra = 2`, delivering $\ge 3$ awarded items total) via non-destructive sequential lot chaining in `ItemLotParam_map` (`targetLotId + 1..9`).
+- [x] **Strict 4-Tier World Progression Gating (`ProgressionTier`)**:
+  - Partitioned items and encounter destinations into Early, Mid, Late, and Endgame tiers.
+  - Strict progression locking preventing late-game items from appearing in early regions.
+
 

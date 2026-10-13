@@ -12,6 +12,8 @@ Cross-platform desktop application and mod engine for *Elden Ring*. Converts rep
 | `ROADMAP.md` | Development phases, milestones, and deliverables. |
 | `src/` | Core Python engine (scanner, ID allocator, backup manager, param patcher, manifest). |
 | `data/` | Knowledge database (vanilla model-to-item mapping, loot routing tables). |
+| `docs/` | System specifications, guides, and architectural designs (Diablo loot, item distribution, chest upgrade). |
+| `research/` | **CRITICAL**: Canonical project research (NTFS junction to central `knowledge/research/elden-ring-loot-forge`). Contains boss drop mechanics, `ItemLotParam_map` chained lot analysis, and EMEVD event architecture. |
 | `ui/` | Modern Souls-themed Web/Desktop graphical user interface. |
 | `tests/` | Automated test suite verifying detection, ID allocation, and param generation. |
 | `input_mods/` | Default staging folder where users place replacement mod files. |

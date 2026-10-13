@@ -20,3 +20,4 @@ config.json
 tests/injection_output/
 scratch/
 data/*.dcx
+research
