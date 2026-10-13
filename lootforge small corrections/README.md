@@ -61,3 +61,51 @@ Previously, passive affixes (like Frostbite, Bleed, Poison, FP on Kill) were app
   - On-hit status buildups are assigned to `spEffectBehaviorId0..2` with retail SpEffects (`6702` Frostbite, `6400` Bleed, `6401` Poison, `6451` Scarlet Rot).
   - Resident passive buffs are assigned to `residentSpEffectId`, `residentSpEffectId1`, `residentSpEffectId2`.
   - Up to 3 effects cleanly populate `spEffectMsgId0`, `spEffectMsgId1`, `spEffectMsgId2`, displaying authentic yellow-glow passive badges in the Elden Ring weapon inspection UI.
+
+---
+
+## 4. Strict Rotation Sequence: Bosses > Chests > The Rest
+
+### The Logic
+Variant distribution and overflow cascades now strictly follow the priority sequence:
+1. **Bosses (Remembrances at Finger Reader Enia)** (`bucket = 0`):
+   - High-prestige encounter loot.
+   - When Enia's remembrance shop capacity for a boss is exceeded, overflow cascades directly into **Chests** before touching roaming mobs or merchants.
+2. **Chests (World Pickups & Dungeons)** (`bucket = 1`):
+   - Exploration reward locations (`ItemLotParam_map`).
+   - Non-destructive sequential lot chaining ensures authentic world loot remains untouched.
+3. **The Rest (Merchants, Elites, Roaming Mobs)** (`bucket = 2`):
+   - Nomadic merchants, dungeon elites, and open-world roaming mobs.
+
+---
+
+## 5. Multiple Drops for Bosses & Chests
+
+### The Implementation
+Major encounters and high-value discoveries now reward multiple items simultaneously:
+- **Companion Accessory Relic Bundling**: Whenever a variant is allocated to a Boss (`shop_lineup`) or a Chest (`map_pickup`), a procedural companion accessory/talisman relic is automatically rolled and attached.
+- **Awarded Items List**: Both the primary gear item and the accessory relic ID are bundled together in `loot_spec["awarded_items"]` (`[primary_param_id, companion_accessory_param_id]`).
+- **Concurrent Engine Drop**:
+  - In `ItemLotParam_map` (Chests), sequential chained rows (`targetLotId + 1`, `targetLotId + 2`) are created and triggered simultaneously when the chest is opened.
+  - In `ShopLineupParam` (Boss Remembrances), all awarded items are added to Finger Reader Enia's inventory for that remembrance.
+
+---
+
+## 6. Inclusion of Accessories (Talismans) into the Loot Pool
+
+### Technical Specifications
+Full end-to-end support for Elden Ring accessories (`EquipParamAccessory`):
+1. **Param Table**: `EquipParamAccessory`
+   - Resident passive SpEffects routed to `residentSpEffectId1..4` and `refId`.
+   - Authentic icon IDs (`iconId`), weight, and sort properties.
+   - Base row cloning with retail fallback (ID `1000` Crimson Amber Medallion).
+2. **FMG Text Archives**:
+   - Injected into `AccessoryName.fmg`, `AccessoryInfo.fmg`, and `AccessoryCaption.fmg`.
+   - Mirrored across base game (`item.msgbnd.dcx`) and DLC (`item_dlc02.msgbnd.dcx`).
+3. **Engine Category Codes**:
+   - `ItemLotParam` (`_enemy` and `_map`): `lotItemCategory` for accessories is **`4`** (1=Goods, 2=Weapon, 3=Protector, 4=Accessory).
+   - `ShopLineupParam`: `equipType` for accessories is **`2`** (0=Weapon, 1=Protector, 2=Accessory, 3=Goods).
+4. **Diablo ARPG Support**:
+   - **Stat Infusion**: Injects procedural stat affixes into vanilla talismans (`EquipParamAccessory`).
+   - **Standalone Relics**: Procedurally generates standalone talismans with Diablo affixes (`Erdtree's`, `Radagon's`, `Godfrey's`, `of the Sorcerer`, `of the Faithful`, `of Swift Casting`, etc.).
+

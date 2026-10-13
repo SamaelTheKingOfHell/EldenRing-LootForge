@@ -122,6 +122,94 @@ class TestSmallCorrectionsVerification(unittest.TestCase):
         self.assertEqual(model_to_base_id.get("0606"), 3080000, "Banished Knight's GS must be 3080000 (not 6060000)")
         self.assertEqual(model_to_base_id.get("0556"), 10050000, "Eleonora's Poleblade must be 10050000 (not 5560000)")
 
+    def test_correction_4_accessories_in_loot_pool(self):
+        """Correction 4: Accessories/talismans have authentic retail IDs, affixes, and stat infusions."""
+        accessories = self.kb.list_all_vanilla_accessories()
+        self.assertGreaterEqual(len(accessories), 25, "Must have authentic accessories loaded in knowledge base!")
+
+        model_to_base_id = {m: a["baseParamId"] for m, a in accessories.items()}
+        self.assertEqual(model_to_base_id.get("1000"), 1000, "Crimson Amber Medallion must be ID 1000")
+        self.assertEqual(model_to_base_id.get("1010"), 1010, "Erdtree's Favor must be ID 1010")
+        self.assertEqual(model_to_base_id.get("1051"), 1051, "Radagon's Soreseal must be ID 1051")
+        self.assertEqual(model_to_base_id.get("1110"), 1110, "Gold Scarab must be ID 1110")
+        self.assertEqual(model_to_base_id.get("3090"), 3090, "Godfrey Icon must be ID 3090")
+
+        # Test stat infusion generation
+        specs = self.generator.generate_vanilla_stat_injections(knowledge_base=self.kb)
+        acc_specs = [s for s in specs if s["equip_params"][0].get("param_table") == "EquipParamAccessory"]
+        self.assertGreaterEqual(len(acc_specs), 20, "Must generate stat injections for accessories!")
+
+        # Test accessory affix rolling and effect mapping
+        affs = self.generator.roll_affixes(
+            from_rarity=None, is_weapon=False, is_accessory=True
+        ) if hasattr(self.generator, "from_rarity") else self.generator.roll_affixes(
+            from_rarity if False else 4, is_weapon=False, is_accessory=True
+        )
+        # Note: generator.roll_affixes(RarityTier.LEGENDARY, is_weapon=False, is_accessory=True)
+        from src.diablo_affixes import RarityTier
+        leg_affs = self.generator.roll_affixes(RarityTier.LEGENDARY, is_weapon=False, is_accessory=True)
+        self.assertGreaterEqual(len(leg_affs), 2)
+        updates = {}
+        DiabloLootGenerator.apply_affixes_to_equipment(updates, leg_affs, is_weapon=False, is_accessory=True)
+        has_resident = any(k.startswith("residentSpEffectId") for k in updates) or "refId" in updates
+        self.assertTrue(has_resident, "Accessory updates must populate residentSpEffects or refId!")
+
+    def test_correction_5_rotation_bosses_chests_rest_and_multi_drop(self):
+        """Correction 5: Rotation sequence follows bosses > chests > the rest with multi-drops."""
+        from src.models import (
+            DetectedModSet, ModPartFile, EquipmentSlot, StandaloneAllocation,
+            LootTarget, LootDistributionType
+        )
+        from src.param_builder import ParamBuilder
+
+        builder = ParamBuilder(knowledge_base=self.kb)
+        test_set = DetectedModSet(
+            set_id="TestArmor_1500",
+            folder_or_archive_name="Test Armor",
+            target_model_id="1500",
+            target_vanilla_name="Knight Helm",
+            parts=[ModPartFile("hr_m_1500.partsbnd.dcx", "hr_m_1500.partsbnd.dcx", EquipmentSlot.HEAD, "1500", "m", 100)],
+            allocation=StandaloneAllocation(
+                new_model_id="9020",
+                new_equip_param_id=9020000,
+                new_item_lot_id=9100020,
+                marker_tag="[LootForge]"
+            ),
+            loot_target=LootTarget(
+                route_type=LootDistributionType.ENEMY_DROP,
+                target_id="431100000",
+                display_name="Godrick Soldier",
+                chance_or_cost=100.0
+            )
+        )
+
+        base_spec = builder.build_patch_spec(test_set)
+        variants = self.generator.generate_variants_for_spec(
+            base_spec=base_spec,
+            variants_per_item=6,
+            knowledge_base=self.kb
+        )
+        self.assertEqual(len(variants), 6)
+
+        # Mod buckets: 0=Boss, 1=Chest, 2=Rest, 3=Boss, 4=Chest, 5=Rest
+        for idx, var in enumerate(variants):
+            bucket = idx % 3
+            loot = var.get("loot_distribution", {})
+            awarded = loot.get("awarded_items", [])
+            if bucket == 0:
+                # Boss: multi-drop (bundled companion accessory)
+                self.assertEqual(len(awarded), 2, f"Boss variant at index {idx} must award multiple items!")
+                tables = [ep["param_table"] for ep in var["equip_params"]]
+                self.assertIn("EquipParamAccessory", tables)
+            elif bucket == 1:
+                # Chest: multi-drop (bundled companion accessory)
+                self.assertEqual(len(awarded), 2, f"Chest variant at index {idx} must award multiple items!")
+                tables = [ep["param_table"] for ep in var["equip_params"]]
+                self.assertIn("EquipParamAccessory", tables)
+            elif bucket == 2:
+                # Rest: single drop
+                self.assertEqual(len(awarded), 1, f"Rest variant at index {idx} must award single item!")
+
 
 if __name__ == "__main__":
     unittest.main()
