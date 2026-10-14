@@ -70,7 +70,15 @@ namespace LootForge.RegTool
             return 0;
         }
 
-        public static int EnrichChestLootPools(PARAM mapParam, PARAM enemyParam, PARAM protParam, PARAM wepParam, int minItems = 1, int maxItems = 4)
+        public static int EnrichChestLootPools(
+            PARAM mapParam,
+            PARAM enemyParam,
+            PARAM protParam,
+            PARAM wepParam,
+            int minItems = 1,
+            int maxItems = 4,
+            HashSet<int>? customArmorIds = null,
+            HashSet<int>? customWeaponIds = null)
         {
             var mapLayout = ItemLotLayout.Extract(mapParam);
             var enemyLayout = ItemLotLayout.Extract(enemyParam);
@@ -82,7 +90,10 @@ namespace LootForge.RegTool
             var customArmorItems = new List<(int Id, string Name, int Category, EntityProgressionTier Tier)>();
             foreach (var r in protParam.Rows)
             {
-                if (r.ID >= 9000000 && r.ID < 99000000)
+                bool isCustom = customArmorIds != null
+                    ? customArmorIds.Contains(r.ID)
+                    : (r.Name != null && r.Name.Contains("[LootForge]"));
+                if (isCustom)
                 {
                     string itmName = !string.IsNullOrWhiteSpace(r.Name) ? r.Name : $"Custom Armor {r.ID}";
                     customArmorItems.Add((r.ID, itmName, 3, ProgressionTierClassifier.ClassifyTier(r.ID, itmName)));
@@ -92,7 +103,10 @@ namespace LootForge.RegTool
             var customWeaponItems = new List<(int Id, string Name, int Category, EntityProgressionTier Tier)>();
             foreach (var r in wepParam.Rows)
             {
-                if (r.ID >= 9000000 && r.ID < 99000000)
+                bool isCustom = customWeaponIds != null
+                    ? customWeaponIds.Contains(r.ID)
+                    : (r.Name != null && r.Name.Contains("[LootForge]"));
+                if (isCustom)
                 {
                     string itmName = !string.IsNullOrWhiteSpace(r.Name) ? r.Name : $"Custom Weapon {r.ID}";
                     customWeaponItems.Add((r.ID, itmName, 2, ProgressionTierClassifier.ClassifyTier(r.ID, itmName)));
@@ -105,19 +119,17 @@ namespace LootForge.RegTool
             var targetChests = new List<(int LotId, string Name, EntityProgressionTier Tier)>();
             var seenChestIds = new HashSet<int>();
 
-            // Explicit landmark chests
-            void AddLandmark(int lotId, string name, EntityProgressionTier t)
-            {
-                if (mapRowMap.ContainsKey(lotId) && seenChestIds.Add(lotId))
-                    targetChests.Add((lotId, name, t));
-            }
-            AddLandmark(1042371010, "Gatefront Ruins Cellar Chest (Whetstone Knife)", EntityProgressionTier.Early);
-            AddLandmark(102100, "Gatefront Ruins Chest Lot 102100", EntityProgressionTier.Early);
-            AddLandmark(1043360800, "Dragon-Burnt Ruins Chest (Twinblade)", EntityProgressionTier.Early);
-            AddLandmark(1043360810, "Dragon-Burnt Ruins Cellar Chest (Trap)", EntityProgressionTier.Early);
-            AddLandmark(1038430500, "Murkwater Cave Patches Chest", EntityProgressionTier.Early);
-            AddLandmark(1038430510, "Murkwater Cave Patches Trap Chest", EntityProgressionTier.Early);
-            AddLandmark(20600, "Morne Tunnel Hidden Chest", EntityProgressionTier.Early);
+            (int LotId, string Name, EntityProgressionTier Tier)[] landmarks = [
+                (1042371010, "Gatefront Ruins Cellar Chest", EntityProgressionTier.Early),
+                (102100, "Gatefront Ruins Chest Lot 102100", EntityProgressionTier.Early),
+                (1043360800, "Dragon-Burnt Ruins Chest (Twinblade)", EntityProgressionTier.Early),
+                (1043360810, "Dragon-Burnt Ruins Cellar Chest (Trap)", EntityProgressionTier.Early),
+                (1038430500, "Murkwater Cave Patches Chest", EntityProgressionTier.Early),
+                (1038430510, "Murkwater Cave Patches Trap Chest", EntityProgressionTier.Early),
+                (20600, "Morne Tunnel Hidden Chest", EntityProgressionTier.Early)
+            ];
+            foreach (var lm in landmarks)
+                if (mapRowMap.ContainsKey(lm.LotId) && seenChestIds.Add(lm.LotId)) targetChests.Add(lm);
 
             int mId = mapLayout.ItemIdIndices[0];
             int mCat = mapLayout.CategoryIndices[0];
@@ -157,14 +169,15 @@ namespace LootForge.RegTool
             int totalItemsInChests = 0;
 
             // Prioritize custom armors first, then custom weapons
-            var combinedCustomPool = new List<(int Id, string Name, int Category, EntityProgressionTier Tier)>();
+            var combinedCustomPool = new List<(int Id, string Name, int Category, EntityProgressionTier Tier)>(customArmorItems.Count + customWeaponItems.Count);
             combinedCustomPool.AddRange(customArmorItems);
             combinedCustomPool.AddRange(customWeaponItems);
-
             int poolCursor = 0;
 
             foreach (var chest in targetChests)
             {
+                if (combinedCustomPool.Count > 0 && poolCursor >= combinedCustomPool.Count) break;
+                if (combinedCustomPool.Count == 0 && chestsEnriched >= 20) break;
                 int baseLotId = chest.LotId;
                 string chestName = chest.Name;
                 EntityProgressionTier tier = chest.Tier;

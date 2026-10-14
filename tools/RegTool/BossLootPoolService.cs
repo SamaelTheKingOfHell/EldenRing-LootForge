@@ -71,7 +71,14 @@ namespace LootForge.RegTool
             return 0;
         }
 
-        public static int EnrichBossLootPools(PARAM enemyParam, PARAM mapParam, PARAM? wepParam, PARAM? protParam, int weaponsPerBoss = 3)
+        public static int EnrichBossLootPools(
+            PARAM enemyParam,
+            PARAM mapParam,
+            PARAM? wepParam,
+            PARAM? protParam,
+            int weaponsPerBoss = 3,
+            HashSet<int>? customWeaponIds = null,
+            HashSet<int>? customArmorIds = null)
         {
             var enemyLayout = ItemLotLayout.Extract(enemyParam);
             var mapLayout = ItemLotLayout.Extract(mapParam);
@@ -137,7 +144,10 @@ namespace LootForge.RegTool
             {
                 foreach (var r in wepParam.Rows)
                 {
-                    if (r.ID >= 9000000 && r.ID < 99000000)
+                    bool isCustom = customWeaponIds != null
+                        ? customWeaponIds.Contains(r.ID)
+                        : (r.Name != null && r.Name.Contains("[LootForge]"));
+                    if (isCustom)
                     {
                         string n = !string.IsNullOrWhiteSpace(r.Name) ? r.Name : $"Custom Weapon {r.ID}";
                         customBossItems.Add((r.ID, n, 2, ProgressionTierClassifier.ClassifyTier(r.ID, n)));
@@ -149,7 +159,10 @@ namespace LootForge.RegTool
             {
                 foreach (var r in protParam.Rows)
                 {
-                    if (r.ID >= 9000000 && r.ID < 99000000)
+                    bool isCustom = customArmorIds != null
+                        ? customArmorIds.Contains(r.ID)
+                        : (r.Name != null && r.Name.Contains("[LootForge]"));
+                    if (isCustom)
                     {
                         string n = !string.IsNullOrWhiteSpace(r.Name) ? r.Name : $"Custom Armor {r.ID}";
                         customBossItems.Add((r.ID, n, 3, ProgressionTierClassifier.ClassifyTier(r.ID, n)));

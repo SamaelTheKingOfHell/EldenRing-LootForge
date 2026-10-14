@@ -216,7 +216,7 @@ namespace LootForge.RegTool
                 var mapP = GetOrLoadParam("ItemLotParam_map", "ItemLotParam").Param;
                 var wepP = GetOrLoadParam("EquipParamWeapon", "EquipParamWeapon").Param;
                 var protP = GetOrLoadParam("EquipParamProtector", "EquipParamProtector").Param;
-                BossLootPoolService.EnrichBossLootPools(enemyP, mapP, wepP, protP, bCount);
+                BossLootPoolService.EnrichBossLootPools(enemyP, mapP, wepP, protP, bCount, itemIdToIsWeapon.Keys.ToHashSet(), itemIdToIsProtector.Keys.ToHashSet());
             }
 
             if (options.TryGetValue("enrich-chests", out var ec) && ec.Equals("true", StringComparison.OrdinalIgnoreCase))
@@ -227,7 +227,7 @@ namespace LootForge.RegTool
                 var enemyP = GetOrLoadParam("ItemLotParam_enemy", "ItemLotParam").Param;
                 var protP = GetOrLoadParam("EquipParamProtector", "EquipParamProtector").Param;
                 var wepP = GetOrLoadParam("EquipParamWeapon", "EquipParamWeapon").Param;
-                ChestLootPoolService.EnrichChestLootPools(mapP, enemyP, protP, wepP, minItms, maxItms);
+                ChestLootPoolService.EnrichChestLootPools(mapP, enemyP, protP, wepP, minItms, maxItms, itemIdToIsProtector.Keys.ToHashSet(), itemIdToIsWeapon.Keys.ToHashSet());
             }
 
             Parallel.ForEach(paramCache, kvp =>
