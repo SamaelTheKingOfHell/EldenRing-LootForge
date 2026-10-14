@@ -7,22 +7,21 @@ using SoulsFormats;
 namespace LootForge.RegTool
 {
     /// <summary>
-    /// Service responsible for injecting custom mod equipment drops and shop lineups
-    /// into Elden Ring ItemLotParam_enemy and ShopLineupParam tables.
-    /// Handles merchant overflow spillover to Twin Maiden Husks to prevent invisible items.
-    /// Adheres to [CS-MODULAR] and [CS-GRANULARITY].
+    /// Service responsible for injecting custom mod equipment drops into Elden Ring
+    /// ItemLotParam_enemy and ItemLotParam_map tables (chests, world pickups, boss lots).
+    /// Preserves original vanilla loot (slot 1) while injecting 1-4 mod items into available slots.
+    /// Delegates shop lineup and overflow handling to ShopLootInjector.
+    /// Adheres to [CS-MODULAR] and [CS-GRANULARITY] (<= 300 lines).
     /// </summary>
     public static class LootInjector
     {
         private static Dictionary<int, PARAM.Row>? _enemyLotRowMap;
         private static Dictionary<int, PARAM.Row>? _mapLotRowMap;
-        private static HashSet<int>? _shopRowIds;
 
         public static void ResetCache()
         {
             _enemyLotRowMap = null;
             _mapLotRowMap = null;
-            _shopRowIds = null;
         }
 
         public static void InjectLootDistribution(
@@ -51,7 +50,7 @@ namespace LootForge.RegTool
             }
             else if ((lootType == "shop_lineup" || lootType == "merchant_shop") && awardedItems.Count > 0)
             {
-                InjectShopLineup(lootEl, getOrLoadParam, itemIdToIsProtector, itemIdToIsWeapon, itemIdToIsAccessory, awardedItems, ref injectedLootCount);
+                ShopLootInjector.InjectShopLineup(lootEl, getOrLoadParam, itemIdToIsProtector, itemIdToIsWeapon, itemIdToIsAccessory, awardedItems, ref injectedLootCount);
             }
         }
 
@@ -93,8 +92,7 @@ namespace LootForge.RegTool
 
             if (candidateRows.Count == 0)
             {
-                // Fallback: If not found in this lot table, spill over to Twin Maiden Husks in ShopLineupParam
-                InjectShopLineup(lootEl, getOrLoadParam, itemIdToIsProtector, itemIdToIsWeapon, itemIdToIsAccessory, awardedItems, ref injectedLootCount);
+                ShopLootInjector.InjectShopLineup(lootEl, getOrLoadParam, itemIdToIsProtector, itemIdToIsWeapon, itemIdToIsAccessory, awardedItems, ref injectedLootCount);
                 return;
             }
 
@@ -102,67 +100,57 @@ namespace LootForge.RegTool
             ushort ratePoints = (ushort)(dropRatePercent >= 100.0 ? 1000 : Math.Clamp((int)(dropRatePercent * 10), 1, 1000));
             var overflowItems = new List<int>();
 
-            foreach (int itemId in awardedItems)
+            if (isMapTable)
             {
-                bool isAccessory = itemIdToIsAccessory.TryGetValue(itemId, out var ia) && ia;
-                bool isArmor = itemIdToIsProtector.TryGetValue(itemId, out var ip) ? ip : (!isAccessory && !itemIdToIsWeapon.GetValueOrDefault(itemId, false));
-                int lotCategory = isAccessory ? 4 : (isArmor ? 3 : 2);
-                bool placed = false;
-
-                if (isMapTable)
+                // In ItemLotParam_map (chests, world pickups, map events):
+                // Candidate row[0] is the exact entity triggered by the MSB event.
+                // CRITICAL REQUIREMENT: Slot 1 (lotItemId01) is the original item and MUST REMAIN UNTOUCHED!
+                // Inject up to 4 mod items into available empty slots (lotItemId02..lotItemId08).
+                var targetRow = candidateRows[0];
+                foreach (int itemId in awardedItems)
                 {
-                    // Chests and world pickups: NEVER share an existing ItemLotParam row with an existing drop,
-                    // as FromSoftware engines roll a single slot and will cannibalize/replace the vanilla chest item!
-                    // Instead, chain a sequential ID (targetLotId + 1..9), which Elden Ring evaluates and awards
-                    // concurrently with the chest!
-                    var templateRow = candidateRows[0];
-                    int freeChainId = -1;
-                    for (int offset = 1; offset <= 9; offset++)
+                    bool isAccessory = itemIdToIsAccessory.TryGetValue(itemId, out var ia) && ia;
+                    bool isArmor = itemIdToIsProtector.TryGetValue(itemId, out var ip) ? ip : (!isAccessory && !itemIdToIsWeapon.GetValueOrDefault(itemId, false));
+                    int lotCategory = isAccessory ? 4 : (isArmor ? 3 : 2);
+
+                    int slotToUse = -1;
+                    // Scan slots 2 to 8. Never touch slot 1!
+                    for (int s = 2; s <= 8; s++)
                     {
-                        int candId = targetLotId + offset;
-                        if (!rowMap.ContainsKey(candId))
-                        {
-                            freeChainId = candId;
-                            break;
-                        }
+                        int cur = ParamHelper.GetCellInt(targetRow, $"lotItemId0{s}");
+                        if (cur == itemId) { slotToUse = s; break; }
+                        if (cur == 0 && slotToUse == -1) slotToUse = s;
                     }
 
-                    if (freeChainId != -1)
+                    if (slotToUse != -1)
                     {
-                        PARAM.Row chainedRow = new PARAM.Row(templateRow)
-                        {
-                            ID = freeChainId,
-                            Name = $"[LootForge] Injected Map Drop ({itemId})"
-                        };
-
-                        for (int s = 1; s <= 8; s++)
-                        {
-                            ParamHelper.SetCellIfExists(chainedRow, $"lotItemId0{s}", 0);
-                            ParamHelper.SetCellIfExists(chainedRow, $"lotItemCategory0{s}", 0);
-                            ParamHelper.SetCellIfExists(chainedRow, $"lotItemBasePoint0{s}", (ushort)0);
-                            ParamHelper.SetCellIfExists(chainedRow, $"lotItemNum0{s}", (byte)0);
-                            ParamHelper.SetCellIfExists(chainedRow, $"getItemFlagId0{s}", 0u);
-                        }
-
-                        ParamHelper.SetCellIfExists(chainedRow, "lotItemId01", itemId);
-                        ParamHelper.SetCellIfExists(chainedRow, "lotItemCategory01", lotCategory);
-                        ParamHelper.SetCellIfExists(chainedRow, "lotItemBasePoint01", (ushort)1000);
-                        ParamHelper.SetCellIfExists(chainedRow, "lotItemNum01", (byte)1);
-                        ParamHelper.SetCellIfExists(chainedRow, "getItemFlagId01", 0u);
-
-                        itemLotParam.Rows.Add(chainedRow);
-                        rowMap[freeChainId] = chainedRow;
-                        placed = true;
+                        ParamHelper.SetCellIfExists(targetRow, $"lotItemId0{slotToUse}", itemId);
+                        ParamHelper.SetCellIfExists(targetRow, $"lotItemCategory0{slotToUse}", lotCategory);
+                        ParamHelper.SetCellIfExists(targetRow, $"lotItemBasePoint0{slotToUse}", (ushort)1000);
+                        ParamHelper.SetCellIfExists(targetRow, $"lotItemNum0{slotToUse}", (byte)1);
+                        ParamHelper.SetCellIfExists(targetRow, $"getItemFlagId0{slotToUse}", 0u);
+                    }
+                    else
+                    {
+                        overflowItems.Add(itemId);
                     }
                 }
-                else
+            }
+            else
+            {
+                // Enemy drops:
+                // Check if primary slot is guaranteed drop (1000 points, e.g. boss remembrance / trophy).
+                // If so, chain a sequential row so guaranteed drops are never cannibalized.
+                int p01 = ParamHelper.GetCellInt(candidateRows[0], "lotItemBasePoint01");
+                int item01 = ParamHelper.GetCellInt(candidateRows[0], "lotItemId01");
+                bool isGuaranteedDrop = item01 > 0 && p01 >= 1000;
+
+                foreach (int itemId in awardedItems)
                 {
-                    // Enemy drops:
-                    // Check if primary slot is a guaranteed drop (1000 points, e.g. boss remembrance / trophy).
-                    // If so, chain a sequential row so the guaranteed drop is never cannibalized.
-                    int p01 = ParamHelper.GetCellInt(candidateRows[0], "lotItemBasePoint01");
-                    int item01 = ParamHelper.GetCellInt(candidateRows[0], "lotItemId01");
-                    bool isGuaranteedDrop = item01 > 0 && p01 >= 1000;
+                    bool isAccessory = itemIdToIsAccessory.TryGetValue(itemId, out var ia) && ia;
+                    bool isArmor = itemIdToIsProtector.TryGetValue(itemId, out var ip) ? ip : (!isAccessory && !itemIdToIsWeapon.GetValueOrDefault(itemId, false));
+                    int lotCategory = isAccessory ? 4 : (isArmor ? 3 : 2);
+                    bool placed = false;
 
                     if (isGuaranteedDrop)
                     {
@@ -231,17 +219,17 @@ namespace LootForge.RegTool
                             }
                         }
                     }
-                }
 
-                if (!placed)
-                {
-                    overflowItems.Add(itemId);
+                    if (!placed)
+                    {
+                        overflowItems.Add(itemId);
+                    }
                 }
             }
 
             if (overflowItems.Count > 0)
             {
-                InjectShopLineup(lootEl, getOrLoadParam, itemIdToIsProtector, itemIdToIsWeapon, itemIdToIsAccessory, overflowItems, ref injectedLootCount);
+                ShopLootInjector.InjectShopLineup(lootEl, getOrLoadParam, itemIdToIsProtector, itemIdToIsWeapon, itemIdToIsAccessory, overflowItems, ref injectedLootCount);
             }
 
             injectedLootCount++;
@@ -268,206 +256,6 @@ namespace LootForge.RegTool
             if (lower.Contains("noble")) return 430000000;
             if (lower.Contains("soldier")) return 431100000;
             return 301000000; // Banished Knight safe non-tutorial fallback
-        }
-
-        private static void InjectShopLineup(
-            JsonElement lootEl,
-            Func<string, string, (PARAM Param, BinderFile File)> getOrLoadParam,
-            Dictionary<int, bool> itemIdToIsProtector,
-            Dictionary<int, bool> itemIdToIsWeapon,
-            Dictionary<int, bool> itemIdToIsAccessory,
-            List<int> awardedItems,
-            ref int injectedLootCount)
-        {
-            var (shopParam, _) = getOrLoadParam("ShopLineupParam", "ShopLineupParam");
-            string shopName = lootEl.TryGetProperty("display_name", out var dn) ? dn.GetString() ?? "Merchant" : "Merchant";
-            if (string.IsNullOrEmpty(shopName) && lootEl.TryGetProperty("merchant_name", out var mn))
-                shopName = mn.GetString() ?? "Merchant";
-
-            int cost = 500;
-            if (lootEl.TryGetProperty("cost_or_remembrance", out var cst))
-                cost = (int)cst.GetDouble();
-            else if (lootEl.TryGetProperty("rune_cost", out var rc))
-                cost = rc.GetInt32();
-
-            string targetId = "";
-            if (lootEl.TryGetProperty("target_id", out var tid))
-                targetId = tid.GetString() ?? "";
-            else if (lootEl.TryGetProperty("shop_id", out var sIdEl))
-                targetId = sIdEl.GetString() ?? "";
-
-            int rangeStart = 100500, rangeEnd = 100524;
-            if (targetId.Contains("twin", StringComparison.OrdinalIgnoreCase) || shopName.Contains("twin", StringComparison.OrdinalIgnoreCase) || shopName.Contains("husks", StringComparison.OrdinalIgnoreCase))
-            {
-                rangeStart = 101800; rangeEnd = 101899;
-            }
-            else if (targetId.Contains("liurnia", StringComparison.OrdinalIgnoreCase) || shopName.Contains("liurnia", StringComparison.OrdinalIgnoreCase))
-            {
-                rangeStart = 100625; rangeEnd = 100637;
-            }
-            else if (targetId.Contains("remembrance", StringComparison.OrdinalIgnoreCase) || shopName.Contains("remembrance", StringComparison.OrdinalIgnoreCase) || shopName.Contains("enia", StringComparison.OrdinalIgnoreCase))
-            {
-                rangeStart = 101900; rangeEnd = 101949;
-            }
-
-            if (_shopRowIds == null)
-            {
-                _shopRowIds = new HashSet<int>(shopParam.Rows.Count + 10000);
-                foreach (var r in shopParam.Rows)
-                {
-                    _shopRowIds.Add(r.ID);
-                }
-            }
-
-            var templateRow = shopParam.Rows.FirstOrDefault(r => r.ID >= rangeStart && r.ID <= rangeEnd)
-                              ?? shopParam.Rows.FirstOrDefault();
-
-            for (int i = 0; i < awardedItems.Count; i++)
-            {
-                int itemId = awardedItems[i];
-
-                int shopRowId = -1;
-                for (int cand = rangeStart; cand <= rangeEnd; cand++)
-                {
-                    if (!_shopRowIds.Contains(cand))
-                    {
-                        shopRowId = cand;
-                        break;
-                    }
-                }
-
-                // Merchant capacity overflow handling:
-                // If range is exhausted, spillover to Twin Maiden Husks (101800..101899)
-                if (shopRowId == -1)
-                {
-                    for (int cand = 101800; cand <= 101899; cand++)
-                    {
-                        if (!_shopRowIds.Contains(cand))
-                        {
-                            shopRowId = cand;
-                            shopName = "Twin Maiden Husks";
-                            break;
-                        }
-                    }
-                }
-
-                // If Twin Maiden Husks is also exhausted, try Finger Reader Enia (101900..101949)
-                if (shopRowId == -1)
-                {
-                    for (int cand = 101900; cand <= 101949; cand++)
-                    {
-                        if (!_shopRowIds.Contains(cand))
-                        {
-                            shopRowId = cand;
-                            shopName = "Finger Reader Enia";
-                            break;
-                        }
-                    }
-                }
-
-                // If ALL shop param ranges have reached capacity limitation, rotate to other pools (ItemLotParam_enemy)
-                if (shopRowId == -1)
-                {
-                    Console.WriteLine($"[RegTool WARN] ShopLineupParam capacity limit reached. Rotating overflowed item ID {itemId} to ItemLotParam_enemy pool.");
-                    RotateOverflowToEnemyDrop(itemId, getOrLoadParam, itemIdToIsProtector, itemIdToIsWeapon, itemIdToIsAccessory, ref injectedLootCount);
-                    continue;
-                }
-
-                _shopRowIds.Add(shopRowId);
-
-                PARAM.Row targetShopRow = new PARAM.Row(templateRow!)
-                {
-                    ID = shopRowId,
-                    Name = $"[LootForge] {shopName}"
-                };
-                shopParam.Rows.Add(targetShopRow);
-
-                bool isAccessory = itemIdToIsAccessory.TryGetValue(itemId, out var ia) && ia;
-                bool isArmor = itemIdToIsProtector.TryGetValue(itemId, out var ip) ? ip : (!isAccessory && !itemIdToIsWeapon.GetValueOrDefault(itemId, false));
-                byte equipType = isAccessory ? (byte)2 : (isArmor ? (byte)1 : (byte)0);
-                ParamHelper.SetCellIfExists(targetShopRow, "equipId", itemId);
-                ParamHelper.SetCellIfExists(targetShopRow, "equipType", equipType);
-
-                int itemCost = cost;
-                if (lootEl.TryGetProperty("item_prices", out var pricesEl) && pricesEl.ValueKind == JsonValueKind.Object)
-                {
-                    if (pricesEl.TryGetProperty(itemId.ToString(), out var pEl) && pEl.TryGetInt32(out int parsedCost))
-                    {
-                        itemCost = parsedCost;
-                    }
-                }
-                ParamHelper.SetCellIfExists(targetShopRow, "value", itemCost);
-                ParamHelper.SetCellIfExists(targetShopRow, "mtrlId", -1);
-                ParamHelper.SetCellIfExists(targetShopRow, "eventFlag_forRelease", 0u);
-                ParamHelper.SetCellIfExists(targetShopRow, "eventFlag_forStock", 0u);
-                ParamHelper.SetCellIfExists(targetShopRow, "sellQuantity", (short)-1);
-                ParamHelper.SetCellIfExists(targetShopRow, "costType", (byte)0);
-                ParamHelper.SetCellIfExists(targetShopRow, "setNum", (ushort)1);
-                ParamHelper.SetCellIfExists(targetShopRow, "value_Add", 0);
-                ParamHelper.SetCellIfExists(targetShopRow, "value_Magnification", 1.0f);
-                ParamHelper.SetCellIfExists(targetShopRow, "iconId", -1);
-                ParamHelper.SetCellIfExists(targetShopRow, "nameMsgId", -1);
-                ParamHelper.SetCellIfExists(targetShopRow, "menuTitleMsgId", -1);
-                ParamHelper.SetCellIfExists(targetShopRow, "menuIconId", (short)-1);
-
-                injectedLootCount++;
-            }
-        }
-
-        private static void RotateOverflowToEnemyDrop(
-            int itemId,
-            Func<string, string, (PARAM Param, BinderFile File)> getOrLoadParam,
-            Dictionary<int, bool> itemIdToIsProtector,
-            Dictionary<int, bool> itemIdToIsWeapon,
-            Dictionary<int, bool> itemIdToIsAccessory,
-            ref int injectedLootCount)
-        {
-            var (itemLotParam, _) = getOrLoadParam("ItemLotParam_enemy", "ItemLotParam");
-            int[] fallbackLots = new[] { 301000000, 380000000, 431100000, 430000000 };
-            PARAM.Row? targetRow = null;
-            foreach (int lotId in fallbackLots)
-            {
-                var row = itemLotParam.Rows.FirstOrDefault(r => r.ID == lotId);
-                if (row != null)
-                {
-                    for (int s = 1; s <= 8; s++)
-                    {
-                        int cur = ParamHelper.GetCellInt(row, $"lotItemId0{s}");
-                        if (cur == 0 || cur == itemId)
-                        {
-                            targetRow = row;
-                            break;
-                        }
-                    }
-                    if (targetRow != null) break;
-                }
-            }
-
-            if (targetRow == null)
-            {
-                targetRow = itemLotParam.Rows.FirstOrDefault(r => r.ID == 301000000) ?? itemLotParam.Rows.FirstOrDefault();
-            }
-
-            if (targetRow != null)
-            {
-                bool isAccessory = itemIdToIsAccessory.TryGetValue(itemId, out var ia) && ia;
-                bool isArmor = itemIdToIsProtector.TryGetValue(itemId, out var ip) ? ip : (!isAccessory && !itemIdToIsWeapon.GetValueOrDefault(itemId, false));
-                int lotCategory = isAccessory ? 4 : (isArmor ? 3 : 2);
-                int slotToUse = 1;
-                for (int s = 1; s <= 8; s++)
-                {
-                    int cur = ParamHelper.GetCellInt(targetRow, $"lotItemId0{s}");
-                    if (cur == itemId || cur == 0) { slotToUse = s; break; }
-                }
-
-                ParamHelper.SetCellIfExists(targetRow, $"lotItemId0{slotToUse}", itemId);
-                ParamHelper.SetCellIfExists(targetRow, $"lotItemCategory0{slotToUse}", lotCategory);
-                ParamHelper.SetCellIfExists(targetRow, $"lotItemBasePoint0{slotToUse}", (ushort)250);
-                ParamHelper.SetCellIfExists(targetRow, $"lotItemNum0{slotToUse}", (byte)1);
-                ParamHelper.SetCellIfExists(targetRow, $"getItemFlagId0{slotToUse}", 0u);
-                Console.WriteLine($"[RegTool SUCCESS] Rotated overflowed item ID {itemId} to ItemLotParam_enemy lot ID {targetRow.ID} slot {slotToUse}.");
-                injectedLootCount++;
-            }
         }
     }
 }

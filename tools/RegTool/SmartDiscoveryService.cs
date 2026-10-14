@@ -16,111 +16,6 @@ namespace LootForge.RegTool
     /// </summary>
     public static class SmartDiscoveryService
     {
-        public enum EntityProgressionTier
-        {
-            Early = 1,
-            Mid = 2,
-            Late = 3,
-            Endgame = 4
-        }
-
-        public record DiscoveredWeapon(
-            int Id,
-            int BaseId,
-            string Name,
-            int WepType,
-            int SortId,
-            int ReinforceTypeId,
-            int ModelId,
-            EntityProgressionTier Tier,
-            bool IsBaseWeapon
-        );
-
-        public record DiscoveredProtector(
-            int Id,
-            string Name,
-            int Category, // 0 = Head, 1 = Body, 2 = Arms, 3 = Legs
-            string SlotName,
-            int SortId,
-            int ModelId,
-            EntityProgressionTier Tier
-        );
-
-        public record DiscoveredAccessory(
-            int Id,
-            string Name,
-            int SortId,
-            int RefId,
-            EntityProgressionTier Tier
-        );
-
-        public record DiscoveredBossLot(
-            int LotId,
-            string Name,
-            int RewardItemId,
-            int RewardCategory,
-            EntityProgressionTier Tier
-        );
-
-        public record DiscoveredChest(
-            int LotId,
-            string Name,
-            int BaseItemId,
-            int Category,
-            EntityProgressionTier Tier
-        );
-
-        public record DiscoveredWorldSnapshot(
-            int TotalWeapons,
-            int BaseWeapons,
-            int TotalProtectors,
-            int TotalAccessories,
-            int TotalBossLots,
-            List<DiscoveredWeapon> Weapons,
-            List<DiscoveredProtector> Protectors,
-            List<DiscoveredAccessory> Accessories,
-            List<DiscoveredBossLot> BossLots
-        );
-
-        public static EntityProgressionTier ClassifyTier(int id, string? name)
-        {
-            string n = (name ?? "").ToLowerInvariant();
-
-            // Early game landmarks
-            if (id == 20330 || id == 1037420400 || n.Contains("groveside") || (n.Contains("beastman") && !n.Contains("dragonbarrow")))
-                return EntityProgressionTier.Early;
-            if (n.Contains("limgrave") || n.Contains("weeping") || n.Contains("stormveil") || n.Contains("morne") ||
-                n.Contains("godrick") || n.Contains("margit") || n.Contains("darriwil") || n.Contains("gatefront"))
-                return EntityProgressionTier.Early;
-
-            // Endgame landmarks
-            if (n.Contains("haligtree") || n.Contains("malenia") || n.Contains("maliketh") || n.Contains("mohg") ||
-                n.Contains("placidusax") || n.Contains("elden beast") || n.Contains("snowfield") || n.Contains("mountaintop") ||
-                n.Contains("castle sol") || n.Contains("niall") || n.Contains("farum azula"))
-                return EntityProgressionTier.Endgame;
-
-            // Late game landmarks
-            if (n.Contains("altus") || n.Contains("leyndell") || n.Contains("volcano") || n.Contains("gelmir") ||
-                n.Contains("rykard") || n.Contains("godfrey") || n.Contains("ordovis") || n.Contains("auriza") ||
-                n.Contains("elemer") || n.Contains("shaded castle"))
-                return EntityProgressionTier.Late;
-
-            // Mid game landmarks
-            if (n.Contains("liurnia") || n.Contains("raya lucaria") || n.Contains("caria") || n.Contains("rennala") ||
-                n.Contains("radahn") || n.Contains("caelid") || n.Contains("redmane") || n.Contains("siofra") ||
-                n.Contains("ainsel") || n.Contains("dragonbarrow"))
-                return EntityProgressionTier.Mid;
-
-            // ID boundary heuristics
-            if (id >= 10000 && id < 20100) return EntityProgressionTier.Early;
-            if (id >= 20100 && id < 20300) return EntityProgressionTier.Late;
-            if (id >= 20300 && id < 20360) return EntityProgressionTier.Early;
-            if (id >= 20360 && id < 20400) return EntityProgressionTier.Mid;
-            if (id >= 20400 && id < 20470) return EntityProgressionTier.Late;
-            if (id >= 20470 && id < 20600) return EntityProgressionTier.Endgame;
-
-            return EntityProgressionTier.Early;
-        }
 
         public static int ExecuteIntrospect(Dictionary<string, string> options)
         {
@@ -215,7 +110,7 @@ namespace LootForge.RegTool
                     if (isBase) baseWepCount++;
 
                     string name = weaponNames.TryGetValue(r.ID, out var fn) ? fn : (r.Name ?? $"Weapon {r.ID}");
-                    var tier = ClassifyTier(r.ID, name);
+                    var tier = ProgressionTierClassifier.ClassifyTier(r.ID, name);
 
                     discoveredWeapons.Add(new DiscoveredWeapon(
                         r.ID,
@@ -252,7 +147,7 @@ namespace LootForge.RegTool
                     };
 
                     string name = protectorNames.TryGetValue(r.ID, out var fn) ? fn : (r.Name ?? $"Protector {r.ID}");
-                    var tier = ClassifyTier(r.ID, name);
+                    var tier = ProgressionTierClassifier.ClassifyTier(r.ID, name);
 
                     discoveredProtectors.Add(new DiscoveredProtector(
                         r.ID,
@@ -277,7 +172,7 @@ namespace LootForge.RegTool
                 if (isDeposit == 1 && sortId > 0)
                 {
                     string name = accessoryNames.TryGetValue(r.ID, out var fn) ? fn : (r.Name ?? $"Talisman {r.ID}");
-                    var tier = ClassifyTier(r.ID, name);
+                    var tier = ProgressionTierClassifier.ClassifyTier(r.ID, name);
 
                     discoveredAccessories.Add(new DiscoveredAccessory(
                         r.ID,
@@ -289,26 +184,43 @@ namespace LootForge.RegTool
                 }
             }
 
-            // 4. Discover boss encounters & 100% event lots in ItemLotParam_map
+            // 4. Discover boss encounters, chests, and world pickups in ItemLotParam_map
             var discoveredBossLots = new List<DiscoveredBossLot>();
+            var discoveredChests = new List<DiscoveredChest>();
             foreach (var r in mapLotParam.Rows)
             {
                 int p1 = ParamHelper.GetCellInt(r, "lotItemBasePoint01");
                 int itm1 = ParamHelper.GetCellInt(r, "lotItemId01");
                 int cat1 = ParamHelper.GetCellInt(r, "lotItemCategory01");
+                int itm2 = ParamHelper.GetCellInt(r, "lotItemId02");
 
-                if (itm1 > 0 && p1 >= 1000 && (cat1 == 2 || cat1 == 3 || cat1 == 4))
+                if (itm1 > 0 && p1 >= 1000)
                 {
-                    string name = r.Name ?? $"Boss/Reward Lot {r.ID}";
-                    var tier = ClassifyTier(r.ID, name);
+                    string name = r.Name ?? $"Map Lot {r.ID}";
+                    var tier = ProgressionTierClassifier.ClassifyTier(r.ID, name);
 
-                    discoveredBossLots.Add(new DiscoveredBossLot(
-                        r.ID,
-                        name,
-                        itm1,
-                        cat1,
-                        tier
-                    ));
+                    if (cat1 == 2 || cat1 == 3 || cat1 == 4)
+                    {
+                        discoveredBossLots.Add(new DiscoveredBossLot(
+                            r.ID,
+                            name,
+                            itm1,
+                            cat1,
+                            tier
+                        ));
+                    }
+
+                    // Any guaranteed single-item chest or world pickup with available slots
+                    if (itm2 <= 0)
+                    {
+                        discoveredChests.Add(new DiscoveredChest(
+                            r.ID,
+                            name,
+                            itm1,
+                            cat1,
+                            tier
+                        ));
+                    }
                 }
             }
 
@@ -318,10 +230,12 @@ namespace LootForge.RegTool
                 discoveredProtectors.Count,
                 discoveredAccessories.Count,
                 discoveredBossLots.Count,
+                discoveredChests.Count,
                 discoveredWeapons,
                 discoveredProtectors,
                 discoveredAccessories,
-                discoveredBossLots
+                discoveredBossLots,
+                discoveredChests
             );
 
             if (isStdout)
@@ -336,6 +250,7 @@ namespace LootForge.RegTool
                 Console.WriteLine($"Total Player Protectors Discovered: {snapshot.TotalProtectors}");
                 Console.WriteLine($"Total Accessories Discovered: {snapshot.TotalAccessories}");
                 Console.WriteLine($"Total 100% Boss / Event Lots Discovered: {snapshot.TotalBossLots}");
+                Console.WriteLine($"Total Chest / Pickup Lots Discovered: {snapshot.TotalChests}");
 
                 if (!string.IsNullOrEmpty(outputPath) && outputPath != "-")
                 {

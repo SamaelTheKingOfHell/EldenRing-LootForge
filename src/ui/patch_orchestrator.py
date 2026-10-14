@@ -154,6 +154,15 @@ class PatchOrchestrator:
         if not source_reg or not source_reg.exists():
             raise FileNotFoundError("Could not find a valid Elden Ring regulation.bin to read from!")
 
+        # Real-time discovery of all chests and bosses in source_reg (supporting any overhaul mod)
+        try:
+            snapshot_path = base_dir / "data" / "world_snapshot.json"
+            regulation_manager.introspect_world(source_reg, output_json=snapshot_path)
+            from src.knowledge_base import VanillaKnowledgeBase
+            knowledge_base = VanillaKnowledgeBase.from_data_dir(str(base_dir / "data"))
+        except Exception as ie:
+            system_logger.warning(f"Real-time world introspection notice: {ie}", source="PatchOrchestrator")
+
         target_reg = regulation_manager.resolve_target_regulation(
             active_path=active_input,
             output_dir=config.output_directory,
@@ -180,12 +189,20 @@ class PatchOrchestrator:
         injected_count = 0
         diablo_total_variants = 0
 
+        diablo_gen = None
+        if config.diablo_loot_enabled or config.diablo_use_vanilla_base_items:
+            from src.diablo_generator import DiabloLootGenerator
+            diablo_gen = DiabloLootGenerator(
+                seed=config.diablo_seed, knowledge_base=knowledge_base,
+                randomize_weapon_skills=config.diablo_randomize_weapon_skills,
+                balance_weapon_skills_by_progression=config.diablo_balance_weapon_skills_by_progression,
+                stats_multiplier=config.stats_multiplier, price_multiplier=config.price_multiplier
+            )
+
         for s, cfg in zip(scanned_sets, drop_configs):
             s.import_custom_moveset = getattr(config, "import_custom_skills_movesets", True) and getattr(cfg, "import_custom_art", True)
             if s.loot_target:
-                s.loot_target.chance_or_cost = distributor.calculate_final_rate(
-                    cfg.user_rate, global_multiplier_percent
-                )
+                s.loot_target.chance_or_cost = distributor.calculate_final_rate(cfg.user_rate, global_multiplier_percent)
 
             input_p = Path(config.input_directory)
             if not input_p.is_absolute():
@@ -193,17 +210,8 @@ class PatchOrchestrator:
             staged = asset_renumberer.stage_mod_set(str(input_p), s)
 
             base_spec = param_builder.build_patch_spec(s)
-            if config.diablo_loot_enabled and config.diablo_variants_per_item > 1:
-                from src.diablo_generator import DiabloLootGenerator
-                diablo_gen = DiabloLootGenerator(
-                    seed=config.diablo_seed, knowledge_base=knowledge_base,
-                    randomize_weapon_skills=config.diablo_randomize_weapon_skills,
-                    balance_weapon_skills_by_progression=config.diablo_balance_weapon_skills_by_progression,
-                    stats_multiplier=config.stats_multiplier, price_multiplier=config.price_multiplier
-                )
-                variants = diablo_gen.generate_variants_for_spec(
-                    base_spec, variants_per_item=config.diablo_variants_per_item
-                )
+            if diablo_gen and config.diablo_loot_enabled and config.diablo_variants_per_item > 1:
+                variants = diablo_gen.generate_variants_for_spec(base_spec, variants_per_item=config.diablo_variants_per_item)
                 patch_specs.extend(variants)
                 diablo_total_variants += len(variants)
             else:
@@ -213,17 +221,9 @@ class PatchOrchestrator:
             injected_count += 1
 
         # Inject vanilla base items for distribution if enabled
-        if config.diablo_use_vanilla_base_items:
-            from src.diablo_generator import DiabloLootGenerator
-            diablo_gen = DiabloLootGenerator(
-                seed=config.diablo_seed, knowledge_base=knowledge_base,
-                randomize_weapon_skills=config.diablo_randomize_weapon_skills,
-                balance_weapon_skills_by_progression=config.diablo_balance_weapon_skills_by_progression,
-                stats_multiplier=config.stats_multiplier, price_multiplier=config.price_multiplier
-            )
+        if diablo_gen and config.diablo_use_vanilla_base_items:
             vanilla_dist_specs = diablo_gen.generate_vanilla_base_distribution_specs(
-                knowledge_base=knowledge_base,
-                id_allocator=id_allocator,
+                knowledge_base=knowledge_base, id_allocator=id_allocator,
                 variants_per_item=config.diablo_variants_per_item if config.diablo_loot_enabled else 1
             )
             patch_specs.extend(vanilla_dist_specs)

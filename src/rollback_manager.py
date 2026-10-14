@@ -88,7 +88,7 @@ class RollbackManager:
             try:
                 backup_manager.restore_backup_file(bak_name, str(orig_p))
                 restored_files.append(str(orig_p))
-                system_logger.info(f"Restored msg file from {bak_name} to {orig_p}", source="Rollback")
+                system_logger.info(f"Restored file from {bak_name} to {orig_p}", source="Rollback")
             except Exception as e:
                 errors.append(f"Failed to restore {orig_p} from {bak_name}: {e}")
 
@@ -124,13 +124,15 @@ class RollbackManager:
 
                 try:
                     if lang_dir.exists() and not any(lang_dir.iterdir()):
-                        lang_dir.rmdir()
+                        if local_out_dir and lang_dir.resolve().is_relative_to(local_out_dir.resolve()):
+                            lang_dir.rmdir()
                 except Exception:
                     pass
 
             try:
                 if md.exists() and not any(md.iterdir()):
-                    md.rmdir()
+                    if local_out_dir and md.resolve().is_relative_to(local_out_dir.resolve()):
+                        md.rmdir()
             except Exception:
                 pass
 
@@ -203,8 +205,10 @@ class RollbackManager:
                                 errors.append(f"Failed to remove {f}: {e}")
 
             try:
+                # Protect host mod directories: only remove empty directories inside our local staging directory
                 if pd.exists() and not any(pd.iterdir()):
-                    pd.rmdir()
+                    if local_out_dir and pd.resolve().is_relative_to(local_out_dir.resolve()):
+                        pd.rmdir()
             except Exception:
                 pass
 
