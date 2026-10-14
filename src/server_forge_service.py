@@ -49,7 +49,7 @@ class ServerForgeService:
             patch_spec = handler.param_builder.build_patch_spec(mod_set)
             all_specs.append(patch_spec)
 
-            record = handler.manifest_store.record_set(mod_set, staged_files)
+            record = handler.manifest_store.record_set(mod_set, staged_files, save_now=False)
             injected_records.append(record)
             forged_mod_sets.append(mod_set)
 

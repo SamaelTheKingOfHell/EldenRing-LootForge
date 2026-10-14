@@ -112,7 +112,8 @@ class ManifestStore:
         target_regulation_path: str,
         deployed_files: Optional[List[str]] = None,
         created_msg_files: Optional[List[str]] = None,
-        backed_up_files: Optional[Dict[str, str]] = None
+        backed_up_files: Optional[Dict[str, str]] = None,
+        save_now: bool = True
     ) -> None:
         """Records deployment environment targets for complete, clean rollbacks."""
         self.target_regulation_path = target_regulation_path
@@ -126,9 +127,10 @@ class ManifestStore:
                     self.created_msg_files.append(cm)
         if backed_up_files:
             self.backed_up_files.update(backed_up_files)
-        self.save()
+        if save_now:
+            self.save()
 
-    def record_set(self, mod_set: DetectedModSet, staged_files: List[str]) -> ManifestRecord:
+    def record_set(self, mod_set: DetectedModSet, staged_files: List[str], save_now: bool = True) -> ManifestRecord:
         """Adds or updates an injected mod set record."""
         if not mod_set.allocation or not mod_set.loot_target:
             raise ValueError(f"Cannot record set '{mod_set.set_id}' without allocation and loot target.")
@@ -158,7 +160,8 @@ class ManifestStore:
             has_custom_moveset=has_custom_moveset
         )
         self._records[mod_set.set_id] = rec
-        self.save()
+        if save_now:
+            self.save()
         return rec
 
     def remove_set(self, set_id: str) -> Optional[ManifestRecord]:

@@ -222,7 +222,7 @@ class PatchOrchestrator:
             else:
                 patch_specs.append(base_spec)
 
-            manifest_store.record_set(s, staged)
+            manifest_store.record_set(s, staged, save_now=False)
             injected_count += 1
 
         # Phase 2: Inject vanilla base items for distribution if enabled
@@ -251,12 +251,13 @@ class PatchOrchestrator:
             sweep_vanilla_items=config.diablo_loot_enabled and config.diablo_inject_vanilla_stats
         )
 
-        # Phase 4: Record deployment manifest (no duplicate deployer pass!)
+        # Phase 4: Record deployment manifest in ONE single disk write
         manifest_store.record_deployment(
             target_regulation_path=str(target_reg),
             deployed_files=all_deployed_files,
             created_msg_files=created_msg_files,
-            backed_up_files=backed_up_files
+            backed_up_files=backed_up_files,
+            save_now=True
         )
 
         config.active_regulation_path = str(target_reg)
