@@ -62,11 +62,12 @@ class LootForgeConfig:
         diablo_balance_weapon_skills_by_progression: bool = True,
         boss_loot_pools_enabled: bool = True,
         boss_weapons_per_pool: int = 3,
+        chest_loot_pools_enabled: bool = True,
+        chest_min_items: int = 1,
+        chest_max_items: int = 4,
         price_power_scaling_enabled: bool = True,
-        price_multiplier: float = 1.0,
-        stats_multiplier: float = 1.0,
-        master_multiplier: float = 1.0,
-        sell_price_ratio: float = 0.30,
+        price_multiplier: float = 1.0, stats_multiplier: float = 1.0,
+        master_multiplier: float = 1.0, sell_price_ratio: float = 0.30,
         item_custom_art_toggles: Optional[Dict[str, bool]] = None,
         import_custom_skills_movesets: bool = True
     ):
@@ -103,6 +104,9 @@ class LootForgeConfig:
         self.diablo_balance_weapon_skills_by_progression = diablo_balance_weapon_skills_by_progression
         self.boss_loot_pools_enabled = boss_loot_pools_enabled
         self.boss_weapons_per_pool = boss_weapons_per_pool
+        self.chest_loot_pools_enabled = chest_loot_pools_enabled
+        self.chest_min_items = chest_min_items
+        self.chest_max_items = chest_max_items
         self.price_power_scaling_enabled = price_power_scaling_enabled
         self.price_multiplier = price_multiplier
         self.stats_multiplier = stats_multiplier
@@ -146,8 +150,7 @@ class LootForgeConfig:
             candidate_paths = [
                 os.path.join(home, ".steam/steam/steamapps/common/ELDEN RING/Game"),
                 os.path.join(home, ".local/share/Steam/steamapps/common/ELDEN RING/Game"),
-                "/run/media/mmcblk0p1/steamapps/common/ELDEN RING/Game",
-                os.path.join(home, "Games/ELDEN RING/Game")
+                "/run/media/mmcblk0p1/steamapps/common/ELDEN RING/Game", os.path.join(home, "Games/ELDEN RING/Game")
             ]
 
         for path in candidate_paths:
@@ -222,13 +225,13 @@ class LootForgeConfig:
             "diablo_balance_weapon_skills_by_progression": self.diablo_balance_weapon_skills_by_progression,
             "boss_loot_pools_enabled": self.boss_loot_pools_enabled,
             "boss_weapons_per_pool": self.boss_weapons_per_pool,
+            "chest_loot_pools_enabled": self.chest_loot_pools_enabled,
+            "chest_min_items": self.chest_min_items,
+            "chest_max_items": self.chest_max_items,
             "price_power_scaling_enabled": self.price_power_scaling_enabled,
-            "price_multiplier": self.price_multiplier,
-            "stats_multiplier": self.stats_multiplier,
-            "master_multiplier": self.master_multiplier,
-            "sell_price_ratio": self.sell_price_ratio,
-            "is_windows": self.is_windows,
-            "is_steam_deck": self.is_steam_deck
+            "price_multiplier": self.price_multiplier, "stats_multiplier": self.stats_multiplier,
+            "master_multiplier": self.master_multiplier, "sell_price_ratio": self.sell_price_ratio,
+            "is_windows": self.is_windows, "is_steam_deck": self.is_steam_deck
         }
 
     def save(self, file_path: str = "config.json") -> None:
@@ -259,20 +262,13 @@ class LootForgeConfig:
                 output_directory=data.get("output_directory", "mod"),
                 backup_directory=data.get("backup_directory", "backups"),
                 manifest_file=data.get("manifest_file", "lootforge_manifest.json"),
-                min_model_id=data.get("min_model_id", 9000),
-                max_model_id=data.get("max_model_id", 9999),
-                base_param_id=data.get("base_param_id", 9000000),
-                base_item_lot_id=data.get("base_item_lot_id", 9100000),
-                base_shop_id=data.get("base_shop_id", 9200000),
-                default_locale=data.get("default_locale", "en"),
-                debug_mode=data.get("debug_mode", True),
-                port=data.get("port", 8383),
-                addition_type=data.get("addition_type", 2),
-                anti_dup=data.get("anti_dup", 1),
-                global_multiplier_percent=float(data.get("global_multiplier_percent", 100.0)),
-                global_spoiled=bool(data.get("global_spoiled", True)),
-                items_per_page=int(data.get("items_per_page", 8)),
-                banner_collapsed=bool(data.get("banner_collapsed", False)),
+                min_model_id=data.get("min_model_id", 9000), max_model_id=data.get("max_model_id", 9999),
+                base_param_id=data.get("base_param_id", 9000000), base_item_lot_id=data.get("base_item_lot_id", 9100000),
+                base_shop_id=data.get("base_shop_id", 9200000), default_locale=data.get("default_locale", "en"),
+                debug_mode=data.get("debug_mode", True), port=data.get("port", 8383),
+                addition_type=data.get("addition_type", 2), anti_dup=data.get("anti_dup", 1),
+                global_multiplier_percent=float(data.get("global_multiplier_percent", 100.0)), global_spoiled=bool(data.get("global_spoiled", True)),
+                items_per_page=int(data.get("items_per_page", 8)), banner_collapsed=bool(data.get("banner_collapsed", False)),
                 user_drop_rates=data.get("user_drop_rates", {}),
                 item_spoiled_states=data.get("item_spoiled_states", {}),
                 item_custom_art_toggles=data.get("item_custom_art_toggles", {}),
@@ -286,6 +282,9 @@ class LootForgeConfig:
                 diablo_balance_weapon_skills_by_progression=bool(data.get("diablo_balance_weapon_skills_by_progression", True)),
                 boss_loot_pools_enabled=bool(data.get("boss_loot_pools_enabled", True)),
                 boss_weapons_per_pool=int(data.get("boss_weapons_per_pool", 3)),
+                chest_loot_pools_enabled=bool(data.get("chest_loot_pools_enabled", True)),
+                chest_min_items=int(data.get("chest_min_items", 1)),
+                chest_max_items=int(data.get("chest_max_items", 4)),
                 price_power_scaling_enabled=bool(data.get("price_power_scaling_enabled", True)),
                 price_multiplier=float(data.get("price_multiplier", 1.0)),
                 stats_multiplier=float(data.get("stats_multiplier", 1.0)),

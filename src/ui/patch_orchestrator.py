@@ -237,18 +237,17 @@ class PatchOrchestrator:
             system_logger.info(f"Generated {len(vanilla_dist_specs)} procedural relics from vanilla base items.", source="PatchOrchestrator")
 
         # Phase 3: Single-pass in-memory regulation patch
-        boss_pools_enabled = config.boss_loot_pools_enabled
         patch_result = regulation_manager.execute_patch(
             specs=patch_specs,
             source_reg=source_reg,
             target_reg=target_reg,
             game_dir=config.game_directory,
-            boss_loot_pools_enabled=boss_pools_enabled,
-            boss_weapons_per_pool=config.boss_weapons_per_pool,
-            chest_loot_pools_enabled=config.chest_loot_pools_enabled,
-            chest_min_items=config.chest_min_items,
-            chest_max_items=config.chest_max_items,
-            sweep_vanilla_items=config.diablo_loot_enabled and config.diablo_inject_vanilla_stats
+            boss_loot_pools_enabled=getattr(config, "boss_loot_pools_enabled", True),
+            boss_weapons_per_pool=getattr(config, "boss_weapons_per_pool", 3),
+            chest_loot_pools_enabled=getattr(config, "chest_loot_pools_enabled", True),
+            chest_min_items=getattr(config, "chest_min_items", 1),
+            chest_max_items=getattr(config, "chest_max_items", 4),
+            sweep_vanilla_items=getattr(config, "diablo_loot_enabled", False) and getattr(config, "diablo_inject_vanilla_stats", False)
         )
 
         # Phase 4: Record deployment manifest in ONE single disk write
@@ -263,6 +262,8 @@ class PatchOrchestrator:
         config.active_regulation_path = str(target_reg)
         config.save(config_path)
 
+        output_dir = target_reg.parent
+        parts_deployed = len(all_deployed_files)
         file_size_mb = round(patch_result["target_size_bytes"] / (1024 * 1024), 2)
         diablo_info = f"⚡ Diablo ARPG: {diablo_total_variants} procedural relics generated!\n" if diablo_total_variants > 0 else ""
         custom_skills_count = sum(1 for s in scanned_sets if getattr(s, "import_custom_moveset", True) and s.skill_moveset and s.skill_moveset.has_custom_skill)

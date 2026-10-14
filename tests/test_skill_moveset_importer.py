@@ -548,6 +548,23 @@ def test_config_roundtrip_includes_master_bool(temp_env):
     assert reloaded.import_custom_skills_movesets is True
 
 
+def test_config_roundtrip_includes_chest_loot_pools(temp_env):
+    """Validates chest loot pool configuration parameters survive save and load cycles in LootForgeConfig."""
+    from src.config import LootForgeConfig
+
+    cfg_file = temp_env / "config_chest.json"
+    cfg = LootForgeConfig(chest_loot_pools_enabled=False, chest_min_items=2, chest_max_items=6)
+    assert cfg.chest_loot_pools_enabled is False
+    assert cfg.chest_min_items == 2
+    assert cfg.chest_max_items == 6
+    cfg.save(str(cfg_file))
+
+    loaded = LootForgeConfig.load(str(cfg_file))
+    assert loaded.chest_loot_pools_enabled is False
+    assert loaded.chest_min_items == 2
+    assert loaded.chest_max_items == 6
+
+
 def test_loot_review_modal_global_boolean_disabled(temp_env):
     """Validates LootReviewModal handles master boolean disabled state for bug testing isolation."""
     os.environ["QT_QPA_PLATFORM"] = "offscreen"
