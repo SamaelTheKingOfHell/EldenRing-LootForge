@@ -173,6 +173,127 @@ class TestBackupManager(unittest.TestCase):
         # Manifest cleared
         self.assertEqual(len(store.get_all_records()), 0)
 
+    def test_chr_moveset_asset_backup_and_rollback_preservation(self):
+        """
+        Validates that pre-existing chr/ assets carrying double jump or core features
+        are backed up when overwritten and restored on rollback WITHOUT deleting chr/.
+        """
+        from src.regulation_manager import RegulationManager
+        from src.manifest_store import ManifestStore
+
+        target_dir = self.test_dir / "ordo_profile"
+        target_dir.mkdir(parents=True, exist_ok=True)
+        chr_dir = target_dir / "chr"
+        chr_dir.mkdir(parents=True, exist_ok=True)
+
+        # Pre-existing file carrying double jump
+        double_jump_file = chr_dir / "c0000_a00_hi.anibnd.dcx"
+        original_dj_content = b"DOUBLE_JUMP_PLAYER_ANIMATION_TAE_BYTES"
+        with open(double_jump_file, "wb") as f:
+            f.write(original_dj_content)
+
+        bak_rec = self.mgr.create_file_backup(str(double_jump_file), category="chr")
+
+        # Simulate overwriting it with a foreign mod file
+        with open(double_jump_file, "wb") as f:
+            f.write(b"OVERWRITTEN_WEAPON_MOD_BYTES")
+
+        # Newly deployed file from LootForge
+        new_anim_file = chr_dir / "c0000_a1x.anibnd.dcx"
+        with open(new_anim_file, "wb") as f:
+            f.write(b"NEW_WEAPON_ANIM_BYTES")
+
+        manifest_file = self.test_dir / "manifest_chr.json"
+        store = ManifestStore(manifest_path=str(manifest_file))
+        store.record_deployment(
+            target_regulation_path=str(target_dir / "regulation.bin"),
+            deployed_files=[str(double_jump_file), str(new_anim_file)],
+            backed_up_files={str(double_jump_file): bak_rec.backup_file_name}
+        )
+
+        reg_mgr = RegulationManager(base_dir=self.test_dir)
+        res = reg_mgr.rollback_all(
+            backup_manager=self.mgr,
+            manifest_store=store,
+            target_reg_path=str(target_dir / "regulation.bin")
+        )
+
+        self.assertTrue(res["success"])
+        # Original double jump file MUST be restored byte-for-byte
+        self.assertTrue(double_jump_file.exists())
+        with open(double_jump_file, "rb") as f:
+            self.assertEqual(f.read(), original_dj_content)
+
+        # Newly created file MUST be deleted
+        self.assertFalse(new_anim_file.exists())
+
+        # chr/ directory MUST NOT be deleted because it still contains restored double jump file
+        self.assertTrue(chr_dir.exists())
+
+    def test_host_core_player_assets_preservation(self):
+        """
+        Validates that SkillMovesetDeployer does NOT clobber pre-existing host player assets
+        (c0000_a00_hi.anibnd.dcx, c0000.hks, c0000.behbnd.dcx) when import_custom_skills_movesets is active.
+        """
+        from src.skill_moveset_deployer import SkillMovesetDeployer
+        from src.models import DetectedModSet, SkillMovesetMetadata
+
+        input_base = self.test_dir / "input_mods"
+        mod_source = input_base / "ForeignWeaponMod"
+        src_chr = mod_source / "chr"
+        src_chr.mkdir(parents=True, exist_ok=True)
+        src_action = mod_source / "action" / "script"
+        src_action.mkdir(parents=True, exist_ok=True)
+
+        # Foreign mod ships these files
+        (src_chr / "c0000_a00_hi.anibnd.dcx").write_bytes(b"FOREIGN_BASE_ANIM")
+        (src_chr / "c0000_a2x.anibnd.dcx").write_bytes(b"FOREIGN_WEAPON_ANIM")
+        (src_action / "c0000.hks").write_bytes(b"FOREIGN_HKS_NO_DOUBLE_JUMP")
+
+        output_dir = self.test_dir / "target_mod"
+        out_chr = output_dir / "chr"
+        out_chr.mkdir(parents=True, exist_ok=True)
+        out_action = output_dir / "action" / "script"
+        out_action.mkdir(parents=True, exist_ok=True)
+
+        # Target mod already has double jump in these files
+        target_dj_anim = out_chr / "c0000_a00_hi.anibnd.dcx"
+        target_dj_anim.write_bytes(b"HOST_ORDO_DOUBLE_JUMP_ANIM")
+        target_hks = out_action / "c0000.hks"
+        target_hks.write_bytes(b"HOST_ORDO_HKS_AIRMOVE_LUA")
+
+        mod_set = DetectedModSet(
+            set_id="mod_foreign",
+            folder_or_archive_name="ForeignWeaponMod",
+            target_model_id="999",
+            target_vanilla_name="Sword",
+            parts=[],
+            is_weapon=True,
+            skill_moveset=SkillMovesetMetadata(has_custom_moveset=True)
+        )
+
+        deployer = SkillMovesetDeployer()
+        deployed = deployer.deploy_moveset_assets(
+            mod_set=mod_set,
+            input_base_dir=input_base,
+            output_dir=output_dir,
+            backup_manager=self.mgr
+        )
+
+        # Host mod's double jump files MUST be untouched!
+        self.assertEqual(target_dj_anim.read_bytes(), b"HOST_ORDO_DOUBLE_JUMP_ANIM")
+        self.assertEqual(target_hks.read_bytes(), b"HOST_ORDO_HKS_AIRMOVE_LUA")
+
+        # Foreign mod's weapon-specific anim bank MUST be deployed
+        target_weapon_anim = out_chr / "c0000_a2x.anibnd.dcx"
+        self.assertTrue(target_weapon_anim.exists())
+        self.assertEqual(target_weapon_anim.read_bytes(), b"FOREIGN_WEAPON_ANIM")
+        self.assertIn(str(target_weapon_anim), deployed)
+        # Host files must NOT be in deployed_files
+        self.assertNotIn(str(target_dj_anim), deployed)
+        self.assertNotIn(str(target_hks), deployed)
+
 
 if __name__ == "__main__":
     unittest.main()
+

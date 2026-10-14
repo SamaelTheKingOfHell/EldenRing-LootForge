@@ -52,18 +52,82 @@ namespace LootForge.RegTool
         public static void PurgePreviousInjections(
             Func<string, string, (PARAM Param, BinderFile File)> getOrLoadParam)
         {
-            // 1. Purge synthetic rows and clear mod items from existing rows in ItemLotParam_enemy
+            var allLfItemIds = new HashSet<int>();
+
+            // 1. Identify and purge LootForge rows in EquipParamWeapon
+            try
+            {
+                var (weaponParam, _) = getOrLoadParam("EquipParamWeapon", "EquipParamWeapon");
+                foreach (var r in weaponParam.Rows)
+                {
+                    if (r.Name != null && r.Name.Contains("[LootForge]"))
+                    {
+                        allLfItemIds.Add(r.ID);
+                    }
+                }
+                weaponParam.Rows.RemoveAll(r => r.Name != null && r.Name.Contains("[LootForge]"));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[RegTool WARN] Could not purge EquipParamWeapon: {ex.Message}");
+            }
+
+            // 2. Identify and purge LootForge rows in EquipParamProtector
+            try
+            {
+                var (protectorParam, _) = getOrLoadParam("EquipParamProtector", "EquipParamProtector");
+                foreach (var r in protectorParam.Rows)
+                {
+                    if (r.Name != null && r.Name.Contains("[LootForge]"))
+                    {
+                        allLfItemIds.Add(r.ID);
+                    }
+                }
+                protectorParam.Rows.RemoveAll(r => r.Name != null && r.Name.Contains("[LootForge]"));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[RegTool WARN] Could not purge EquipParamProtector: {ex.Message}");
+            }
+
+            // 3. Identify and purge LootForge rows in EquipParamAccessory
+            try
+            {
+                var (accessoryParam, _) = getOrLoadParam("EquipParamAccessory", "EquipParamAccessory");
+                foreach (var r in accessoryParam.Rows)
+                {
+                    if (r.Name != null && r.Name.Contains("[LootForge]"))
+                    {
+                        allLfItemIds.Add(r.ID);
+                    }
+                }
+                accessoryParam.Rows.RemoveAll(r => r.Name != null && r.Name.Contains("[LootForge]"));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[RegTool WARN] Could not purge EquipParamAccessory: {ex.Message}");
+            }
+
+            // 4. Purge LootForge rows in SpEffectParam
+            try
+            {
+                var (spEffectParam, _) = getOrLoadParam("SpEffectParam", "SpEffect");
+                spEffectParam.Rows.RemoveAll(r => r.Name != null && r.Name.Contains("[LootForge]"));
+            }
+            catch {}
+
+            // 5. Purge synthetic rows and clear mod items from existing rows in ItemLotParam_enemy
             try
             {
                 var (itemLotParam, _) = getOrLoadParam("ItemLotParam_enemy", "ItemLotParam");
-                itemLotParam.Rows.RemoveAll(r => (r.Name != null && r.Name.Contains("[LootForge]")) || (r.ID >= 9100000 && r.ID < 9200000));
+                itemLotParam.Rows.RemoveAll(r => r.Name != null && r.Name.Contains("[LootForge]"));
 
                 foreach (var row in itemLotParam.Rows)
                 {
                     for (int s = 1; s <= 8; s++)
                     {
                         int itemId = ParamHelper.GetCellInt(row, $"lotItemId0{s}");
-                        if (itemId >= 9000000 && itemId < 10000000)
+                        if (allLfItemIds.Contains(itemId))
                         {
                             ParamHelper.SetCellIfExists(row, $"lotItemId0{s}", 0);
                             ParamHelper.SetCellIfExists(row, $"lotItemCategory0{s}", 0);
@@ -79,18 +143,18 @@ namespace LootForge.RegTool
                 Console.WriteLine($"[RegTool WARN] Could not purge ItemLotParam_enemy: {ex.Message}");
             }
 
-            // 1b. Purge synthetic rows and clear mod items from existing rows in ItemLotParam_map
+            // 6. Purge synthetic rows and clear mod items from existing rows in ItemLotParam_map
             try
             {
                 var (mapLotParam, _) = getOrLoadParam("ItemLotParam_map", "ItemLotParam");
-                mapLotParam.Rows.RemoveAll(r => (r.Name != null && r.Name.Contains("[LootForge]")) || (r.ID >= 9100000 && r.ID < 9200000));
+                mapLotParam.Rows.RemoveAll(r => r.Name != null && r.Name.Contains("[LootForge]"));
 
                 foreach (var row in mapLotParam.Rows)
                 {
                     for (int s = 1; s <= 8; s++)
                     {
                         int itemId = ParamHelper.GetCellInt(row, $"lotItemId0{s}");
-                        if (itemId >= 9000000 && itemId < 10000000)
+                        if (allLfItemIds.Contains(itemId))
                         {
                             ParamHelper.SetCellIfExists(row, $"lotItemId0{s}", 0);
                             ParamHelper.SetCellIfExists(row, $"lotItemCategory0{s}", 0);
@@ -106,69 +170,20 @@ namespace LootForge.RegTool
                 Console.WriteLine($"[RegTool WARN] Could not purge ItemLotParam_map: {ex.Message}");
             }
 
-            // 2. Purge LootForge rows in ShopLineupParam
+            // 7. Purge LootForge rows in ShopLineupParam
             try
             {
                 var (shopParam, _) = getOrLoadParam("ShopLineupParam", "ShopLineupParam");
                 shopParam.Rows.RemoveAll(r =>
                     (r.Name != null && r.Name.Contains("[LootForge]")) ||
-                    (ParamHelper.GetCellInt(r, "equipId") >= 9000000 && ParamHelper.GetCellInt(r, "equipId") < 10000000));
+                    allLfItemIds.Contains(ParamHelper.GetCellInt(r, "equipId")));
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[RegTool WARN] Could not purge ShopLineupParam: {ex.Message}");
             }
 
-            // 3. Purge LootForge rows in EquipParamWeapon
-            try
-            {
-                var (weaponParam, _) = getOrLoadParam("EquipParamWeapon", "EquipParamWeapon");
-                weaponParam.Rows.RemoveAll(r =>
-                    (r.ID >= 9000000 && r.ID < 10000000) ||
-                    (r.Name != null && r.Name.Contains("[LootForge]")));
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[RegTool WARN] Could not purge EquipParamWeapon: {ex.Message}");
-            }
-
-            // 4. Purge LootForge rows in EquipParamProtector
-            try
-            {
-                var (protectorParam, _) = getOrLoadParam("EquipParamProtector", "EquipParamProtector");
-                protectorParam.Rows.RemoveAll(r =>
-                    (r.ID >= 9000000 && r.ID < 10000000) ||
-                    (r.Name != null && r.Name.Contains("[LootForge]")));
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[RegTool WARN] Could not purge EquipParamProtector: {ex.Message}");
-            }
-
-            // 5. Purge LootForge rows in SpEffectParam
-            try
-            {
-                var (spEffectParam, _) = getOrLoadParam("SpEffectParam", "SpEffect");
-                spEffectParam.Rows.RemoveAll(r =>
-                    (r.ID >= 9000000 && r.ID < 10000000) ||
-                    (r.Name != null && r.Name.Contains("[LootForge]")));
-            }
-            catch {}
-
-            // 6. Purge LootForge rows in EquipParamAccessory
-            try
-            {
-                var (accessoryParam, _) = getOrLoadParam("EquipParamAccessory", "EquipParamAccessory");
-                accessoryParam.Rows.RemoveAll(r =>
-                    (r.ID >= 9000000 && r.ID < 10000000) ||
-                    (r.Name != null && r.Name.Contains("[LootForge]")));
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[RegTool WARN] Could not purge EquipParamAccessory: {ex.Message}");
-            }
-
-            // 7. Purge LootForge custom skills and moveset behaviors
+            // 8. Purge LootForge custom skills and moveset behaviors
             SkillMovesetService.PurgePreviousInjections(getOrLoadParam);
         }
     }

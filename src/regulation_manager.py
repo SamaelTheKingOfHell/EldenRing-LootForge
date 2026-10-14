@@ -187,12 +187,19 @@ class RegulationManager:
                 except Exception:
                     pass
 
-    def deploy_parts(self, mod_sets: list, input_base_dir: Path, output_dir: Path) -> int:
+    def deploy_parts(
+        self,
+        mod_sets: list,
+        input_base_dir: Path,
+        output_dir: Path,
+        backup_manager: Optional[Any] = None
+    ) -> int:
         """Delegates parts deployment and renaming to PartsDeployer service."""
         from src.parts_deployer import PartsDeployer
         deployer = PartsDeployer()
-        count = deployer.deploy_parts(mod_sets, input_base_dir, output_dir)
+        count = deployer.deploy_parts(mod_sets, input_base_dir, output_dir, backup_manager=backup_manager)
         self.last_deployed_files = getattr(deployer, "last_deployed_files", [])
+        self.last_backed_up_files = getattr(deployer, "last_backed_up_files", {})
         return count
 
     def rollback_all(

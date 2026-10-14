@@ -9,7 +9,7 @@ Adheres to [CS-MODULAR] and [CS-GRANULARITY].
 import shutil
 import re
 from pathlib import Path
-from typing import List, Dict
+from typing import List, Dict, Optional, Any
 from src.models import DetectedModSet
 from src.logger import system_logger
 
@@ -25,12 +25,14 @@ class PartsDeployer:
 
     def __init__(self):
         self.last_deployed_files: List[str] = []
+        self.last_backed_up_files: Dict[str, str] = {}
 
     def deploy_parts(
         self,
         mod_sets: List[DetectedModSet],
         input_base_dir: Path,
-        output_dir: Path
+        output_dir: Path,
+        backup_manager: Optional[Any] = None
     ) -> int:
         """
         Copies and renames standalone model parts files to the output directory.
@@ -47,6 +49,7 @@ class PartsDeployer:
         parts_output.mkdir(parents=True, exist_ok=True)
 
         self.last_deployed_files = []
+        self.last_backed_up_files = {}
         deployed = 0
         ARMOR_FILE_RE = re.compile(r"^(am|bd|hd|lg)_([mf])_(.+)$", re.IGNORECASE)
 
@@ -78,6 +81,13 @@ class PartsDeployer:
                 ).lower()
                 target = parts_output / target_name
                 try:
+                    if target.exists() and backup_manager:
+                        try:
+                            bak = backup_manager.create_file_backup(str(target), category="parts")
+                            self.last_backed_up_files[str(target)] = bak.backup_file_name
+                        except Exception as be:
+                            system_logger.warning(f"Could not backup {target}: {be}", source="PartsDeployer")
+
                     shutil.copy2(str(source), str(target))
                     deployed += 1
                     self.last_deployed_files.append(str(target))
@@ -108,6 +118,13 @@ class PartsDeployer:
                 if opposing_target_name not in set_deployed_files:
                     opposing_target = parts_output / opposing_target_name
                     try:
+                        if opposing_target.exists() and backup_manager:
+                            try:
+                                bak = backup_manager.create_file_backup(str(opposing_target), category="parts")
+                                self.last_backed_up_files[str(opposing_target)] = bak.backup_file_name
+                            except Exception as be:
+                                system_logger.warning(f"Could not backup {opposing_target}: {be}", source="PartsDeployer")
+
                         shutil.copy2(str(target_path), str(opposing_target))
                         deployed += 1
                         self.last_deployed_files.append(str(opposing_target))
@@ -127,9 +144,16 @@ class PartsDeployer:
                 try:
                     from src.skill_moveset_importer import SkillMovesetImporter
                     importer = SkillMovesetImporter(output_dir.parent if output_dir.name == "mod" else output_dir)
-                    moveset_files = importer.deploy_moveset_assets(ms, input_base_dir, output_dir)
+                    moveset_files = importer.deploy_moveset_assets(
+                        mod_set=ms,
+                        input_base_dir=input_base_dir,
+                        output_dir=output_dir,
+                        backup_manager=backup_manager
+                    )
                     deployed += len(moveset_files)
                     self.last_deployed_files.extend(moveset_files)
+                    if hasattr(importer, "last_backed_up_files") and importer.last_backed_up_files:
+                        self.last_backed_up_files.update(importer.last_backed_up_files)
                 except Exception as ex:
                     system_logger.error(
                         f"Failed to deploy custom moveset assets for {ms.set_id}: {ex}",

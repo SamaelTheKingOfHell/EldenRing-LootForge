@@ -346,21 +346,21 @@ namespace LootForge.RegTool
             try
             {
                 var (saParam, _) = getOrLoadParam("SwordArtsParam", "SwordArtsParam");
-                saParam.Rows.RemoveAll(r => (r.Name != null && r.Name.Contains("[LootForge]")) || (r.ID >= 9000000 && r.ID < 9100000));
+                saParam.Rows.RemoveAll(r => r.Name != null && r.Name.Contains("[LootForge]"));
             }
             catch { }
 
             try
             {
                 var (bParam, _) = getOrLoadParam("BehaviorParam_PC", "BehaviorParam");
-                bParam.Rows.RemoveAll(r => (r.Name != null && r.Name.Contains("[LootForge]")) || (r.ID >= 9000000 && r.ID < 9100000));
+                bParam.Rows.RemoveAll(r => r.Name != null && r.Name.Contains("[LootForge]"));
             }
             catch { }
 
             try
             {
                 var (atkParam, _) = getOrLoadParam("AtkParam_Pc", "AtkParam");
-                atkParam.Rows.RemoveAll(r => (r.Name != null && r.Name.Contains("[LootForge]")) || (r.ID >= 9000000 && r.ID < 9100000));
+                atkParam.Rows.RemoveAll(r => r.Name != null && r.Name.Contains("[LootForge]"));
             }
             catch { }
         }

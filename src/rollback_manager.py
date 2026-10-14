@@ -134,17 +134,22 @@ class RollbackManager:
             except Exception:
                 pass
 
-        # 4. Clean deployed & staged 3D parts (.partsbnd.dcx)
+        # 4. Clean deployed & staged 3D parts (.partsbnd.dcx) and assets
         deployed_files = getattr(manifest_store, "deployed_files", [])
         for df in deployed_files:
             p = Path(df)
-            if p.exists() and str(p) not in removed_files:
+            if (
+                p.exists()
+                and str(p) not in removed_files
+                and str(p) not in restored_files
+                and str(p) not in backed_up_files
+            ):
                 try:
                     p.unlink()
                     removed_files.append(str(p))
-                    system_logger.info(f"Removed deployed part: {p}", source="Rollback")
+                    system_logger.info(f"Removed deployed file: {p}", source="Rollback")
                 except Exception as e:
-                    errors.append(f"Failed to remove deployed part ({p}): {e}")
+                    errors.append(f"Failed to remove deployed file ({p}): {e}")
 
         records = manifest_store.get_all_records() if hasattr(manifest_store, "get_all_records") else []
         allocated_model_ids = {r.allocated_model_id for r in records if getattr(r, "allocated_model_id", None)}
@@ -161,7 +166,12 @@ class RollbackManager:
                 for base in [target_dir, local_out_dir]:
                     if base:
                         sp = base / staged
-                        if sp.exists() and str(sp) not in removed_files:
+                        if (
+                            sp.exists()
+                            and str(sp) not in removed_files
+                            and str(sp) not in restored_files
+                            and str(sp) not in backed_up_files
+                        ):
                             try:
                                 sp.unlink()
                                 removed_files.append(str(sp))
@@ -180,7 +190,11 @@ class RollbackManager:
             if pd.name == "parts":
                 for f in list(pd.glob("*.partsbnd.dcx")):
                     if any(mid in f.name for mid in allocated_model_ids):
-                        if str(f) not in removed_files:
+                        if (
+                            str(f) not in removed_files
+                            and str(f) not in restored_files
+                            and str(f) not in backed_up_files
+                        ):
                             try:
                                 f.unlink()
                                 removed_files.append(str(f))

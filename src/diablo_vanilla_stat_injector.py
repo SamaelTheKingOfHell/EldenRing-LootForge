@@ -35,8 +35,11 @@ class VanillaStatInjector:
             rolled_skill: Optional[WeaponSkill] = None
             w_tier = kb.get_progression_tier(w_info) if (kb and hasattr(kb, "get_progression_tier")) else None
             if generator.randomize_weapon_skills:
-                rolled_skill = generator.roll_weapon_skill(tier=w_tier)
-                field_updates["swordArtsParamId"] = rolled_skill.id
+                gem_mount = w_info.get("gemMountType", 1)
+                is_unarmed = base_param_id == 110000 or base_param_id < 1000000
+                if gem_mount > 0 and not is_unarmed:
+                    rolled_skill = generator.roll_weapon_skill(tier=w_tier)
+                    field_updates["swordArtsParamId"] = rolled_skill.id
 
             generator.apply_affixes_to_equipment(field_updates, affixes, is_weapon=True)
 

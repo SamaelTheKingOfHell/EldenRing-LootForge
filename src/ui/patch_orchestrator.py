@@ -246,10 +246,17 @@ class PatchOrchestrator:
         if not input_dir.is_absolute():
             input_dir = base_dir / input_dir
         parts_deployed = regulation_manager.deploy_parts(
-            mod_sets=scanned_sets, input_base_dir=input_dir, output_dir=output_dir
+            mod_sets=scanned_sets,
+            input_base_dir=input_dir,
+            output_dir=output_dir,
+            backup_manager=backup_manager
         )
 
         deployed_parts = getattr(regulation_manager, "last_deployed_files", [])
+        parts_backed_up = getattr(regulation_manager, "last_backed_up_files", {})
+        if parts_backed_up:
+            backed_up_files.update(parts_backed_up)
+
         manifest_store.record_deployment(
             target_regulation_path=str(target_reg),
             deployed_files=deployed_parts,

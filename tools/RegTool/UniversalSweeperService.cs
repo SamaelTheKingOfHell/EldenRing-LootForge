@@ -139,7 +139,7 @@ namespace LootForge.RegTool
                 int modelId = ParamHelper.GetCellInt(r, "equipModelId");
                 int originId = ParamHelper.GetCellInt(r, "originEquipWep");
 
-                if (wepType > 0 && isDeposit == 1 && sortId > 0 && modelId > 0)
+                if (wepType > 0 && isDeposit == 1 && sortId > 0 && modelId > 0 && r.ID != 110000 && r.ID >= 1000000)
                 {
                     totalEligibleWeapons++;
                     int familyId = originId > 0 ? originId : (r.ID - (r.ID % 100));
@@ -189,7 +189,13 @@ namespace LootForge.RegTool
 
                     if (chosenSkill.HasValue)
                     {
-                        ParamHelper.SetCellIfExists(row, "swordArtsParamId", chosenSkill.Value);
+                        int gemMountType = ParamHelper.GetCellInt(row, "gemMountType");
+                        // Only randomize skill on standard infusible weapons (gemMountType > 0),
+                        // never on unique Somber weapons, catalysts, or custom moveset weapons (gemMountType == 0)
+                        if (gemMountType > 0)
+                        {
+                            ParamHelper.SetCellIfExists(row, "swordArtsParamId", chosenSkill.Value);
+                        }
                     }
 
                     // FMG mutation

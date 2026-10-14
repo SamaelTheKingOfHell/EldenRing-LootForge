@@ -7,15 +7,12 @@ animation archives (chr/c0000_*.anibnd.dcx, chr/c0000.behbnd.dcx), and visual ef
 Adheres to [CS-MODULAR] and [CS-GRANULARITY].
 """
 
-import os
-import sys
-import json
-import shutil
-import subprocess
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 from src.models import DetectedModSet, SkillMovesetMetadata
 from src.logger import system_logger
+from src.skill_regulation_extractor import SkillRegulationExtractor
+from src.skill_moveset_deployer import SkillMovesetDeployer
 
 
 class SkillMovesetImporter:
@@ -25,82 +22,33 @@ class SkillMovesetImporter:
     Adheres to [CS-MODULAR] and [CS-GRANULARITY].
     """
 
-    # In-memory regulation data cache mapping regulation path -> parsed JSON dict
-    _regulation_cache: Dict[str, Dict[str, Any]] = {}
+    _regulation_cache = SkillRegulationExtractor._regulation_cache
 
     @classmethod
     def clear_cache(cls):
         """Clears the in-memory regulation extraction cache."""
-        cls._regulation_cache.clear()
+        SkillRegulationExtractor.clear_cache()
 
     def __init__(self, base_dir: Path):
         self.base_dir = Path(base_dir).resolve()
-        self.defs_dir = self.base_dir / "tools" / "vendor" / "Paramdex" / "ER" / "Defs"
-        self.regtool_exe = self.base_dir / "tools" / "RegTool" / "bin" / "Release" / "net9.0" / "RegTool.exe"
-        self.regtool_dll = self.base_dir / "tools" / "RegTool" / "bin" / "Release" / "net9.0" / "RegTool.dll"
-        self.regtool_debug_dll = self.base_dir / "tools" / "RegTool" / "bin" / "Debug" / "net9.0" / "RegTool.dll"
-        self.regtool_proj = self.base_dir / "tools" / "RegTool" / "RegTool.csproj"
+        self.extractor = SkillRegulationExtractor(self.base_dir)
+        self.deployer = SkillMovesetDeployer()
+
+    @property
+    def last_deployed_files(self) -> List[str]:
+        return self.deployer.last_deployed_files
+
+    @property
+    def last_backed_up_files(self) -> Dict[str, str]:
+        return self.deployer.last_backed_up_files
 
     def extract_regulation_data(
         self,
         reg_file: Path,
         msg_candidate: Optional[Path] = None
     ) -> Optional[Dict[str, Any]]:
-        """
-        Executes RegTool extract-skills-movesets on a mod's regulation.bin, caching
-        the result in-memory so subsequent weapon lookups from the same mod regulation
-        are instantaneous.
-        """
-        reg_path = Path(reg_file).resolve()
-        cache_key = str(reg_path)
-        if cache_key in self._regulation_cache:
-            return self._regulation_cache[cache_key]
-
-        scratch_dir = self.base_dir / "scratch"
-        scratch_dir.mkdir(parents=True, exist_ok=True)
-        file_hash = f"{reg_path.stem}_{reg_path.stat().st_size}"
-        out_json = scratch_dir / f"extracted_{file_hash}.json"
-
-        # If scratch json already exists and is newer than reg_file, reuse it directly
-        if out_json.exists() and out_json.stat().st_mtime >= reg_path.stat().st_mtime:
-            try:
-                with open(out_json, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                    self._regulation_cache[cache_key] = data
-                    return data
-            except Exception:
-                pass
-
-        msg_dir_arg = []
-        if msg_candidate and Path(msg_candidate).exists():
-            msg_dir_arg = ["--msg", str(msg_candidate)]
-
-        if sys.platform.startswith("win") and self.regtool_exe.exists():
-            cmd = [str(self.regtool_exe), "extract-skills-movesets", "--input", str(reg_path), "--defs", str(self.defs_dir), "--output", str(out_json)] + msg_dir_arg
-        elif self.regtool_dll.exists():
-            cmd = ["dotnet", str(self.regtool_dll), "extract-skills-movesets", "--input", str(reg_path), "--defs", str(self.defs_dir), "--output", str(out_json)] + msg_dir_arg
-        elif self.regtool_debug_dll.exists():
-            cmd = ["dotnet", str(self.regtool_debug_dll), "extract-skills-movesets", "--input", str(reg_path), "--defs", str(self.defs_dir), "--output", str(out_json)] + msg_dir_arg
-        else:
-            cmd = ["dotnet", "run", "--project", str(self.regtool_proj), "--", "extract-skills-movesets", "--input", str(reg_path), "--defs", str(self.defs_dir), "--output", str(out_json)] + msg_dir_arg
-
-        try:
-            res = subprocess.run(cmd, capture_output=True, text=True, cwd=str(self.base_dir), check=False)
-            if res.returncode != 0:
-                system_logger.warning(f"RegTool extract-skills-movesets failed: {res.stderr or res.stdout}", source="SkillMovesetImporter")
-                return None
-
-            if not out_json.exists():
-                return None
-
-            with open(out_json, "r", encoding="utf-8") as f:
-                data = json.load(f)
-
-            self._regulation_cache[cache_key] = data
-            return data
-        except Exception as ex:
-            system_logger.error(f"Failed to extract mod regulation data: {ex}", source="SkillMovesetImporter")
-            return None
+        """Delegates regulation data extraction to SkillRegulationExtractor."""
+        return self.extractor.extract_regulation_data(reg_file, msg_candidate)
 
     def introspect_mod_folder(
         self,
@@ -110,10 +58,8 @@ class SkillMovesetImporter:
     ) -> Optional[SkillMovesetMetadata]:
         """
         Scans a mod directory for custom animations, moveset parameters, and skills.
-        If deep=False (used for initial fast directory scan), executes purely in-memory
-        and filesystem checks (<1ms) without spinning up the .NET runtime.
-        If deep=True (lazy loaded on modal open or forge), extracts authentic weapon
-        and skill metadata from regulation.bin.
+        If deep=False, executes purely in-memory/filesystem checks (<1ms).
+        If deep=True, extracts authentic weapon and skill metadata from regulation.bin.
         """
         mod_path = Path(mod_folder).resolve()
         if not mod_path.exists():
@@ -127,7 +73,6 @@ class SkillMovesetImporter:
 
         chr_dir = mod_path / "chr"
         if not chr_dir.exists():
-            # Check recursive chr folder
             for sub in mod_path.rglob("chr"):
                 if sub.is_dir():
                     chr_dir = sub
@@ -179,8 +124,6 @@ class SkillMovesetImporter:
                 )
             return None
 
-        # If regulation.bin exists, but deep is False (e.g. initial fast scan):
-        # Return lightweight metadata immediately without launching .NET subprocess!
         if not deep:
             return SkillMovesetMetadata(
                 has_custom_skill=True,
@@ -193,8 +136,6 @@ class SkillMovesetImporter:
                 regulation_path=str(reg_file.resolve())
             )
 
-        # Deep introspection requested:
-        # Check for optional mod msg directory
         msg_candidate = mod_path / "msg"
         if not msg_candidate.exists():
             for sub in mod_path.rglob("msg"):
@@ -225,7 +166,6 @@ class SkillMovesetImporter:
             custom_behaviors = data.get("CustomBehaviors", {})
             custom_attacks = data.get("CustomAttacks", {})
 
-            # Filter for weapon matching target_model_id if specified
             matched_weapon = None
             if target_model_id:
                 try:
@@ -328,7 +268,6 @@ class SkillMovesetImporter:
         """
         Lazily ensures that a mod set's skill_moveset metadata has been fully introspected
         from regulation.bin if it hasn't been already.
-        Returns True if deep introspection succeeded or was already done.
         """
         if not mod_set.is_weapon or not mod_set.skill_moveset:
             return False
@@ -386,65 +325,17 @@ class SkillMovesetImporter:
         mod_set.skill_moveset.is_deep_introspected = True
         return False
 
-
     def deploy_moveset_assets(
         self,
         mod_set: DetectedModSet,
         input_base_dir: Path,
-        output_dir: Path
+        output_dir: Path,
+        backup_manager: Optional[Any] = None
     ) -> List[str]:
-        """
-        Copies chr/, sfx/, and action/ directories from the mod folder to the output mod directory.
-        Normalizes filenames to lowercase for Proton/Linux compatibility.
-        """
-        deployed_files: List[str] = []
-        source_mod_dir = input_base_dir / mod_set.folder_or_archive_name
-        if not source_mod_dir.exists():
-            source_mod_dir = input_base_dir
-
-        out_path = Path(output_dir)
-
-        # Deploy chr/ assets (animations, behaviors)
-        chr_candidates = [source_mod_dir / "chr"] + list(source_mod_dir.rglob("chr"))
-        for cand in chr_candidates:
-            if cand.is_dir() and cand != (out_path / "chr"):
-                out_chr = out_path / "chr"
-                out_chr.mkdir(parents=True, exist_ok=True)
-                for item in cand.iterdir():
-                    if item.is_file() and (item.name.endswith(".dcx") or item.name.endswith(".tae")):
-                        target = out_chr / item.name.lower()
-                        shutil.copy2(str(item), str(target))
-                        deployed_files.append(str(target))
-                        system_logger.debug(f"Deployed animation: {item.name} -> {target.name}", source="SkillMovesetImporter")
-                break
-
-        # Deploy sfx/ assets
-        sfx_candidates = [source_mod_dir / "sfx"] + list(source_mod_dir.rglob("sfx"))
-        for cand in sfx_candidates:
-            if cand.is_dir() and cand != (out_path / "sfx"):
-                out_sfx = out_path / "sfx"
-                out_sfx.mkdir(parents=True, exist_ok=True)
-                for item in cand.iterdir():
-                    if item.is_file() and item.name.endswith(".dcx"):
-                        target = out_sfx / item.name.lower()
-                        shutil.copy2(str(item), str(target))
-                        deployed_files.append(str(target))
-                        system_logger.debug(f"Deployed VFX: {item.name} -> {target.name}", source="SkillMovesetImporter")
-                break
-
-        # Deploy action/ assets
-        action_candidates = [source_mod_dir / "action"] + list(source_mod_dir.rglob("action"))
-        for cand in action_candidates:
-            if cand.is_dir() and cand != (out_path / "action"):
-                out_action = out_path / "action"
-                out_action.mkdir(parents=True, exist_ok=True)
-                for item in cand.rglob("*"):
-                    if item.is_file():
-                        rel = item.relative_to(cand)
-                        target = out_action / str(rel).lower()
-                        target.parent.mkdir(parents=True, exist_ok=True)
-                        shutil.copy2(str(item), str(target))
-                        deployed_files.append(str(target))
-                break
-
-        return deployed_files
+        """Delegates moveset asset deployment to SkillMovesetDeployer."""
+        return self.deployer.deploy_moveset_assets(
+            mod_set=mod_set,
+            input_base_dir=input_base_dir,
+            output_dir=output_dir,
+            backup_manager=backup_manager
+        )
