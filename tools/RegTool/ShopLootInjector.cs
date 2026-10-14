@@ -163,51 +163,31 @@ namespace LootForge.RegTool
             ref int injectedLootCount)
         {
             var (itemLotParam, _) = getOrLoadParam("ItemLotParam_enemy", "ItemLotParam");
-            int[] fallbackLots = new[] { 301000000, 380000000, 431100000, 430000000 };
-            PARAM.Row? targetRow = null;
-            foreach (int lotId in fallbackLots)
+            bool isAccessory = itemIdToIsAccessory.TryGetValue(itemId, out var ia) && ia;
+            bool isArmor = itemIdToIsProtector.TryGetValue(itemId, out var ip) ? ip : (!isAccessory && !itemIdToIsWeapon.GetValueOrDefault(itemId, false));
+            int lotCategory = isAccessory ? 4 : (isArmor ? 3 : 2);
+
+            // Never overwrite slot 1. Find any valid enemy row with an empty slot 2..8
+            foreach (var row in itemLotParam.Rows)
             {
-                var row = itemLotParam.Rows.FirstOrDefault(r => r.ID == lotId);
-                if (row != null)
+                if (ParamHelper.GetCellInt(row, "lotItemId01") <= 0) continue;
+
+                for (int s = 2; s <= 8; s++)
                 {
-                    for (int s = 1; s <= 8; s++)
+                    int cur = ParamHelper.GetCellInt(row, $"lotItemId0{s}");
+                    if (cur == 0 || cur == itemId)
                     {
-                        int cur = ParamHelper.GetCellInt(row, $"lotItemId0{s}");
-                        if (cur == 0 || cur == itemId)
-                        {
-                            targetRow = row;
-                            break;
-                        }
+                        ParamHelper.SetCellIfExists(row, $"lotItemId0{s}", itemId);
+                        ParamHelper.SetCellIfExists(row, $"lotItemCategory0{s}", lotCategory);
+                        ParamHelper.SetCellIfExists(row, $"lotItemBasePoint0{s}", (ushort)250);
+                        ParamHelper.SetCellIfExists(row, $"lotItemNum0{s}", (byte)1);
+                        ParamHelper.SetCellIfExists(row, $"getItemFlagId0{s}", 0u);
+                        injectedLootCount++;
+                        return;
                     }
-                    if (targetRow != null) break;
                 }
             }
-
-            if (targetRow == null)
-            {
-                targetRow = itemLotParam.Rows.FirstOrDefault(r => r.ID == 301000000) ?? itemLotParam.Rows.FirstOrDefault();
-            }
-
-            if (targetRow != null)
-            {
-                bool isAccessory = itemIdToIsAccessory.TryGetValue(itemId, out var ia) && ia;
-                bool isArmor = itemIdToIsProtector.TryGetValue(itemId, out var ip) ? ip : (!isAccessory && !itemIdToIsWeapon.GetValueOrDefault(itemId, false));
-                int lotCategory = isAccessory ? 4 : (isArmor ? 3 : 2);
-                int slotToUse = 1;
-                for (int s = 1; s <= 8; s++)
-                {
-                    int cur = ParamHelper.GetCellInt(targetRow, $"lotItemId0{s}");
-                    if (cur == itemId || cur == 0) { slotToUse = s; break; }
-                }
-
-                ParamHelper.SetCellIfExists(targetRow, $"lotItemId0{slotToUse}", itemId);
-                ParamHelper.SetCellIfExists(targetRow, $"lotItemCategory0{slotToUse}", lotCategory);
-                ParamHelper.SetCellIfExists(targetRow, $"lotItemBasePoint0{slotToUse}", (ushort)250);
-                ParamHelper.SetCellIfExists(targetRow, $"lotItemNum0{slotToUse}", (byte)1);
-                ParamHelper.SetCellIfExists(targetRow, $"getItemFlagId0{slotToUse}", 0u);
-                Console.WriteLine($"[RegTool SUCCESS] Rotated overflowed item ID {itemId} to ItemLotParam_enemy lot ID {targetRow.ID} slot {slotToUse}.");
-                injectedLootCount++;
-            }
+            Console.WriteLine($"[RegTool WARN] Could not find open enemy lot slot for item {itemId}.");
         }
     }
 }

@@ -84,21 +84,9 @@ class DiabloVariantBuilder:
                             "cost_or_remembrance": float(boss.get("defaultCost", 30000))
                         }
                     else:
-                        chest = generator.get_next_chest(chest_pool, excluded_ids=item_assigned_chests) if hasattr(generator, "get_next_chest") else (chest_pool[0] if chest_pool else None)
-                        if not chest and raw_chests and hasattr(generator, "get_next_chest"):
-                            chest = generator.get_next_chest(raw_chests, excluded_ids=item_assigned_chests)
-                        if chest:
-                            generator.record_chest_assignment(chest.get("lotParamId", 0))
-                            item_assigned_chests.add(chest.get("lotParamId", 0))
-                            loot_spec = {
-                                "type": "map_pickup",
-                                "lot_id": chest["lotParamId"],
-                                "target_id": str(chest["lotParamId"]),
-                                "display_name": f"[Chest After Boss] {chest['name']}",
-                                "drop_rate_percent": 100.0
-                            }
+                        mod_bucket = 1
 
-                elif mod_bucket == 1 and chest_pool:
+                if mod_bucket == 1 and chest_pool:
                     chest = generator.get_next_chest(chest_pool, excluded_ids=item_assigned_chests) if hasattr(generator, "get_next_chest") else (chest_pool[0] if chest_pool else None)
                     if not chest and raw_chests and hasattr(generator, "get_next_chest"):
                         chest = generator.get_next_chest(raw_chests, excluded_ids=item_assigned_chests)

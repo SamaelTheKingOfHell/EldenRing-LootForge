@@ -133,6 +133,7 @@ class KnowledgeLoader:
                     "boss": bl.get("Name", f"Boss Lot {lot_id}"),
                     "lotParamId": lot_id,
                     "progressionTier": bl.get("Tier", 1),
+                    "isMapTable": bl.get("IsMapTable", True),
                     "defaultCost": 30000
                 })
         routes_data["_discovered_boss_lots"] = disc_bosses

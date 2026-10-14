@@ -52,6 +52,9 @@ namespace LootForge.RegTool
                         return DiagnosticService.ExecuteFindMultiSlotLots(options);
                     case "inject-boss-loot-pools":
                         return BossLootPoolService.ExecuteInjectBossLootPools(options);
+                    case "inject-chest-loot-pools":
+                    case "inject-chests":
+                        return ChestLootPoolService.ExecuteInjectChestLootPools(options);
                     case "introspect-world":
                         return SmartDiscoveryService.ExecuteIntrospect(options);
                     case "sweep-vanilla":
@@ -62,6 +65,11 @@ namespace LootForge.RegTool
                         return RegulationDiffService.ExecuteDiffReg(options);
                     case "sync-dlc-msg":
                         return FmgInjector.ExecuteSyncDlcMsg(options);
+                    case "audit-loot":
+                        return LootAuditService.ExecuteAuditLoot(options);
+                    case "find-tutorial":
+                        TutorialFinder.Find();
+                        return 0;
                     default:
                         Console.Error.WriteLine($"Unknown command: '{command}'");
                         PrintUsage();

@@ -88,15 +88,8 @@ class LootDistributor:
 
         if not source_name:
             all_enemies = self._kb.list_elite_enemies()
-            if all_enemies:
-                fallback = random.choice(all_enemies)
-                source_id, source_name, default_route = fallback["id"], fallback["name"], "enemy_drop"
-                system_logger.info(
-                    f"Model '{model_id}' not in knowledge base, assigned to: {source_name}",
-                    source="LootDistributor"
-                )
-            else:
-                source_name = "Wandering Enemy (Uncharted)"
+            fallback = random.choice(all_enemies) if all_enemies else {"id": "mob_default", "name": "Wandering Enemy"}
+            source_id, source_name, default_route = fallback["id"], fallback["name"], "enemy_drop"
 
         tier = self._kb.get_progression_tier(vanilla_info or mod_set.target_model_id)
 
@@ -122,6 +115,16 @@ class LootDistributor:
         # 2. Addition Type Routing
         if addition_type == AdditionType.RANDOM_ADDITION:
             target = self._random_boss_shop_or_transfusion(tier=tier) if is_not_dropped else self._random_mob_drop(tier=tier)
+        elif not is_weapon:
+            chests = self._kb.list_chests(tier=tier) or self._kb.list_chests()
+            if chests:
+                unassigned = [c for c in chests if str(c.get("lotParamId", c.get("id"))) not in self._assigned_chests]
+                chosen = unassigned[0] if unassigned else chests[len(self._assigned_chests) % len(chests)]
+                lot_id = chosen.get("lotParamId", 102100)
+                self._assigned_chests.add(str(lot_id))
+                target = LootTarget(LootDistributionType.MAP_PICKUP, str(lot_id), chosen.get("name", f"Chest {lot_id}"), 100.0)
+            else:
+                target = self._standard_placement(default_route, source_id, source_name)
         else:
             target = self._standard_placement(default_route, source_id, source_name)
 

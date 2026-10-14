@@ -279,8 +279,14 @@ class VanillaKnowledgeBase:
             if not any(k in e.get("name", "").lower() for k in ["chest", "quest", "cache"])
         ]
 
+        bosses = list(self._discovered_boss_lots) if self._discovered_boss_lots else list(self._boss_remembrances)
+        if not any(b.get("lotParamId") == 10030 for b in bosses):
+            bosses.insert(0, {"id": "boss_lot_10030", "name": "Chapel of Anticipation - Grafted Scion", "boss": "Grafted Scion", "lotParamId": 10030, "progressionTier": 1, "isMapTable": True})
+            bosses.insert(1, {"id": "boss_lot_18000050", "name": "Cave of Knowledge - Stranded Graveyard Reward", "boss": "Soldier of Godrick", "lotParamId": 18000050, "progressionTier": 1, "isMapTable": True})
+            bosses.insert(2, {"id": "boss_lot_431100000", "name": "Cave of Knowledge - Soldier of Godrick", "boss": "Soldier of Godrick", "lotParamId": 431100000, "progressionTier": 1, "isMapTable": False})
+
         return {
-            "bosses": list(self._boss_remembrances),
+            "bosses": bosses,
             "merchants": list(self._merchants),
             "chests": chests,
             "elites": list(self._elite_enemies),

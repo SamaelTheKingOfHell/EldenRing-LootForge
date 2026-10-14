@@ -46,7 +46,8 @@ namespace LootForge.RegTool
         string Name,
         int RewardItemId,
         int RewardCategory,
-        EntityProgressionTier Tier
+        EntityProgressionTier Tier,
+        bool IsMapTable = true
     );
 
     public record DiscoveredChest(
@@ -54,7 +55,8 @@ namespace LootForge.RegTool
         string Name,
         int BaseItemId,
         int Category,
-        EntityProgressionTier Tier
+        EntityProgressionTier Tier,
+        bool IsModded = false
     );
 
     public record DiscoveredWorldSnapshot(

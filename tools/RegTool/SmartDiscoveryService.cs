@@ -90,6 +90,7 @@ namespace LootForge.RegTool
             var protParam = LoadParam("EquipParamProtector");
             var accParam = LoadParam("EquipParamAccessory");
             var mapLotParam = LoadParam("ItemLotParam_map");
+            var enemyLotParam = LoadParam("ItemLotParam_enemy");
 
             // 1. Discover valid player weapons
             var discoveredWeapons = new List<DiscoveredWeapon>();
@@ -186,43 +187,51 @@ namespace LootForge.RegTool
                 }
             }
 
-            // 4. Discover boss encounters, chests, and world pickups in ItemLotParam_map
+            // 4. Discover boss encounters and chests across ItemLotParam_enemy and ItemLotParam_map
             var discoveredBossLots = new List<DiscoveredBossLot>();
             var discoveredChests = new List<DiscoveredChest>();
+            var seenBossLots = new HashSet<int>();
+
+            void AddBoss(int id, string name, int itm, int cat, EntityProgressionTier t, bool isMap)
+            {
+                if (seenBossLots.Add(id))
+                    discoveredBossLots.Add(new DiscoveredBossLot(id, name, itm, cat, t, isMap));
+            }
+
+            // Guaranteed early/tutorial boss lots
+            AddBoss(10030, "Chapel of Anticipation - Grafted Scion", 2060000, 2, EntityProgressionTier.Early, true);
+            AddBoss(10031, "Chapel of Anticipation - Grafted Scion (Shield)", 32090000, 2, EntityProgressionTier.Early, true);
+            AddBoss(18000050, "Cave of Knowledge - Stranded Graveyard Reward", 1040, 4, EntityProgressionTier.Early, true);
+            AddBoss(431100000, "Cave of Knowledge - Soldier of Godrick", 2040000, 2, EntityProgressionTier.Early, false);
+
+            foreach (var r in enemyLotParam.Rows)
+            {
+                int itm1 = ParamHelper.GetCellInt(r, "lotItemId01");
+                int p1 = ParamHelper.GetCellInt(r, "lotItemBasePoint01");
+                int cat1 = ParamHelper.GetCellInt(r, "lotItemCategory01");
+                if (itm1 > 0 && p1 >= 1000 && (cat1 == 2 || cat1 == 3 || cat1 == 4))
+                {
+                    string name = r.Name ?? $"Enemy Boss {r.ID}";
+                    AddBoss(r.ID, name, itm1, cat1, ProgressionTierClassifier.ClassifyTier(r.ID, name), false);
+                }
+            }
+
             foreach (var r in mapLotParam.Rows)
             {
-                int p1 = ParamHelper.GetCellInt(r, "lotItemBasePoint01");
                 int itm1 = ParamHelper.GetCellInt(r, "lotItemId01");
+                int p1 = ParamHelper.GetCellInt(r, "lotItemBasePoint01");
                 int cat1 = ParamHelper.GetCellInt(r, "lotItemCategory01");
                 int itm2 = ParamHelper.GetCellInt(r, "lotItemId02");
+                string name = r.Name ?? $"Map Lot {r.ID}";
+                var tier = ProgressionTierClassifier.ClassifyTier(r.ID, name);
 
-                if (itm1 > 0 && p1 >= 1000)
+                if (itm1 > 0 && p1 >= 1000 && (cat1 == 2 || cat1 == 3 || cat1 == 4))
+                    AddBoss(r.ID, name, itm1, cat1, tier, true);
+
+                if (itm1 > 0 && itm2 <= 0)
                 {
-                    string name = r.Name ?? $"Map Lot {r.ID}";
-                    var tier = ProgressionTierClassifier.ClassifyTier(r.ID, name);
-
-                    if (cat1 == 2 || cat1 == 3 || cat1 == 4)
-                    {
-                        discoveredBossLots.Add(new DiscoveredBossLot(
-                            r.ID,
-                            name,
-                            itm1,
-                            cat1,
-                            tier
-                        ));
-                    }
-
-                    // Any guaranteed single-item chest or world pickup with available slots
-                    if (itm2 <= 0)
-                    {
-                        discoveredChests.Add(new DiscoveredChest(
-                            r.ID,
-                            name,
-                            itm1,
-                            cat1,
-                            tier
-                        ));
-                    }
+                    bool isMod = r.ID >= 100000 && r.ID < 1000000000;
+                    discoveredChests.Add(new DiscoveredChest(r.ID, name, itm1, cat1, tier, isMod));
                 }
             }
 

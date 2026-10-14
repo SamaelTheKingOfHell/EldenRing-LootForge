@@ -86,150 +86,109 @@ namespace LootForge.RegTool
                 }
             }
 
+            bool isMapTable = tableName.Equals("ItemLotParam_map", StringComparison.OrdinalIgnoreCase);
             var candidateRows = new List<PARAM.Row>(2);
             if (rowMap.TryGetValue(targetLotId, out var pRow)) candidateRows.Add(pRow);
             if (rowMap.TryGetValue(targetLotId + 10, out var cRow)) candidateRows.Add(cRow);
 
             if (candidateRows.Count == 0)
             {
-                ShopLootInjector.InjectShopLineup(lootEl, getOrLoadParam, itemIdToIsProtector, itemIdToIsWeapon, itemIdToIsAccessory, awardedItems, ref injectedLootCount);
-                return;
-            }
-
-            bool isMapTable = tableName.Equals("ItemLotParam_map", StringComparison.OrdinalIgnoreCase);
-            ushort ratePoints = (ushort)(dropRatePercent >= 100.0 ? 1000 : Math.Clamp((int)(dropRatePercent * 10), 1, 1000));
-            var overflowItems = new List<int>();
-
-            if (isMapTable)
-            {
-                // In ItemLotParam_map (chests, world pickups, map events):
-                // Candidate row[0] is the exact entity triggered by the MSB event.
-                // CRITICAL REQUIREMENT: Slot 1 (lotItemId01) is the original item and MUST REMAIN UNTOUCHED!
-                // Inject up to 4 mod items into available empty slots (lotItemId02..lotItemId08).
-                var targetRow = candidateRows[0];
-                foreach (int itemId in awardedItems)
+                // Cross-table fallback: check if targetLotId exists in the other table
+                string otherTable = isMapTable ? "ItemLotParam_enemy" : "ItemLotParam_map";
+                var (otherParam, _) = getOrLoadParam(otherTable, "ItemLotParam");
+                var otherRow = otherParam.Rows.FirstOrDefault(r => r.ID == targetLotId);
+                if (otherRow != null)
                 {
-                    bool isAccessory = itemIdToIsAccessory.TryGetValue(itemId, out var ia) && ia;
-                    bool isArmor = itemIdToIsProtector.TryGetValue(itemId, out var ip) ? ip : (!isAccessory && !itemIdToIsWeapon.GetValueOrDefault(itemId, false));
-                    int lotCategory = isAccessory ? 4 : (isArmor ? 3 : 2);
+                    ref var otherRowMap = ref (isMapTable ? ref _enemyLotRowMap : ref _mapLotRowMap);
+                    InjectItemLotDrop(otherTable, ref otherRowMap, lootEl, getOrLoadParam, itemIdToIsProtector, itemIdToIsWeapon, itemIdToIsAccessory, awardedItems, ref injectedLootCount);
+                    return;
+                }
 
-                    int slotToUse = -1;
-                    // Scan slots 2 to 8. Never touch slot 1!
-                    for (int s = 2; s <= 8; s++)
-                    {
-                        int cur = ParamHelper.GetCellInt(targetRow, $"lotItemId0{s}");
-                        if (cur == itemId) { slotToUse = s; break; }
-                        if (cur == 0 && slotToUse == -1) slotToUse = s;
-                    }
-
-                    if (slotToUse != -1)
-                    {
-                        ParamHelper.SetCellIfExists(targetRow, $"lotItemId0{slotToUse}", itemId);
-                        ParamHelper.SetCellIfExists(targetRow, $"lotItemCategory0{slotToUse}", lotCategory);
-                        ParamHelper.SetCellIfExists(targetRow, $"lotItemBasePoint0{slotToUse}", (ushort)1000);
-                        ParamHelper.SetCellIfExists(targetRow, $"lotItemNum0{slotToUse}", (byte)1);
-                        ParamHelper.SetCellIfExists(targetRow, $"getItemFlagId0{slotToUse}", 0u);
-                    }
-                    else
-                    {
-                        overflowItems.Add(itemId);
-                    }
+                // Fallback to any map chest with available slots
+                var (mapParam, _) = getOrLoadParam("ItemLotParam_map", "ItemLotParam");
+                var fallbackChest = mapParam.Rows.FirstOrDefault(r => ParamHelper.GetCellInt(r, "lotItemId01") > 0 && ParamHelper.GetCellInt(r, "lotItemId02") == 0);
+                if (fallbackChest != null)
+                {
+                    candidateRows.Add(fallbackChest);
+                    isMapTable = true;
+                }
+                else
+                {
+                    ShopLootInjector.InjectShopLineup(lootEl, getOrLoadParam, itemIdToIsProtector, itemIdToIsWeapon, itemIdToIsAccessory, awardedItems, ref injectedLootCount);
+                    return;
                 }
             }
-            else
+
+            var targetRow = candidateRows[0];
+            ushort pts = (ushort)(isMapTable || dropRatePercent >= 100.0 ? 1000 : Math.Clamp((int)(dropRatePercent * 10), 1, 1000));
+            var overflowItems = new List<int>();
+
+            foreach (int itemId in awardedItems)
             {
-                // Enemy drops:
-                // Check if primary slot is guaranteed drop (1000 points, e.g. boss remembrance / trophy).
-                // If so, chain a sequential row so guaranteed drops are never cannibalized.
-                int p01 = ParamHelper.GetCellInt(candidateRows[0], "lotItemBasePoint01");
-                int item01 = ParamHelper.GetCellInt(candidateRows[0], "lotItemId01");
-                bool isGuaranteedDrop = item01 > 0 && p01 >= 1000;
+                bool isAccessory = itemIdToIsAccessory.TryGetValue(itemId, out var ia) && ia;
+                bool isArmor = itemIdToIsProtector.TryGetValue(itemId, out var ip) ? ip : (!isAccessory && !itemIdToIsWeapon.GetValueOrDefault(itemId, false));
+                int lotCategory = isAccessory ? 4 : (isArmor ? 3 : 2);
 
-                foreach (int itemId in awardedItems)
+                int slotToUse = -1;
+                // Never touch slot 1 (preserves original vanilla/mod loot). Scan slots 2 to 8
+                for (int s = 2; s <= 8; s++)
                 {
-                    bool isAccessory = itemIdToIsAccessory.TryGetValue(itemId, out var ia) && ia;
-                    bool isArmor = itemIdToIsProtector.TryGetValue(itemId, out var ip) ? ip : (!isAccessory && !itemIdToIsWeapon.GetValueOrDefault(itemId, false));
-                    int lotCategory = isAccessory ? 4 : (isArmor ? 3 : 2);
-                    bool placed = false;
+                    int cur = ParamHelper.GetCellInt(targetRow, $"lotItemId0{s}");
+                    if (cur == itemId) { slotToUse = s; break; }
+                    if (cur == 0 && slotToUse == -1) slotToUse = s;
+                }
 
-                    if (isGuaranteedDrop)
-                    {
-                        var templateRow = candidateRows[0];
-                        int freeChainId = -1;
-                        for (int offset = 1; offset <= 9; offset++)
-                        {
-                            int candId = targetLotId + offset;
-                            if (!rowMap.ContainsKey(candId))
-                            {
-                                freeChainId = candId;
-                                break;
-                            }
-                        }
-
-                        if (freeChainId != -1)
-                        {
-                            PARAM.Row chainedRow = new PARAM.Row(templateRow)
-                            {
-                                ID = freeChainId,
-                                Name = $"[LootForge] Injected Enemy Drop ({itemId})"
-                            };
-
-                            for (int s = 1; s <= 8; s++)
-                            {
-                                ParamHelper.SetCellIfExists(chainedRow, $"lotItemId0{s}", 0);
-                                ParamHelper.SetCellIfExists(chainedRow, $"lotItemCategory0{s}", 0);
-                                ParamHelper.SetCellIfExists(chainedRow, $"lotItemBasePoint0{s}", (ushort)0);
-                                ParamHelper.SetCellIfExists(chainedRow, $"lotItemNum0{s}", (byte)0);
-                                ParamHelper.SetCellIfExists(chainedRow, $"getItemFlagId0{s}", 0u);
-                            }
-
-                            ParamHelper.SetCellIfExists(chainedRow, "lotItemId01", itemId);
-                            ParamHelper.SetCellIfExists(chainedRow, "lotItemCategory01", lotCategory);
-                            ParamHelper.SetCellIfExists(chainedRow, "lotItemBasePoint01", ratePoints);
-                            ParamHelper.SetCellIfExists(chainedRow, "lotItemNum01", (byte)1);
-                            ParamHelper.SetCellIfExists(chainedRow, "getItemFlagId01", 0u);
-
-                            itemLotParam.Rows.Add(chainedRow);
-                            rowMap[freeChainId] = chainedRow;
-                            placed = true;
-                        }
-                    }
-                    else
-                    {
-                        // Standard mob chance drop: use empty slot in candidate rows
-                        foreach (var targetRow in candidateRows)
-                        {
-                            int slotToUse = -1;
-                            for (int s = 1; s <= 8; s++)
-                            {
-                                int cur = ParamHelper.GetCellInt(targetRow, $"lotItemId0{s}");
-                                if (cur == itemId) { slotToUse = s; break; }
-                                if (cur == 0 && slotToUse == -1) slotToUse = s;
-                            }
-
-                            if (slotToUse != -1)
-                            {
-                                ParamHelper.SetCellIfExists(targetRow, $"lotItemId0{slotToUse}", itemId);
-                                ParamHelper.SetCellIfExists(targetRow, $"lotItemCategory0{slotToUse}", lotCategory);
-                                ParamHelper.SetCellIfExists(targetRow, $"lotItemBasePoint0{slotToUse}", ratePoints);
-                                ParamHelper.SetCellIfExists(targetRow, $"lotItemNum0{slotToUse}", (byte)1);
-                                ParamHelper.SetCellIfExists(targetRow, $"getItemFlagId0{slotToUse}", 0u);
-                                placed = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (!placed)
-                    {
-                        overflowItems.Add(itemId);
-                    }
+                if (slotToUse != -1)
+                {
+                    ParamHelper.SetCellIfExists(targetRow, $"lotItemId0{slotToUse}", itemId);
+                    ParamHelper.SetCellIfExists(targetRow, $"lotItemCategory0{slotToUse}", lotCategory);
+                    ParamHelper.SetCellIfExists(targetRow, $"lotItemBasePoint0{slotToUse}", pts);
+                    ParamHelper.SetCellIfExists(targetRow, $"lotItemNum0{slotToUse}", (byte)1);
+                    ParamHelper.SetCellIfExists(targetRow, $"getItemFlagId0{slotToUse}", 0u);
+                }
+                else
+                {
+                    overflowItems.Add(itemId);
                 }
             }
 
             if (overflowItems.Count > 0)
             {
-                ShopLootInjector.InjectShopLineup(lootEl, getOrLoadParam, itemIdToIsProtector, itemIdToIsWeapon, itemIdToIsAccessory, overflowItems, ref injectedLootCount);
+                var (mapParam, _) = getOrLoadParam("ItemLotParam_map", "ItemLotParam");
+                var remaining = new List<int>();
+                foreach (int itm in overflowItems)
+                {
+                    bool placed = false;
+                    foreach (var mRow in mapParam.Rows)
+                    {
+                        if (ParamHelper.GetCellInt(mRow, "lotItemId01") > 0)
+                        {
+                            for (int s = 2; s <= 8; s++)
+                            {
+                                if (ParamHelper.GetCellInt(mRow, $"lotItemId0{s}") == 0)
+                                {
+                                    bool isAccessory = itemIdToIsAccessory.TryGetValue(itm, out var ia) && ia;
+                                    bool isArmor = itemIdToIsProtector.TryGetValue(itm, out var ip) ? ip : (!isAccessory && !itemIdToIsWeapon.GetValueOrDefault(itm, false));
+                                    int lotCategory = isAccessory ? 4 : (isArmor ? 3 : 2);
+                                    ParamHelper.SetCellIfExists(mRow, $"lotItemId0{s}", itm);
+                                    ParamHelper.SetCellIfExists(mRow, $"lotItemCategory0{s}", lotCategory);
+                                    ParamHelper.SetCellIfExists(mRow, $"lotItemBasePoint0{s}", (ushort)1000);
+                                    ParamHelper.SetCellIfExists(mRow, $"lotItemNum0{s}", (byte)1);
+                                    ParamHelper.SetCellIfExists(mRow, $"getItemFlagId0{s}", 0u);
+                                    placed = true;
+                                    break;
+                                }
+                            }
+                            if (placed) break;
+                        }
+                    }
+                    if (!placed) remaining.Add(itm);
+                }
+
+                if (remaining.Count > 0)
+                {
+                    ShopLootInjector.InjectShopLineup(lootEl, getOrLoadParam, itemIdToIsProtector, itemIdToIsWeapon, itemIdToIsAccessory, remaining, ref injectedLootCount);
+                }
             }
 
             injectedLootCount++;
@@ -238,12 +197,14 @@ namespace LootForge.RegTool
         private static int ResolveEnemyLotId(string? name)
         {
             string lower = name?.ToLowerInvariant() ?? "";
+            if (lower.Contains("scion") || lower.Contains("anticipation")) return 10030;
+            if (lower.Contains("soldier of godrick") || lower.Contains("tutorial")) return 18000050;
             if (lower.Contains("moongrum")) return 340000000;
             if (lower.Contains("crucible")) return 250000000;
             if (lower.Contains("black knife") || lower.Contains("assassin")) return 210000000;
             if (lower.Contains("cleanrot")) return 380000000;
             if (lower.Contains("banished")) return 301000000;
-            if (lower.Contains("bloodhound") || lower.Contains("darriwil")) return 410000000;
+            if (lower.Contains("bloodhound") || lower.Contains("darriwil")) return 20600;
             if (lower.Contains("sentinel")) return 420000000;
             if (lower.Contains("cavalry")) return 450000000;
             if (lower.Contains("vyke")) return 440000000;
@@ -255,7 +216,7 @@ namespace LootForge.RegTool
             if (lower.Contains("godrick knight")) return 435100000;
             if (lower.Contains("noble")) return 430000000;
             if (lower.Contains("soldier")) return 431100000;
-            return 301000000; // Banished Knight safe non-tutorial fallback
+            return 102100;
         }
     }
 }

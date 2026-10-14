@@ -99,8 +99,38 @@ namespace LootForge.RegTool
 
             Console.WriteLine($"[BossLootPool] Discovered {targetBosses.Count} total boss targets ({targetBosses.Values.Count(v => !v.IsMapTable)} enemy, {targetBosses.Values.Count(v => v.IsMapTable)} map/dungeon).");
 
+            // Gather custom weapons and armors to prioritize on bosses
+            var customBossItems = new List<(int Id, string Name, int Category, EntityProgressionTier Tier)>();
+            var wepFile = bnd.Files.FirstOrDefault(f => f.Name.EndsWith("EquipParamWeapon.param", StringComparison.OrdinalIgnoreCase));
+            if (wepFile != null)
+            {
+                var wepP = PARAM.Read(wepFile.Bytes);
+                foreach (var r in wepP.Rows)
+                {
+                    if (r.ID >= 9000000 && r.ID < 99000000)
+                    {
+                        string n = !string.IsNullOrWhiteSpace(r.Name) ? r.Name : $"Custom Weapon {r.ID}";
+                        customBossItems.Add((r.ID, n, 2, ProgressionTierClassifier.ClassifyTier(r.ID, n)));
+                    }
+                }
+            }
+
+            var protFile = bnd.Files.FirstOrDefault(f => f.Name.EndsWith("EquipParamProtector.param", StringComparison.OrdinalIgnoreCase));
+            if (protFile != null)
+            {
+                var protP = PARAM.Read(protFile.Bytes);
+                foreach (var r in protP.Rows)
+                {
+                    if (r.ID >= 9000000 && r.ID < 99000000)
+                    {
+                        string n = !string.IsNullOrWhiteSpace(r.Name) ? r.Name : $"Custom Armor {r.ID}";
+                        customBossItems.Add((r.ID, n, 3, ProgressionTierClassifier.ClassifyTier(r.ID, n)));
+                    }
+                }
+            }
+
             var rng = new Random(1337);
-            var usedWeaponIds = new HashSet<int>();
+            var usedItemIds = new HashSet<int>();
             int bossesEnriched = 0;
             int totalItemsInjected = 0;
 
@@ -111,70 +141,43 @@ namespace LootForge.RegTool
                 EntityProgressionTier tier = kvp.Value.Tier;
                 bool isMap = kvp.Value.IsMapTable;
 
-                // Non-repeating distinct weapon allocation per boss with cycling pool
-                var tierWeapons = CuratedWeaponPool.WEAPONS.Where(w => w.Tier == tier).ToList();
-                if (tierWeapons.Count < weaponsPerBoss) tierWeapons = CuratedWeaponPool.WEAPONS;
+                // 1. Prioritize custom weapons and armor pieces
+                var availableCustom = customBossItems.Where(i => i.Tier == tier && !usedItemIds.Contains(i.Id)).ToList();
+                if (availableCustom.Count < weaponsPerBoss)
+                    availableCustom = customBossItems.Where(i => !usedItemIds.Contains(i.Id)).ToList();
 
-                var unassigned = tierWeapons.Where(w => !usedWeaponIds.Contains(w.Id)).ToList();
-                if (unassigned.Count < weaponsPerBoss)
+                var chosenItems = availableCustom.OrderBy(_ => rng.Next()).Take(weaponsPerBoss).ToList();
+
+                // 2. Supplement with curated weapons if needed
+                if (chosenItems.Count < weaponsPerBoss)
                 {
-                    foreach (var w in tierWeapons) usedWeaponIds.Remove(w.Id);
-                    unassigned = tierWeapons.Where(w => !usedWeaponIds.Contains(w.Id)).ToList();
-                }
-
-                var chosenWeapons = unassigned.OrderBy(_ => rng.Next()).Take(weaponsPerBoss).ToList();
-                if (chosenWeapons.Count < weaponsPerBoss)
-                {
-                    var extra = CuratedWeaponPool.WEAPONS.Where(w => !chosenWeapons.Any(c => c.Id == w.Id)).OrderBy(_ => rng.Next()).Take(weaponsPerBoss - chosenWeapons.Count);
-                    chosenWeapons.AddRange(extra);
-                }
-
-                if (chosenWeapons.Count == 0) continue;
-                foreach (var w in chosenWeapons) usedWeaponIds.Add(w.Id);
-
-                if (isMap)
-                {
-                    // Inject directly into empty slots (lotItemId02..lotItemId08) of the map row
-                    if (mapRowMap.TryGetValue(baseLotId, out var targetRow))
+                    var tierWeapons = CuratedWeaponPool.WEAPONS.Where(w => w.Tier == tier && !usedItemIds.Contains(w.Id)).ToList();
+                    if (tierWeapons.Count < weaponsPerBoss - chosenItems.Count) tierWeapons = CuratedWeaponPool.WEAPONS;
+                    var extra = tierWeapons.Where(w => !chosenItems.Any(c => c.Id == w.Id)).OrderBy(_ => rng.Next()).Take(weaponsPerBoss - chosenItems.Count);
+                    foreach (var w in extra)
                     {
-                        int slotIdx = 2;
-                        foreach (var wep in chosenWeapons)
-                        {
-                            while (slotIdx <= 8 && ParamHelper.GetCellInt(targetRow, $"lotItemId0{slotIdx}") > 0)
-                                slotIdx++;
-
-                            if (slotIdx <= 8)
-                            {
-                                ParamHelper.SetCellIfExists(targetRow, $"lotItemId0{slotIdx}", wep.Id);
-                                ParamHelper.SetCellIfExists(targetRow, $"lotItemCategory0{slotIdx}", 2);
-                                ParamHelper.SetCellIfExists(targetRow, $"lotItemBasePoint0{slotIdx}", (ushort)1000);
-                                ParamHelper.SetCellIfExists(targetRow, $"lotItemNum0{slotIdx}", (byte)1);
-                                ParamHelper.SetCellIfExists(targetRow, $"getItemFlagId0{slotIdx}", 0u);
-                                totalItemsInjected++;
-                                slotIdx++;
-                            }
-                        }
-                        bossesEnriched++;
+                        chosenItems.Add((w.Id, w.Name, 2, w.Tier));
                     }
                 }
-                else
+
+                if (chosenItems.Count == 0) continue;
+                foreach (var itm in chosenItems) usedItemIds.Add(itm.Id);
+
+                if (isMap && mapRowMap.TryGetValue(baseLotId, out var baseRow))
                 {
-                    // Enemy drops: chain sequential rows (baseLotId + 1..N)
-                    if (enemyRowMap.TryGetValue(baseLotId, out var baseRow))
+                    for (int i = 0; i < chosenItems.Count; i++)
                     {
-                        for (int offset = 1; offset <= chosenWeapons.Count; offset++)
+                        int offset = i + 1;
+                        int chainedId = baseLotId + offset;
+                        var itm = chosenItems[i];
+                        PARAM.Row? chainedRow = mapRowMap.TryGetValue(chainedId, out var existing) ? existing : null;
+                        if (chainedRow == null)
                         {
-                            int chainedId = baseLotId + offset;
-                            var wep = chosenWeapons[offset - 1];
-
-                            if (!enemyRowMap.TryGetValue(chainedId, out var chainedRow))
+                            chainedRow = new PARAM.Row(baseRow)
                             {
-                                chainedRow = new PARAM.Row(baseRow) { ID = chainedId };
-                                enemyParam.Rows.Add(chainedRow);
-                                enemyRowMap[chainedId] = chainedRow;
-                            }
-
-                            chainedRow.Name = $"[Boss Pool T{(int)tier}] {wep.Name} (for {bossName})";
+                                ID = chainedId,
+                                Name = $"[Boss Pool T{(int)tier}] {itm.Name} (for {bossName})"
+                            };
                             for (int s = 1; s <= 8; s++)
                             {
                                 ParamHelper.SetCellIfExists(chainedRow, $"lotItemId0{s}", 0);
@@ -183,17 +186,52 @@ namespace LootForge.RegTool
                                 ParamHelper.SetCellIfExists(chainedRow, $"lotItemNum0{s}", (byte)0);
                                 ParamHelper.SetCellIfExists(chainedRow, $"getItemFlagId0{s}", 0u);
                             }
-
-                            ParamHelper.SetCellIfExists(chainedRow, "lotItemId01", wep.Id);
-                            ParamHelper.SetCellIfExists(chainedRow, "lotItemCategory01", 2);
-                            ParamHelper.SetCellIfExists(chainedRow, "lotItemBasePoint01", (ushort)1000);
-                            ParamHelper.SetCellIfExists(chainedRow, "lotItemNum01", (byte)1);
-                            ParamHelper.SetCellIfExists(chainedRow, "getItemFlagId01", 0u);
-
-                            totalItemsInjected++;
+                            mapParam.Rows.Add(chainedRow);
+                            mapRowMap[chainedId] = chainedRow;
                         }
-                        bossesEnriched++;
+
+                        ParamHelper.SetCellIfExists(chainedRow, "lotItemId01", itm.Id);
+                        ParamHelper.SetCellIfExists(chainedRow, "lotItemCategory01", itm.Category);
+                        ParamHelper.SetCellIfExists(chainedRow, "lotItemBasePoint01", (ushort)1000);
+                        ParamHelper.SetCellIfExists(chainedRow, "lotItemNum01", (byte)1);
+                        ParamHelper.SetCellIfExists(chainedRow, "getItemFlagId01", 0u);
+                        totalItemsInjected++;
                     }
+                    bossesEnriched++;
+                }
+                else if (!isMap && enemyRowMap.TryGetValue(baseLotId, out var targetRow))
+                {
+                    int slotIdx = 1;
+                    if (baseLotId == 431100000 && chosenItems.Count > 0)
+                    {
+                        var firstItm = chosenItems[0];
+                        ParamHelper.SetCellIfExists(targetRow, "lotItemId01", firstItm.Id);
+                        ParamHelper.SetCellIfExists(targetRow, "lotItemCategory01", firstItm.Category);
+                        ParamHelper.SetCellIfExists(targetRow, "lotItemBasePoint01", (ushort)1000);
+                        ParamHelper.SetCellIfExists(targetRow, "lotItemNum01", (byte)1);
+                        ParamHelper.SetCellIfExists(targetRow, "getItemFlagId01", 0u);
+                        totalItemsInjected++;
+                        slotIdx = 2;
+                    }
+
+                    for (int i = (baseLotId == 431100000 ? 1 : 0); i < chosenItems.Count; i++)
+                    {
+                        var itm = chosenItems[i];
+                        while (slotIdx <= 8 && ParamHelper.GetCellInt(targetRow, $"lotItemId0{slotIdx}") > 0)
+                            slotIdx++;
+
+                        if (slotIdx <= 8)
+                        {
+                            ParamHelper.SetCellIfExists(targetRow, $"lotItemId0{slotIdx}", itm.Id);
+                            ParamHelper.SetCellIfExists(targetRow, $"lotItemCategory0{slotIdx}", itm.Category);
+                            ParamHelper.SetCellIfExists(targetRow, $"lotItemBasePoint0{slotIdx}", (ushort)1000);
+                            ParamHelper.SetCellIfExists(targetRow, $"lotItemNum0{slotIdx}", (byte)1);
+                            ParamHelper.SetCellIfExists(targetRow, $"getItemFlagId0{slotIdx}", 0u);
+                            totalItemsInjected++;
+                            slotIdx++;
+                        }
+                    }
+                    bossesEnriched++;
                 }
             }
 
