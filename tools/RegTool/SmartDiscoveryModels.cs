@@ -37,6 +37,7 @@ namespace LootForge.RegTool
         string Name,
         int SortId,
         int RefId,
+        int IconId,
         EntityProgressionTier Tier
     );
 

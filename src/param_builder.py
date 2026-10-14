@@ -280,6 +280,7 @@ class ParamBuilder:
                                 "field_updates": {
                                     "sortId": comp_param_id,
                                     "isDeposit": 1,
+                                    "iconId": comp.get("iconId", 18000),
                                     "sellValue": acc_pricing["sell_price"],
                                     "saleValue": acc_pricing["buy_price"],
                                     "basicPrice": acc_pricing["buy_price"]

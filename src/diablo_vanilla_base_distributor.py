@@ -190,7 +190,8 @@ class VanillaBaseDistributor:
                     "row_name": f"[LootForge] {clean_name}",
                     "field_updates": {
                         "sortId": alloc.new_equip_param_id,
-                        "isDeposit": 1
+                        "isDeposit": 1,
+                        "iconId": a_info.get("iconId", 18000)
                     }
                 }],
                 "fmg_texts": [{

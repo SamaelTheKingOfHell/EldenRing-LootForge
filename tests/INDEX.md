@@ -20,6 +20,7 @@ Automated verification suites adhering to `[CS-NO-MOCK]`. Tests exercise concret
 | `test_localization_parity.py` | Verifies 100% string key parity across all localization dictionaries (`[CS-LOCALIZATION]`). |
 | `test_pricing_engine.py` | Validates power-scaled rune pricing, regional progression tiers, rarity multipliers, affixes, boss prestige, and sell ratios (`[CS-NO-MOCK]`). |
 | `test_skill_moveset_importer.py` | Validates custom weapon skills extraction, moveset asset deployment (chr, sfx, action), parameter spec generation, and PartsDeployer integration. |
+| `test_accessory_modular_injection.py` | Validates authentic talisman iconId extraction (>= 18000), absence of transparent/placeholder icons, and accessory FMG text specs. |
 | `verify_server.py` | End-to-end integration test validating HTTP API endpoints and UI asset serving (`[CS-NO-MOCK]`). |
 
 

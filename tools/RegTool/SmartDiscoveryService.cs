@@ -168,6 +168,7 @@ namespace LootForge.RegTool
                 int isDeposit = ParamHelper.GetCellInt(r, "isDeposit");
                 int sortId = ParamHelper.GetCellInt(r, "sortId");
                 int refId = ParamHelper.GetCellInt(r, "refId");
+                int iconId = ParamHelper.GetCellInt(r, "iconId");
 
                 if (isDeposit == 1 && sortId > 0)
                 {
@@ -179,6 +180,7 @@ namespace LootForge.RegTool
                         name,
                         sortId,
                         refId,
+                        iconId > 0 ? iconId : 18000,
                         tier
                     ));
                 }

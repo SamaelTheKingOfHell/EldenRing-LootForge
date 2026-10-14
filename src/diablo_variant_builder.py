@@ -154,7 +154,11 @@ class DiabloVariantBuilder:
                                 "drop_rate_percent": float(enemy.get("defaultDropChance", 20.0))
                             }
 
-            is_chest_drop = loot_spec is not None and loot_spec.get("type") in ("map_pickup", "world_chest")
+            if loot_spec is None and spec_copy.get("loot_distribution"):
+                loot_spec = copy.deepcopy(spec_copy["loot_distribution"])
+
+            is_chest_drop = loot_spec is not None and loot_spec.get("type") in ("map_pickup", "world_chest", "chest_drop")
+            is_boss = is_boss or (loot_spec is not None and loot_spec.get("type") == "boss_remembrance")
 
             # 2. Modify Equip Params and FMG texts with rolled affixes
             variant_new_ids: List[int] = []
@@ -237,7 +241,11 @@ class DiabloVariantBuilder:
                         if comp_param_id not in variant_new_ids:
                             comp_rarity = generator.roll_rarity(is_boss=is_boss, is_chest=is_chest_drop)
                             comp_affixes = generator.roll_affixes(comp_rarity, is_weapon=False, is_accessory=True, is_boss=is_boss or is_chest_drop)
-                            comp_field_updates = {"sortId": comp_param_id, "isDeposit": 1}
+                            comp_field_updates = {
+                                "sortId": comp_param_id,
+                                "isDeposit": 1,
+                                "iconId": comp_info.get("iconId", 18000)
+                            }
                             generator.apply_affixes_to_equipment(comp_field_updates, comp_affixes, is_weapon=False, is_accessory=True)
 
                             comp_pricing = generator.pricing_engine.calculate_item_prices(

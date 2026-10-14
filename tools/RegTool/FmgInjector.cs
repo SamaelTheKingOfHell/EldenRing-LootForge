@@ -1,14 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using SoulsFormats;
 
 namespace LootForge.RegTool
 {
     /// <summary>
     /// Service responsible for injecting custom mod text into Elden Ring FMG archives
-    /// and mirroring entries into DLC message packages (item_dlc02.msgbnd.dcx).
+    /// and mirroring entries into DLC message packages (item_dlc01.msgbnd.dcx, item_dlc02.msgbnd.dcx).
     /// Adheres to [CS-MODULAR] and [CS-GRANULARITY].
     /// </summary>
     public static class FmgInjector
@@ -57,133 +56,7 @@ namespace LootForge.RegTool
             BND4 msgBnd,
             List<FmgTextSpec> fmgTexts)
         {
-            var fmgFileCache = new Dictionary<string, (FMG Fmg, BinderFile File)>(StringComparer.OrdinalIgnoreCase);
-
-            FMG? FindAndLoadFmg(string categoryName)
-            {
-                if (fmgFileCache.TryGetValue(categoryName, out var cached))
-                    return cached.Fmg;
-
-                var binderFile = msgBnd.Files.FirstOrDefault(f =>
-                    f.Name != null &&
-                    Path.GetFileName(f.Name).Equals($"{categoryName}.fmg", StringComparison.OrdinalIgnoreCase));
-
-                if (binderFile == null) return null;
-
-                var fmg = FMG.Read(binderFile.Bytes);
-                fmgFileCache[categoryName] = (fmg, binderFile);
-                return fmg;
-            }
-
-            var fmgMaps = new Dictionary<string, Dictionary<int, string?>>(StringComparer.OrdinalIgnoreCase);
-
-            Dictionary<int, string?> GetOrCreateMap(string categoryName)
-            {
-                if (!fmgMaps.TryGetValue(categoryName, out var map))
-                {
-                    var fmg = FindAndLoadFmg(categoryName);
-                    map = new Dictionary<int, string?>(fmg != null ? fmg.Entries.Count + fmgTexts.Count : fmgTexts.Count);
-                    if (fmg != null)
-                    {
-                        foreach (var entry in fmg.Entries)
-                        {
-                            map[entry.ID] = entry.Text;
-                        }
-                    }
-                    fmgMaps[categoryName] = map;
-                }
-                return map;
-            }
-
-            var protectorNameMap    = GetOrCreateMap("ProtectorName");
-            var protectorInfoMap    = GetOrCreateMap("ProtectorInfo");
-            var protectorCaptionMap = GetOrCreateMap("ProtectorCaption");
-            var weaponNameMap       = GetOrCreateMap("WeaponName");
-            var weaponInfoMap       = GetOrCreateMap("WeaponInfo");
-            var weaponCaptionMap    = GetOrCreateMap("WeaponCaption");
-            var accessoryNameMap    = GetOrCreateMap("AccessoryName");
-            var accessoryInfoMap    = GetOrCreateMap("AccessoryInfo");
-            var accessoryCaptionMap = GetOrCreateMap("AccessoryCaption");
-
-            int count = 0;
-
-            foreach (var spec in fmgTexts)
-            {
-                var nameMap    = spec.IsAccessory ? accessoryNameMap    : (spec.IsWeapon ? weaponNameMap    : protectorNameMap);
-                var infoMap    = spec.IsAccessory ? accessoryInfoMap    : (spec.IsWeapon ? weaponInfoMap    : protectorInfoMap);
-                var captionMap = spec.IsAccessory ? accessoryCaptionMap : (spec.IsWeapon ? weaponCaptionMap : protectorCaptionMap);
-
-                string nameText = spec.Name;
-                string infoText = spec.Info;
-                string captionText = spec.Caption;
-
-                // Fast O(1) lookup for vanilla name if custom mod name was not provided
-                if ((string.IsNullOrWhiteSpace(nameText) || !IsValidFmgText(nameText)) && spec.VanillaSourceId > 0)
-                {
-                    int[] fmgIdsToTry = new int[] {
-                        spec.VanillaSourceId,
-                        spec.VanillaSourceId / 1000,
-                        spec.VanillaSourceId / 100,
-                        spec.VanillaSourceId / 10,
-                        spec.VanillaSourceId * 10,
-                        spec.VanillaSourceId / 10000
-                    };
-
-                    foreach (int fmgId in fmgIdsToTry)
-                    {
-                        if (nameMap.TryGetValue(fmgId, out var vanillaNameText) && IsValidFmgText(vanillaNameText))
-                        {
-                            nameText = vanillaNameText!.Trim();
-                            break;
-                        }
-                    }
-                }
-
-                if (spec.VanillaSourceId > 0)
-                {
-                    if (string.IsNullOrWhiteSpace(infoText) || !IsValidFmgText(infoText))
-                    {
-                        if (infoMap.TryGetValue(spec.VanillaSourceId, out var vanillaInfoText) && IsValidFmgText(vanillaInfoText))
-                            infoText = vanillaInfoText!;
-                    }
-
-                    if (string.IsNullOrWhiteSpace(captionText) || !IsValidFmgText(captionText))
-                    {
-                        if (captionMap.TryGetValue(spec.VanillaSourceId, out var vanillaCaptionText) && IsValidFmgText(vanillaCaptionText))
-                            captionText = vanillaCaptionText!;
-                    }
-                }
-
-                if (!IsValidFmgText(nameText))
-                {
-                    nameText = $"[LootForge] {(spec.IsAccessory ? "Accessory" : (spec.IsWeapon ? "Weapon" : "Armor"))} {spec.ItemId}";
-                }
-
-                nameText = FormatLootForgeItemName(nameText);
-
-                // O(1) assignment replaces expensive linear RemoveAll and Add
-                nameMap[spec.ItemId] = nameText;
-                infoMap[spec.ItemId] = infoText;
-                captionMap[spec.ItemId] = captionText;
-
-                count++;
-            }
-
-            // Reconstruct FMG entries in bulk and serialize in parallel
-            foreach (var kvp in fmgFileCache)
-            {
-                if (fmgMaps.TryGetValue(kvp.Key, out var map))
-                {
-                    kvp.Value.Fmg.Entries = map.Select(e => new FMG.Entry(e.Key, e.Value)).ToList();
-                }
-            }
-
-            System.Threading.Tasks.Parallel.ForEach(fmgFileCache.Values, entry =>
-            {
-                entry.File.Bytes = entry.Fmg.Write();
-            });
-
-            return count;
+            return FmgArchiveService.InjectFmgEntriesIntoBnd(msgBnd, fmgTexts);
         }
 
         public static int InjectFmgTexts(
@@ -261,6 +134,78 @@ namespace LootForge.RegTool
             }
 
             return count;
+        }
+
+        public static int ExecuteSyncDlcMsg(Dictionary<string, string> options)
+        {
+            if (!options.TryGetValue("msg-dir", out string? msgDir) || string.IsNullOrEmpty(msgDir))
+            {
+                Console.Error.WriteLine("Missing required --msg-dir.");
+                return 1;
+            }
+
+            string baseItemMsg = Path.Combine(msgDir, "item.msgbnd.dcx");
+            if (!File.Exists(baseItemMsg))
+            {
+                Console.Error.WriteLine($"item.msgbnd.dcx not found in {msgDir}");
+                return 1;
+            }
+
+            Console.WriteLine($"[RegTool] Loading base FMG archive: {baseItemMsg}...");
+            BND4 baseBnd = BND4.Read(baseItemMsg);
+
+            var specs = new List<FmgTextSpec>();
+
+            void ExtractSpecs(string nameCat, string infoCat, string capCat, bool isWep, bool isAcc)
+            {
+                var nameFile = baseBnd.Files.FirstOrDefault(f => Path.GetFileName(f.Name).Equals($"{nameCat}.fmg", StringComparison.OrdinalIgnoreCase));
+                var infoFile = baseBnd.Files.FirstOrDefault(f => Path.GetFileName(f.Name).Equals($"{infoCat}.fmg", StringComparison.OrdinalIgnoreCase));
+                var capFile = baseBnd.Files.FirstOrDefault(f => Path.GetFileName(f.Name).Equals($"{capCat}.fmg", StringComparison.OrdinalIgnoreCase));
+
+                if (nameFile == null) return;
+                var nameFmg = FMG.Read(nameFile.Bytes);
+                var infoFmg = infoFile != null ? FMG.Read(infoFile.Bytes) : null;
+                var capFmg = capFile != null ? FMG.Read(capFile.Bytes) : null;
+
+                var infoMap = infoFmg?.Entries.Where(e => e.ID >= 9000000).ToDictionary(e => e.ID, e => e.Text) ?? new();
+                var capMap = capFmg?.Entries.Where(e => e.ID >= 9000000).ToDictionary(e => e.ID, e => e.Text) ?? new();
+
+                foreach (var entry in nameFmg.Entries.Where(e => e.ID >= 9000000 && !string.IsNullOrWhiteSpace(e.Text)))
+                {
+                    infoMap.TryGetValue(entry.ID, out string? info);
+                    capMap.TryGetValue(entry.ID, out string? cap);
+                    specs.Add(new FmgTextSpec(
+                        ItemId: entry.ID,
+                        VanillaSourceId: 0,
+                        IsWeapon: isWep,
+                        Name: entry.Text!,
+                        Caption: cap ?? "",
+                        Info: info ?? "",
+                        IsAccessory: isAcc
+                    ));
+                }
+            }
+
+            ExtractSpecs("AccessoryName", "AccessoryInfo", "AccessoryCaption", false, true);
+            ExtractSpecs("ProtectorName", "ProtectorInfo", "ProtectorCaption", false, false);
+            ExtractSpecs("WeaponName", "WeaponInfo", "WeaponCaption", true, false);
+
+            Console.WriteLine($"[RegTool] Extracted {specs.Count} custom items (ID >= 9000000) from base archive.");
+
+            foreach (string dlcFile in new[] { "item_dlc02.msgbnd.dcx", "item_dlc01.msgbnd.dcx" })
+            {
+                string dlcPath = Path.Combine(msgDir, dlcFile);
+                if (File.Exists(dlcPath))
+                {
+                    Console.WriteLine($"[RegTool] Mirroring into {dlcFile}...");
+                    BND4 dlcBnd = BND4.Read(dlcPath);
+                    int mirrored = FmgArchiveService.InjectFmgEntriesIntoBnd(dlcBnd, specs);
+                    dlcBnd.Write(dlcPath);
+                    Console.WriteLine($"[RegTool SUCCESS] Synced {mirrored} entries across all variant FMGs in {dlcFile}!");
+                }
+            }
+
+            return 0;
         }
     }
 }

@@ -108,12 +108,13 @@ namespace LootForge.RegTool
                 {
                     var highEntries = fmg.Entries.Where(e => e.ID >= 9000000).ToList();
                     Console.WriteLine($"  {fname,-30} Version={fmg.Version,-12} Total={fmg.Entries.Count,6}  ID>=9M: {highEntries.Count}");
-                    foreach (var entry in highEntries)
+                    foreach (var entry in highEntries.Take(5))
                     {
                         string text = entry.Text ?? "<null>";
                         if (text.Length > 80) text = text.Substring(0, 80) + "...";
                         Console.WriteLine($"    [{entry.ID}] {text}");
                     }
+
                 }
             }
             return 0;
@@ -160,6 +161,17 @@ namespace LootForge.RegTool
                         int nameMsg = ParamHelper.GetCellInt(r, "nameMsgId");
                         Console.WriteLine($"  ID={r.ID} Name='{r.Name}' equipId={eqId} equipType={eqType} value={val} iconId={icon} nameMsgId={nameMsg}");
                     }
+                    var accShops = param.Rows.Where(r => ParamHelper.GetCellInt(r, "equipType") == 2).Take(5).ToList();
+                    Console.WriteLine($"Found {accShops.Count} vanilla accessory shops:");
+                    foreach (var r in accShops)
+                    {
+                        int eqId = ParamHelper.GetCellInt(r, "equipId");
+                        int val = ParamHelper.GetCellInt(r, "value");
+                        int icon = ParamHelper.GetCellInt(r, "iconId");
+                        int nameMsg = ParamHelper.GetCellInt(r, "nameMsgId");
+                        Console.WriteLine($"  [Vanilla Acc Shop] ID={r.ID} Name='{r.Name}' eqId={eqId} val={val} iconId={icon} nameMsgId={nameMsg}");
+                    }
+
                 }
 
                 else if (tableName == "EquipParamProtector")
@@ -282,16 +294,54 @@ namespace LootForge.RegTool
                         Console.WriteLine($"  ID={r.ID} Name='{r.Name}' varId={varId} behId={behId} refType={refType} refId={refId}");
                     }
                 }
+                else if (tableName == "EquipParamAccessory")
+                {
+                    var injected = param.Rows.Where(r => r.ID >= 9000000 || (r.Name != null && r.Name.Contains("LootForge"))).ToList();
+                    var badIcons = injected.Where(r => ParamHelper.GetCellInt(r, "iconId") <= 0).ToList();
+                    var badNames = injected.Where(r => string.IsNullOrWhiteSpace(r.Name) || r.Name.StartsWith("?")).ToList();
+                    Console.WriteLine($"Found {injected.Count} injected/custom rows in EquipParamAccessory (Bad icons <=0: {badIcons.Count}, Bad names: {badNames.Count}):");
+                    foreach (var r in badIcons.Take(10))
+                    {
+                        Console.WriteLine($"  [BAD ICON] ID={r.ID} Name='{r.Name}' iconId={ParamHelper.GetCellInt(r, "iconId")}");
+                    }
+                    foreach (var r in badNames.Take(10))
+                    {
+                        Console.WriteLine($"  [BAD NAME] ID={r.ID} Name='{r.Name}' iconId={ParamHelper.GetCellInt(r, "iconId")}");
+                    }
+                    foreach (var r in injected.Take(5))
+                    {
+                        int icon = ParamHelper.GetCellInt(r, "iconId");
+                        int refId = ParamHelper.GetCellInt(r, "refId");
+                        Console.WriteLine($"  ID={r.ID} Name='{r.Name}' iconId={icon} refId={refId}");
+                    }
+
+                    var vanilla = param.Rows.Where(r => r.ID < 9000000 && r.ID > 0).Take(5).ToList();
+                    Console.WriteLine($"Sample vanilla rows in EquipParamAccessory:");
+                    foreach (var r in vanilla)
+                    {
+                        int icon = ParamHelper.GetCellInt(r, "iconId");
+                        Console.WriteLine($"  ID={r.ID} Name='{r.Name}' iconId={icon}");
+                    }
+                }
+            }
+
+            string tableFilter = options.TryGetValue("table", out string? tf) ? tf : "";
+            if (!string.IsNullOrEmpty(tableFilter))
+            {
+                InspectTable(tableFilter);
+                return 0;
             }
 
             InspectTable("ShopLineupParam");
             InspectTable("EquipParamProtector");
             InspectTable("EquipParamWeapon");
+            InspectTable("EquipParamAccessory");
             InspectTable("SwordArtsParam");
             InspectTable("BehaviorParam_PC");
             InspectTable("ItemLotParam_enemy");
             InspectTable("NpcParam");
             return 0;
+
         }
 
         public static int ExecuteFindItem(Dictionary<string, string> options)

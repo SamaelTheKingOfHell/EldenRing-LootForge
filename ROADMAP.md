@@ -176,4 +176,16 @@ This roadmap defines the implementation phases for the cross-platform Standalone
 - [ ] **Pre-Diablo Integration & Drop Distribution**:
   - Ingesting ported sets as authentic `DetectedModSet` objects into LootForge's standalone ID allocator, boss remembrance exchanges, post-boss chests, and optional Diablo procedural ARPG stat infusion.
 
+## Phase 14: Equipment Category Decoupling & Talisman System Parity
+- [x] **Modular Equipment Injector Decomposition (`[CS-MODULAR]`, `[CS-DECOUPLE]`, `[CS-GRANULARITY]`)**:
+  - Decomposed monolithic equipment injection into single-responsibility modules: `ProtectorInjector.cs`, `WeaponInjector.cs`, and `AccessoryInjector.cs` (<= 240 lines each).
+  - Isolated accessory mutations so that armor and weapon modifications can never regress accessory injection and vice-versa.
+- [x] **Accessory Regulation Name-Stripping Resilience & Authentic Icons**:
+  - Updated `AccessoryInjector.cs` to prevent valid talismans from being rejected when regulation binary files strip row names.
+  - Eliminated transparent placeholder icon bug (row ID 1000) by strictly resolving and validating authentic talisman icon IDs (>= 18000, Crimson Amber Medallion fallback 18000).
+  - Captured `IconId` in `SmartDiscoveryModels.cs`, `SmartDiscoveryService.cs`, `KnowledgeLoader`, and variant generation pipelines.
+- [x] **DLC Message Archive Parity & Elimination of `?AccessoryName?`**:
+  - Implemented `FmgArchiveService.cs` matching all category variants (`_dlc01`, `_dlc02`, base) across `item.msgbnd.dcx`, `item_dlc01.msgbnd.dcx`, and `item_dlc02.msgbnd.dcx`.
+  - Guaranteed custom accessory, weapon, and armor text entries are written to all active DLC FMG containers.
+
 

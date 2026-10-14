@@ -60,6 +60,8 @@ namespace LootForge.RegTool
                         return SkillMovesetService.ExecuteExtractSkillsMovesets(options);
                     case "diff-reg":
                         return RegulationDiffService.ExecuteDiffReg(options);
+                    case "sync-dlc-msg":
+                        return FmgInjector.ExecuteSyncDlcMsg(options);
                     default:
                         Console.Error.WriteLine($"Unknown command: '{command}'");
                         PrintUsage();
