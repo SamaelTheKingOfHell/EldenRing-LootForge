@@ -68,12 +68,6 @@ class SkillMovesetDeployer:
                     if item.is_file() and (item.name.endswith(".dcx") or item.name.endswith(".tae")):
                         target = out_chr / item.name.lower()
                         if target.exists():
-                            if backup_manager:
-                                try:
-                                    bak = backup_manager.create_file_backup(str(target), category="chr")
-                                    self.last_backed_up_files[str(target)] = bak.backup_file_name
-                                except Exception as be:
-                                    system_logger.warning(f"Could not backup {target}: {be}", source="SkillMovesetDeployer")
 
                             if item.name.lower() in CORE_PLAYER_ASSETS:
                                 system_logger.info(
@@ -96,13 +90,6 @@ class SkillMovesetDeployer:
                 for item in cand.iterdir():
                     if item.is_file() and item.name.endswith(".dcx"):
                         target = out_sfx / item.name.lower()
-                        if target.exists() and backup_manager:
-                            try:
-                                bak = backup_manager.create_file_backup(str(target), category="sfx")
-                                self.last_backed_up_files[str(target)] = bak.backup_file_name
-                            except Exception as be:
-                                system_logger.warning(f"Could not backup {target}: {be}", source="SkillMovesetDeployer")
-
                         shutil.copy2(str(item), str(target))
                         deployed_files.append(str(target))
                         system_logger.debug(f"Deployed VFX: {item.name} -> {target.name}", source="SkillMovesetDeployer")
@@ -120,12 +107,6 @@ class SkillMovesetDeployer:
                         target = out_action / str(rel).lower()
                         target.parent.mkdir(parents=True, exist_ok=True)
                         if target.exists():
-                            if backup_manager:
-                                try:
-                                    bak = backup_manager.create_file_backup(str(target), category="action")
-                                    self.last_backed_up_files[str(target)] = bak.backup_file_name
-                                except Exception as be:
-                                    system_logger.warning(f"Could not backup {target}: {be}", source="SkillMovesetDeployer")
 
                             if target.name.lower() in CORE_PLAYER_ASSETS or target.suffix.lower() == ".hks":
                                 system_logger.info(

@@ -106,13 +106,6 @@ class PartsDeployer:
                 ).lower()
                 target = parts_output / target_name
                 try:
-                    if target.exists() and backup_manager:
-                        try:
-                            bak = backup_manager.create_file_backup(str(target), category="parts")
-                            self.last_backed_up_files[str(target)] = bak.backup_file_name
-                        except Exception as be:
-                            system_logger.warning(f"Could not backup {target}: {be}", source="PartsDeployer")
-
                     self._sync_file(source, target)
                     deployed += 1
                     self.last_deployed_files.append(str(target))
@@ -143,13 +136,6 @@ class PartsDeployer:
                 if opposing_target_name not in set_deployed_files:
                     opposing_target = parts_output / opposing_target_name
                     try:
-                        if opposing_target.exists() and backup_manager:
-                            try:
-                                bak = backup_manager.create_file_backup(str(opposing_target), category="parts")
-                                self.last_backed_up_files[str(opposing_target)] = bak.backup_file_name
-                            except Exception as be:
-                                system_logger.warning(f"Could not backup {opposing_target}: {be}", source="PartsDeployer")
-
                         self._sync_file(target_path, opposing_target)
                         deployed += 1
                         self.last_deployed_files.append(str(opposing_target))

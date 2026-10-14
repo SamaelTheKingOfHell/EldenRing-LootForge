@@ -84,14 +84,6 @@ namespace LootForge.RegTool
                 return 0;
             }
 
-            // Create backup file before modifying
-            string bakPath = itemMsgBndPath + ".bak";
-            if (!File.Exists(bakPath))
-            {
-                File.Copy(itemMsgBndPath, bakPath, false);
-                Console.WriteLine($"[RegTool] Created backup: {bakPath}");
-            }
-
             Console.WriteLine($"[RegTool] Loading item.msgbnd.dcx from: {itemMsgBndPath}...");
             BND4 msgBnd = BND4.Read(itemMsgBndPath);
 

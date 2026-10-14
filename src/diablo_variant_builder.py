@@ -38,34 +38,36 @@ class DiabloVariantBuilder:
         item_assigned_chests: Set[int] = set()
         item_assigned_bosses: Set[str] = set()
 
+        raw_bosses, raw_merchants, raw_chests = [], [], []
+        boss_pool, chest_pool, merchant_pool, enemy_pool = [], [], [], []
+        if pools:
+            raw_bosses = pools.get("bosses", [])
+            raw_merchants = pools.get("merchants", [])
+            raw_chests = pools.get("chests", [])
+            raw_elites = pools.get("elites", [])
+            raw_roaming = pools.get("roaming", [])
+
+            if tier and kb and hasattr(kb, "get_progression_tier"):
+                boss_pool = [b for b in raw_bosses if kb.get_progression_tier(b) == tier] or raw_bosses
+                chest_pool = [c for c in raw_chests if kb.get_progression_tier(c) == tier] or raw_chests
+                merchant_pool = [m for m in raw_merchants if kb.get_progression_tier(m) == tier] or raw_merchants
+                elites = [e for e in raw_elites if kb.get_progression_tier(e) == tier] or raw_elites
+                roaming = [r for r in raw_roaming if kb.get_progression_tier(r) == tier] or raw_roaming
+            else:
+                boss_pool, chest_pool, merchant_pool = raw_bosses, raw_chests, raw_merchants
+                elites, roaming = raw_elites, raw_roaming
+            enemy_pool = (elites + roaming) if (elites or roaming) else []
+
+        acc_catalog = (kb.list_all_vanilla_accessories(tier=tier) or kb.list_all_vanilla_accessories()) if (kb and hasattr(kb, "list_all_vanilla_accessories")) else {}
+
         for v_idx in range(variants_per_item):
             spec_copy = copy.deepcopy(base_spec)
             spec_copy["set_id"] = f"{base_spec['set_id']}_v{v_idx + 1}"
 
             # 1. Determine distribution destination across whole game with progression locking
-            is_boss = False
-            boss_name: Optional[str] = None
-            loot_spec: Optional[Dict[str, Any]] = None
+            is_boss, boss_name, loot_spec = False, None, None
 
             if pools:
-                raw_bosses = pools.get("bosses", [])
-                raw_merchants = pools.get("merchants", [])
-                raw_chests = pools.get("chests", [])
-                raw_elites = pools.get("elites", [])
-                raw_roaming = pools.get("roaming", [])
-
-                if tier and kb and hasattr(kb, "get_progression_tier"):
-                    boss_pool = [b for b in raw_bosses if kb.get_progression_tier(b) == tier] or raw_bosses
-                    chest_pool = [c for c in raw_chests if kb.get_progression_tier(c) == tier] or raw_chests
-                    merchant_pool = [m for m in raw_merchants if kb.get_progression_tier(m) == tier] or raw_merchants
-                    elites = [e for e in raw_elites if kb.get_progression_tier(e) == tier] or raw_elites
-                    roaming = [r for r in raw_roaming if kb.get_progression_tier(r) == tier] or raw_roaming
-                else:
-                    boss_pool, chest_pool, merchant_pool = raw_bosses, raw_chests, raw_merchants
-                    elites, roaming = raw_elites, raw_roaming
-
-                enemy_pool = (elites + roaming) if (elites or roaming) else []
-
                 mod_bucket = v_idx % 3
                 if mod_bucket == 0 and boss_pool:
                     boss = generator.get_next_boss(boss_pool, excluded_ids=item_assigned_bosses) if hasattr(generator, "get_next_boss") else None
@@ -210,12 +212,7 @@ class DiabloVariantBuilder:
                         )
 
             # Multi-drop for Bosses and Chests (companion accessories)
-            if (is_boss or is_chest_drop) and kb and variant_new_ids:
-                acc_catalog = kb.list_all_vanilla_accessories(tier=tier) if hasattr(kb, "list_all_vanilla_accessories") else {}
-                if not acc_catalog and hasattr(kb, "list_all_vanilla_accessories"):
-                    acc_catalog = kb.list_all_vanilla_accessories()
-
-                if acc_catalog:
+            if (is_boss or is_chest_drop) and kb and variant_new_ids and acc_catalog:
                     acc_keys = list(acc_catalog.keys())
                     num_extra = 2 if is_chest_drop else 1
 

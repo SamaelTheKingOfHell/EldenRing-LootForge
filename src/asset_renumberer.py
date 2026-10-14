@@ -132,16 +132,23 @@ class AssetRenumberer:
     def stage_all_mod_sets(self, input_base: str, mod_sets: List[DetectedModSet]) -> Dict[str, List[str]]:
         """
         Batch renumber and stage all mod sets in a single unified pass before patching.
-        Returns mapping of set_id -> list of staged file paths relative to output_dir.
+        Uses aggressive multi-threaded staging across available CPU cores.
         """
+        import concurrent.futures
         staged_map: Dict[str, List[str]] = {}
         total_files = 0
-        for s in mod_sets:
-            if not getattr(s, "allocation", None) or not getattr(s, "is_enabled", True):
-                continue
-            staged = self.stage_mod_set(input_base, s)
-            staged_map[s.set_id] = staged
-            total_files += len(staged)
+        active_sets = [s for s in mod_sets if getattr(s, "allocation", None) and getattr(s, "is_enabled", True)]
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=min(32, (os.cpu_count() or 4) * 4)) as executor:
+            futures = {executor.submit(self.stage_mod_set, input_base, s): s.set_id for s in active_sets}
+            for fut in concurrent.futures.as_completed(futures):
+                set_id = futures[fut]
+                try:
+                    staged = fut.result()
+                    staged_map[set_id] = staged
+                    total_files += len(staged)
+                except Exception as ex:
+                    system_logger.error(f"Failed to stage set '{set_id}': {ex}", source="AssetRenumberer")
 
         system_logger.info(
             f"Batch renumbered and staged {total_files} file(s) across {len(staged_map)} mod set(s) in a single pass.",
