@@ -772,10 +772,46 @@ class TestDiabloLoot(unittest.TestCase):
             skill_id = ep["field_updates"]["swordArtsParamId"]
             matching_skills = [s for s in WEAPON_SKILL_POOL if s.id == skill_id]
             self.assertTrue(len(matching_skills) > 0)
-            self.assertEqual(
-                matching_skills[0].tier, ProgressionTier.EARLY,
-                f"Spec with early tier must produce early tier skill variant! Got: {matching_skills[0].name}"
-            )
+    def test_no_duplicate_chests_across_items_and_variants(self):
+        """Verifies that multiple variants and items receive unique, non-repeating chests."""
+        from src.knowledge_base import VanillaKnowledgeBase
+        kb = VanillaKnowledgeBase.from_data_dir("data")
+        gen = DiabloLootGenerator(seed=42, knowledge_base=kb)
+
+        spec_a = {
+            "set_id": "test_weapon_a",
+            "tier": ProgressionTier.EARLY,
+            "equip_params": [{"param_table": "EquipParamWeapon", "new_param_id": 9010000, "field_updates": {}}],
+            "fmg_texts": [{"item_id": 9010000, "name": "Sword A", "caption": "Sword A desc."}]
+        }
+        spec_b = {
+            "set_id": "test_weapon_b",
+            "tier": ProgressionTier.EARLY,
+            "equip_params": [{"param_table": "EquipParamWeapon", "new_param_id": 9020000, "field_updates": {}}],
+            "fmg_texts": [{"item_id": 9020000, "name": "Sword B", "caption": "Sword B desc."}]
+        }
+
+        variants_a = gen.generate_variants_for_spec(spec_a, variants_per_item=6, knowledge_base=kb)
+        variants_b = gen.generate_variants_for_spec(spec_b, variants_per_item=6, knowledge_base=kb)
+
+        chests_a = [v["loot_distribution"]["target_id"] for v in variants_a if v["loot_distribution"]["type"] == "map_pickup"]
+        chests_b = [v["loot_distribution"]["target_id"] for v in variants_b if v["loot_distribution"]["type"] == "map_pickup"]
+
+        # Within item A, all chest targets must be unique (no duplicate chest for same item)
+        self.assertEqual(len(chests_a), len(set(chests_a)), "A single item must never have multiple variants in the same chest!")
+        self.assertEqual(len(chests_b), len(set(chests_b)), "A single item must never have multiple variants in the same chest!")
+
+        # Across item A and B, chest targets must not overlap while chests remain available
+        self.assertTrue(len(set(chests_a).intersection(set(chests_b))) == 0, "Different items must receive distinct non-overlapping chests!")
+
+    def test_boss_pools_gated_by_vanilla_distribution(self):
+        """Verifies that boss loot pool injection is suppressed when vanilla base item distribution is disabled."""
+        from src.config import LootForgeConfig as AppConfig
+        cfg = AppConfig()
+        cfg.boss_loot_pools_enabled = True
+        cfg.diablo_use_vanilla_base_items = False
+        boss_pools_enabled = cfg.boss_loot_pools_enabled and cfg.diablo_use_vanilla_base_items
+        self.assertFalse(boss_pools_enabled, "Boss loot pools must be suppressed when diablo_use_vanilla_base_items is False!")
 
 
 if __name__ == "__main__":

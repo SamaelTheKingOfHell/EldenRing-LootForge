@@ -21,6 +21,7 @@ class LootDistributor:
     def __init__(self, knowledge_base: VanillaKnowledgeBase, max_shop_capacity: int = 15):
         self._kb = knowledge_base
         self._assigned_bosses: Set[str] = set()
+        self._assigned_chests: Set[str] = set()
         self._global_spoil_enabled: bool = False
         self._item_configs: Dict[str, ItemDropConfig] = {}
         self._test_mode_index: int = 0
@@ -37,8 +38,9 @@ class LootDistributor:
         self._global_spoil_enabled = bool(val)
 
     def reset_rotation_state(self) -> None:
-        """Clears boss assignment ledger, shop counts, and test mode index for a fresh run."""
+        """Clears boss and chest ledgers, shop counts, and test mode index for a fresh run."""
         self._assigned_bosses.clear()
+        self._assigned_chests.clear()
         self._shop_allocations.clear()
         self._test_mode_index = 0
 
@@ -182,44 +184,41 @@ class LootDistributor:
 
         # Fallback 1: High-value Chests After Boss in the matching progression tier
         tier_chests = self._kb.list_chests(tier=tier)
-        post_boss_chests = [c for c in tier_chests if c.get("afterBoss")]
-        candidate_chests = post_boss_chests if post_boss_chests else tier_chests
-        if candidate_chests:
-            chosen_chest = random.choice(candidate_chests)
-            system_logger.info(f"Boss Rotation: Cascaded to Chest After Boss '{chosen_chest['name']}' (tier {tier.name if tier else 'ALL'})", source="LootDistributor")
+        post_boss = [c for c in tier_chests if c.get("afterBoss")]
+        cands = post_boss if post_boss else tier_chests
+        avail = [c for c in cands if str(c.get("lotParamId", 102100)) not in self._assigned_chests]
+        if avail:
+            chosen_chest = random.choice(avail)
+            self._assigned_chests.add(str(chosen_chest.get("lotParamId", 102100)))
+            system_logger.info(f"Boss Rotation: Cascaded to Chest '{chosen_chest['name']}'", source="LootDistributor")
             return LootTarget(LootDistributionType.MAP_PICKUP, str(chosen_chest.get("lotParamId", 102100)), f"[Chest After Boss] {chosen_chest['name']}", 100.0)
 
         # Fallback 2: Elite enemies / mini-bosses in matching progression tier
         tier_elites = self._kb.list_elite_enemies(tier=tier)
         if tier_elites:
             chosen_mini = random.choice(tier_elites)
-            system_logger.info(f"Boss Rotation: Cascaded to Mini-Boss '{chosen_mini['name']}' (tier {tier.name if tier else 'ALL'})", source="LootDistributor")
+            system_logger.info(f"Boss Rotation: Cascaded to Mini-Boss '{chosen_mini['name']}'", source="LootDistributor")
             return LootTarget(LootDistributionType.ENEMY_DROP, chosen_mini["id"], chosen_mini["name"], float(chosen_mini.get("defaultDropChance", 25.0)))
 
         return self._place_in_wild(original_boss_name, tier=tier)
 
     def _route_chest_after_boss(self, boss_id: str, boss_name: str, tier: Optional[ProgressionTier] = None) -> LootTarget:
-        """
-        AntiDup Option 3: Guaranteed Chest After Boss.
-        Directly routes 100% boss drop into the post-boss chest following the boss's arena/chamber,
-        matching the boss's progression tier.
-        """
+        """AntiDup Option 3: Guaranteed Chest After Boss without duplication."""
         chest = self._kb.get_chest_after_boss(boss_id)
+        if chest and str(chest.get("lotParamId", 102100)) in self._assigned_chests:
+            chest = None
         if not chest:
             tier_chests = self._kb.list_chests(tier=tier)
-            post_boss_chests = [c for c in tier_chests if c.get("afterBoss")]
-            candidate_chests = post_boss_chests if post_boss_chests else tier_chests
-            if candidate_chests:
-                chest = random.choice(candidate_chests)
+            post_boss = [c for c in tier_chests if c.get("afterBoss")]
+            cands = post_boss if post_boss else tier_chests
+            avail = [c for c in cands if str(c.get("lotParamId", 102100)) not in self._assigned_chests]
+            if avail:
+                chest = random.choice(avail)
 
         if chest:
-            system_logger.info(f"AntiDup: Routed directly to Chest After Boss '{chest['name']}' (Lot {chest.get('lotParamId')})", source="LootDistributor")
-            return LootTarget(
-                LootDistributionType.MAP_PICKUP,
-                str(chest.get("lotParamId", 102100)),
-                f"[Chest After Boss] {chest['name']}",
-                100.0
-            )
+            self._assigned_chests.add(str(chest.get("lotParamId", 102100)))
+            system_logger.info(f"AntiDup: Routed directly to Chest '{chest['name']}'", source="LootDistributor")
+            return LootTarget(LootDistributionType.MAP_PICKUP, str(chest.get("lotParamId", 102100)), f"[Chest After Boss] {chest['name']}", 100.0)
 
         return self._place_in_wild(boss_name, tier=tier)
 

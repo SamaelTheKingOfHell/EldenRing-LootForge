@@ -231,12 +231,13 @@ class PatchOrchestrator:
             injected_count += len(vanilla_dist_specs)
             system_logger.info(f"Generated {len(vanilla_dist_specs)} procedural relics from vanilla base items.", source="PatchOrchestrator")
 
+        boss_pools_enabled = config.boss_loot_pools_enabled and config.diablo_use_vanilla_base_items
         patch_result = regulation_manager.execute_patch(
             specs=patch_specs,
             source_reg=source_reg,
             target_reg=target_reg,
             game_dir=config.game_directory,
-            boss_loot_pools_enabled=config.boss_loot_pools_enabled,
+            boss_loot_pools_enabled=boss_pools_enabled,
             boss_weapons_per_pool=config.boss_weapons_per_pool,
             sweep_vanilla_items=config.diablo_loot_enabled and config.diablo_inject_vanilla_stats
         )

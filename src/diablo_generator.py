@@ -6,7 +6,7 @@ SpEffectParam passive buffs, dynamic item naming, and detailed Diablo-style lore
 """
 
 import random
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Any, Optional, Union, Set
 from src.models import ProgressionTier
 from src.diablo_affixes import (
     RarityTier, AffixType, AffixDefinition, AFFIX_POOL,
@@ -69,6 +69,10 @@ class DiabloLootGenerator:
         self._weapon_skills_pool = list(weapon_skills_pool or WEAPON_SKILL_POOL)
         self._shop_allocations: Dict[str, int] = {}
         self._total_shop_allocations: int = 0
+        self._assigned_chests: Set[int] = set()
+        self._assigned_bosses: Set[str] = set()
+        self._chest_cursor: int = 0
+        self._boss_cursor: int = 0
         from src.pricing_engine import PricingEngine
         self.pricing_engine = pricing_engine if pricing_engine is not None else PricingEngine()
 
@@ -113,6 +117,66 @@ class DiabloLootGenerator:
         else:
             self._shop_allocations[shop_id] = self._shop_allocations.get(shop_id, 0) + 1
         self._total_shop_allocations += 1
+
+    def get_next_chest(self, candidate_chests: List[Dict[str, Any]], excluded_ids: Optional[Set[int]] = None) -> Optional[Dict[str, Any]]:
+        """Selects next available chest, prioritizing unassigned chests without repeating."""
+        if not candidate_chests:
+            return None
+        excluded = excluded_ids or set()
+        unassigned = [c for c in candidate_chests if c.get("lotParamId", 0) not in self._assigned_chests and c.get("lotParamId", 0) not in excluded]
+        if unassigned:
+            chosen = unassigned[self._chest_cursor % len(unassigned)]
+            self._chest_cursor += 1
+            return chosen
+        available = [c for c in candidate_chests if c.get("lotParamId", 0) not in excluded]
+        if available:
+            chosen = available[self._chest_cursor % len(available)]
+            self._chest_cursor += 1
+            return chosen
+        chosen = candidate_chests[self._chest_cursor % len(candidate_chests)]
+        self._chest_cursor += 1
+        return chosen
+
+    def get_next_boss(self, candidate_bosses: List[Dict[str, Any]], excluded_ids: Optional[Set[str]] = None) -> Optional[Dict[str, Any]]:
+        """Selects next available boss, prioritizing unassigned bosses with shop capacity."""
+        if not candidate_bosses:
+            return None
+        excluded = excluded_ids or set()
+        eligible = [b for b in candidate_bosses if not self.is_shop_capacity_exceeded(b["id"], is_enia=True) and b["id"] not in excluded]
+        if not eligible:
+            return None
+        unassigned = [b for b in eligible if b["id"] not in self._assigned_bosses]
+        if unassigned:
+            chosen = unassigned[self._boss_cursor % len(unassigned)]
+            self._boss_cursor += 1
+            return chosen
+        chosen = eligible[self._boss_cursor % len(eligible)]
+        self._boss_cursor += 1
+        return chosen
+
+    def is_chest_assigned(self, lot_id: int) -> bool:
+        """Checks if a chest has already been assigned in this distribution run."""
+        return lot_id in self._assigned_chests
+
+    def record_chest_assignment(self, lot_id: int) -> None:
+        """Records a chest assignment to ensure no duplicate chest loot."""
+        self._assigned_chests.add(lot_id)
+
+    def is_boss_assigned(self, boss_id: str) -> bool:
+        """Checks if a boss has already been assigned in this distribution run."""
+        return boss_id in self._assigned_bosses
+
+    def record_boss_assignment(self, boss_id: str) -> None:
+        """Records a boss assignment to ensure no duplicate boss loot."""
+        self._assigned_bosses.add(boss_id)
+
+    def reset_distribution_state(self) -> None:
+        """Resets all tracked assignments across chests, bosses, and shops."""
+        self._assigned_chests.clear()
+        self._assigned_bosses.clear()
+        self._chest_cursor = 0
+        self._boss_cursor = 0
+        self.reset_shop_allocations()
 
     def reset_shop_allocations(self) -> None:
         """Resets tracked shop allocations."""

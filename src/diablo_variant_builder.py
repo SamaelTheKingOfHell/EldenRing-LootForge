@@ -6,7 +6,7 @@ Complies with [CS-MODULAR] and [CS-GRANULARITY] (<= 300 lines).
 """
 
 import copy
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Set
 from src.diablo_affixes import RarityTier, WeaponSkill
 from src.logger import system_logger
 
@@ -35,6 +35,9 @@ class DiabloVariantBuilder:
         if tier is None and kb and hasattr(kb, "get_progression_tier_for_spec"):
             tier = kb.get_progression_tier_for_spec(base_spec)
 
+        item_assigned_chests: Set[int] = set()
+        item_assigned_bosses: Set[str] = set()
+
         for v_idx in range(variants_per_item):
             spec_copy = copy.deepcopy(base_spec)
             spec_copy["set_id"] = f"{base_spec['set_id']}_v{v_idx + 1}"
@@ -58,21 +61,21 @@ class DiabloVariantBuilder:
                     elites = [e for e in raw_elites if kb.get_progression_tier(e) == tier] or raw_elites
                     roaming = [r for r in raw_roaming if kb.get_progression_tier(r) == tier] or raw_roaming
                 else:
-                    boss_pool = raw_bosses
-                    chest_pool = raw_chests
-                    merchant_pool = raw_merchants
-                    elites = raw_elites
-                    roaming = raw_roaming
+                    boss_pool, chest_pool, merchant_pool = raw_bosses, raw_chests, raw_merchants
+                    elites, roaming = raw_elites, raw_roaming
 
                 enemy_pool = (elites + roaming) if (elites or roaming) else []
 
                 mod_bucket = v_idx % 3
                 if mod_bucket == 0 and boss_pool:
-                    boss = boss_pool[(v_idx // 3) % len(boss_pool)]
-                    shop_id = boss["id"]
-                    if not generator.is_shop_capacity_exceeded(shop_id, is_enia=True):
-                        is_boss = True
-                        boss_name = boss.get("name", "Great Enemy")
+                    boss = generator.get_next_boss(boss_pool, excluded_ids=item_assigned_bosses) if hasattr(generator, "get_next_boss") else None
+                    if not boss and raw_bosses and hasattr(generator, "get_next_boss"):
+                        boss = generator.get_next_boss(raw_bosses, excluded_ids=item_assigned_bosses)
+                    if boss:
+                        generator.record_boss_assignment(boss["id"])
+                        generator.record_shop_allocation(boss["id"], is_enia=True)
+                        item_assigned_bosses.add(boss["id"])
+                        is_boss, boss_name = True, boss.get("name", "Great Enemy")
                         loot_spec = {
                             "type": "shop_lineup",
                             "shop_type": "finger_reader_enia",
@@ -80,15 +83,13 @@ class DiabloVariantBuilder:
                             "display_name": f"[Boss Remembrance] {boss_name}",
                             "cost_or_remembrance": float(boss.get("defaultCost", 30000))
                         }
-                        generator.record_shop_allocation(shop_id, is_enia=True)
                     else:
-                        system_logger.info(
-                            f"Shop param row limit reached for Enia remembrance '{boss.get('name')}'. "
-                            f"Cascading to Chests (Bosses -> Chests -> The Rest).",
-                            source="DiabloGenerator"
-                        )
-                        if chest_pool:
-                            chest = chest_pool[(v_idx // 3) % len(chest_pool)]
+                        chest = generator.get_next_chest(chest_pool, excluded_ids=item_assigned_chests) if hasattr(generator, "get_next_chest") else (chest_pool[0] if chest_pool else None)
+                        if not chest and raw_chests and hasattr(generator, "get_next_chest"):
+                            chest = generator.get_next_chest(raw_chests, excluded_ids=item_assigned_chests)
+                        if chest:
+                            generator.record_chest_assignment(chest.get("lotParamId", 0))
+                            item_assigned_chests.add(chest.get("lotParamId", 0))
                             loot_spec = {
                                 "type": "map_pickup",
                                 "lot_id": chest["lotParamId"],
@@ -98,14 +99,19 @@ class DiabloVariantBuilder:
                             }
 
                 elif mod_bucket == 1 and chest_pool:
-                    chest = chest_pool[(v_idx // 3) % len(chest_pool)]
-                    loot_spec = {
-                        "type": "map_pickup",
-                        "lot_id": chest["lotParamId"],
-                        "target_id": str(chest["lotParamId"]),
-                        "display_name": f"[Chest Discovery] {chest['name']}",
-                        "drop_rate_percent": 100.0
-                    }
+                    chest = generator.get_next_chest(chest_pool, excluded_ids=item_assigned_chests) if hasattr(generator, "get_next_chest") else (chest_pool[0] if chest_pool else None)
+                    if not chest and raw_chests and hasattr(generator, "get_next_chest"):
+                        chest = generator.get_next_chest(raw_chests, excluded_ids=item_assigned_chests)
+                    if chest:
+                        generator.record_chest_assignment(chest.get("lotParamId", 0))
+                        item_assigned_chests.add(chest.get("lotParamId", 0))
+                        loot_spec = {
+                            "type": "map_pickup",
+                            "lot_id": chest["lotParamId"],
+                            "target_id": str(chest["lotParamId"]),
+                            "display_name": f"[Chest Discovery] {chest['name']}",
+                            "drop_rate_percent": 100.0
+                        }
 
                 if loot_spec is None:
                     rest_cycle = (v_idx // 3) % 3
@@ -113,6 +119,7 @@ class DiabloVariantBuilder:
                         merch = merchant_pool[(v_idx // 3) % len(merchant_pool)]
                         shop_id = merch["id"]
                         if not generator.is_shop_capacity_exceeded(shop_id, is_enia=False):
+                            generator.record_shop_allocation(shop_id, is_enia=False)
                             loot_spec = {
                                 "type": "merchant_shop",
                                 "shop_id": merch["id"],
@@ -122,7 +129,6 @@ class DiabloVariantBuilder:
                                 "cost_or_remembrance": float(merch.get("defaultRuneCost", 8000)),
                                 "rune_cost": int(merch.get("defaultRuneCost", 8000))
                             }
-                            generator.record_shop_allocation(shop_id)
 
                     if loot_spec is None:
                         if elites:
@@ -255,25 +261,14 @@ class DiabloVariantBuilder:
                             )
 
                             spec_copy.setdefault("equip_params", []).append({
-                                "param_table": "EquipParamAccessory",
-                                "new_param_id": comp_param_id,
-                                "base_clone_id": comp_base_id,
-                                "slot": "accessory",
-                                "slot_offset": 50 + extra_idx,
-                                "row_name": f"[LootForge] {comp_name}",
+                                "param_table": "EquipParamAccessory", "new_param_id": comp_param_id, "base_clone_id": comp_base_id,
+                                "slot": "accessory", "slot_offset": 50 + extra_idx, "row_name": f"[LootForge] {comp_name}",
                                 "field_updates": comp_field_updates
                             })
-
                             spec_copy.setdefault("fmg_texts", []).append({
-                                "item_id": comp_param_id,
-                                "vanilla_source_id": comp_base_id,
-                                "slot": "accessory",
-                                "slot_offset": 50 + extra_idx,
-                                "is_weapon": False,
-                                "is_accessory": True,
-                                "name": comp_fmg_name,
-                                "caption": comp_fmg_caption,
-                                "info": f"Origin: Vanilla {comp_name} ({chest_tag})"
+                                "item_id": comp_param_id, "vanilla_source_id": comp_base_id, "slot": "accessory",
+                                "slot_offset": 50 + extra_idx, "is_weapon": False, "is_accessory": True,
+                                "name": comp_fmg_name, "caption": comp_fmg_caption, "info": f"Origin: Vanilla {comp_name} ({chest_tag})"
                             })
 
                             variant_new_ids.append(comp_param_id)
