@@ -6,6 +6,7 @@ to the target mod directory, mapping vanilla model IDs to allocated standalone m
 Adheres to [CS-MODULAR] and [CS-GRANULARITY].
 """
 
+import os
 import shutil
 import re
 from pathlib import Path
@@ -26,6 +27,30 @@ class PartsDeployer:
     def __init__(self):
         self.last_deployed_files: List[str] = []
         self.last_backed_up_files: Dict[str, str] = {}
+
+    @staticmethod
+    def _sync_file(src: Path, dst: Path) -> None:
+        """
+        Transfers src to dst quickly:
+        - If dst exists with identical size and equal/newer mtime, skip copy.
+        - Attempts hardlink (os.link) first for instant staging on same drive.
+        - Falls back safely to shutil.copy2.
+        """
+        if dst.exists():
+            try:
+                src_stat = src.stat()
+                dst_stat = dst.stat()
+                if src_stat.st_size == dst_stat.st_size and dst_stat.st_mtime >= src_stat.st_mtime:
+                    return
+            except OSError:
+                pass
+
+        try:
+            if dst.exists():
+                dst.unlink()
+            os.link(src, dst)
+        except (OSError, AttributeError):
+            shutil.copy2(src, dst)
 
     def deploy_parts(
         self,
@@ -88,7 +113,7 @@ class PartsDeployer:
                         except Exception as be:
                             system_logger.warning(f"Could not backup {target}: {be}", source="PartsDeployer")
 
-                    shutil.copy2(str(source), str(target))
+                    self._sync_file(source, target)
                     deployed += 1
                     self.last_deployed_files.append(str(target))
                     set_deployed_files[target_name] = target
@@ -125,7 +150,7 @@ class PartsDeployer:
                             except Exception as be:
                                 system_logger.warning(f"Could not backup {opposing_target}: {be}", source="PartsDeployer")
 
-                        shutil.copy2(str(target_path), str(opposing_target))
+                        self._sync_file(target_path, opposing_target)
                         deployed += 1
                         self.last_deployed_files.append(str(opposing_target))
                         set_deployed_files[opposing_target_name] = opposing_target

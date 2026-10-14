@@ -73,6 +73,9 @@ namespace LootForge.RegTool
 
         public static int EnrichBossLootPools(PARAM enemyParam, PARAM mapParam, PARAM? wepParam, PARAM? protParam, int weaponsPerBoss = 3)
         {
+            var enemyLayout = ItemLotLayout.Extract(enemyParam);
+            var mapLayout = ItemLotLayout.Extract(mapParam);
+
             var enemyRowMap = new Dictionary<int, PARAM.Row>(enemyParam.Rows.Count);
             foreach (var r in enemyParam.Rows) enemyRowMap[r.ID] = r;
 
@@ -91,11 +94,12 @@ namespace LootForge.RegTool
             targetBosses[1037420400] = ("Groveside Cave - Beastman of Farum Azula (Event)", EntityProgressionTier.Early, true);
 
             // 2. Discover boss rows in ItemLotParam_enemy
+            int eBp = enemyLayout.BasePointIndices[0], eId = enemyLayout.ItemIdIndices[0], eCat = enemyLayout.CategoryIndices[0];
             foreach (var r in enemyParam.Rows)
             {
-                int p1 = ParamHelper.GetCellInt(r, "lotItemBasePoint01");
-                int itm1 = ParamHelper.GetCellInt(r, "lotItemId01");
-                int cat1 = ParamHelper.GetCellInt(r, "lotItemCategory01");
+                int itm1 = ParamHelper.GetCellIntFast(r, eId);
+                int p1 = ParamHelper.GetCellIntFast(r, eBp);
+                int cat1 = ParamHelper.GetCellIntFast(r, eCat);
 
                 if (itm1 > 0 && p1 >= 1000 && (cat1 == 2 || cat1 == 4))
                 {
@@ -108,11 +112,12 @@ namespace LootForge.RegTool
             }
 
             // 3. Discover boss rows in ItemLotParam_map (dungeon bosses, remembrances, major events)
+            int mBp = mapLayout.BasePointIndices[0], mId = mapLayout.ItemIdIndices[0], mCat = mapLayout.CategoryIndices[0];
             foreach (var r in mapParam.Rows)
             {
-                int p1 = ParamHelper.GetCellInt(r, "lotItemBasePoint01");
-                int itm1 = ParamHelper.GetCellInt(r, "lotItemId01");
-                int cat1 = ParamHelper.GetCellInt(r, "lotItemCategory01");
+                int itm1 = ParamHelper.GetCellIntFast(r, mId);
+                int p1 = ParamHelper.GetCellIntFast(r, mBp);
+                int cat1 = ParamHelper.GetCellIntFast(r, mCat);
 
                 if (itm1 > 0 && p1 >= 1000 && (cat1 == 2 || cat1 == 4) && (r.ID < 100000 || r.ID >= 1000000000))
                 {
@@ -174,7 +179,7 @@ namespace LootForge.RegTool
                 // 2. Supplement with curated weapons if needed
                 if (chosenItems.Count < weaponsPerBoss)
                 {
-                    var tierWeapons = CuratedWeaponPool.WEAPONS.Where(w => w.Tier == tier && !usedItemIds.Contains(w.Id)).ToList();
+                    var tierWeapons = CuratedWeaponPool.GetWeaponsByTier(tier).Where(w => !usedItemIds.Contains(w.Id)).ToList();
                     if (tierWeapons.Count < weaponsPerBoss - chosenItems.Count) tierWeapons = CuratedWeaponPool.WEAPONS;
                     var extra = tierWeapons.Where(w => !chosenItems.Any(c => c.Id == w.Id)).OrderBy(_ => rng.Next()).Take(weaponsPerBoss - chosenItems.Count);
                     foreach (var w in extra)
@@ -201,55 +206,55 @@ namespace LootForge.RegTool
                                 ID = chainedId,
                                 Name = $"[Boss Pool T{(int)tier}] {itm.Name} (for {bossName})"
                             };
-                            for (int s = 1; s <= 8; s++)
+                            for (int s = 0; s < 8; s++)
                             {
-                                ParamHelper.SetCellIfExists(chainedRow, $"lotItemId0{s}", 0);
-                                ParamHelper.SetCellIfExists(chainedRow, $"lotItemCategory0{s}", 0);
-                                ParamHelper.SetCellIfExists(chainedRow, $"lotItemBasePoint0{s}", (ushort)0);
-                                ParamHelper.SetCellIfExists(chainedRow, $"lotItemNum0{s}", (byte)0);
-                                ParamHelper.SetCellIfExists(chainedRow, $"getItemFlagId0{s}", 0u);
+                                ParamHelper.SetCellFast(chainedRow, mapLayout.ItemIdIndices[s], 0);
+                                ParamHelper.SetCellFast(chainedRow, mapLayout.CategoryIndices[s], 0);
+                                ParamHelper.SetCellFast(chainedRow, mapLayout.BasePointIndices[s], (ushort)0);
+                                ParamHelper.SetCellFast(chainedRow, mapLayout.NumIndices[s], (byte)0);
+                                ParamHelper.SetCellFast(chainedRow, mapLayout.FlagIdIndices[s], 0u);
                             }
                             mapParam.Rows.Add(chainedRow);
                             mapRowMap[chainedId] = chainedRow;
                         }
 
-                        ParamHelper.SetCellIfExists(chainedRow, "lotItemId01", itm.Id);
-                        ParamHelper.SetCellIfExists(chainedRow, "lotItemCategory01", itm.Category);
-                        ParamHelper.SetCellIfExists(chainedRow, "lotItemBasePoint01", (ushort)1000);
-                        ParamHelper.SetCellIfExists(chainedRow, "lotItemNum01", (byte)1);
-                        ParamHelper.SetCellIfExists(chainedRow, "getItemFlagId01", 0u);
+                        ParamHelper.SetCellFast(chainedRow, mapLayout.ItemIdIndices[0], itm.Id);
+                        ParamHelper.SetCellFast(chainedRow, mapLayout.CategoryIndices[0], itm.Category);
+                        ParamHelper.SetCellFast(chainedRow, mapLayout.BasePointIndices[0], (ushort)1000);
+                        ParamHelper.SetCellFast(chainedRow, mapLayout.NumIndices[0], (byte)1);
+                        ParamHelper.SetCellFast(chainedRow, mapLayout.FlagIdIndices[0], 0u);
                         totalItemsInjected++;
                     }
                     bossesEnriched++;
                 }
                 else if (!isMap && enemyRowMap.TryGetValue(baseLotId, out var targetRow))
                 {
-                    int slotIdx = 1;
+                    int slotIdx = 0;
                     if (baseLotId == 431100000 && chosenItems.Count > 0)
                     {
                         var firstItm = chosenItems[0];
-                        ParamHelper.SetCellIfExists(targetRow, "lotItemId01", firstItm.Id);
-                        ParamHelper.SetCellIfExists(targetRow, "lotItemCategory01", firstItm.Category);
-                        ParamHelper.SetCellIfExists(targetRow, "lotItemBasePoint01", (ushort)1000);
-                        ParamHelper.SetCellIfExists(targetRow, "lotItemNum01", (byte)1);
-                        ParamHelper.SetCellIfExists(targetRow, "getItemFlagId01", 0u);
+                        ParamHelper.SetCellFast(targetRow, enemyLayout.ItemIdIndices[0], firstItm.Id);
+                        ParamHelper.SetCellFast(targetRow, enemyLayout.CategoryIndices[0], firstItm.Category);
+                        ParamHelper.SetCellFast(targetRow, enemyLayout.BasePointIndices[0], (ushort)1000);
+                        ParamHelper.SetCellFast(targetRow, enemyLayout.NumIndices[0], (byte)1);
+                        ParamHelper.SetCellFast(targetRow, enemyLayout.FlagIdIndices[0], 0u);
                         totalItemsInjected++;
-                        slotIdx = 2;
+                        slotIdx = 1;
                     }
 
                     for (int i = (baseLotId == 431100000 ? 1 : 0); i < chosenItems.Count; i++)
                     {
                         var itm = chosenItems[i];
-                        while (slotIdx <= 8 && ParamHelper.GetCellInt(targetRow, $"lotItemId0{slotIdx}") > 0)
+                        while (slotIdx < 8 && ParamHelper.GetCellIntFast(targetRow, enemyLayout.ItemIdIndices[slotIdx]) > 0)
                             slotIdx++;
 
-                        if (slotIdx <= 8)
+                        if (slotIdx < 8)
                         {
-                            ParamHelper.SetCellIfExists(targetRow, $"lotItemId0{slotIdx}", itm.Id);
-                            ParamHelper.SetCellIfExists(targetRow, $"lotItemCategory0{slotIdx}", itm.Category);
-                            ParamHelper.SetCellIfExists(targetRow, $"lotItemBasePoint0{slotIdx}", (ushort)1000);
-                            ParamHelper.SetCellIfExists(targetRow, $"lotItemNum0{slotIdx}", (byte)1);
-                            ParamHelper.SetCellIfExists(targetRow, $"getItemFlagId0{slotIdx}", 0u);
+                            ParamHelper.SetCellFast(targetRow, enemyLayout.ItemIdIndices[slotIdx], itm.Id);
+                            ParamHelper.SetCellFast(targetRow, enemyLayout.CategoryIndices[slotIdx], itm.Category);
+                            ParamHelper.SetCellFast(targetRow, enemyLayout.BasePointIndices[slotIdx], (ushort)1000);
+                            ParamHelper.SetCellFast(targetRow, enemyLayout.NumIndices[slotIdx], (byte)1);
+                            ParamHelper.SetCellFast(targetRow, enemyLayout.FlagIdIndices[slotIdx], 0u);
                             totalItemsInjected++;
                             slotIdx++;
                         }

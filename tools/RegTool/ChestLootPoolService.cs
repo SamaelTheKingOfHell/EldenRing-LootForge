@@ -72,6 +72,9 @@ namespace LootForge.RegTool
 
         public static int EnrichChestLootPools(PARAM mapParam, PARAM enemyParam, PARAM protParam, PARAM wepParam, int minItems = 1, int maxItems = 4)
         {
+            var mapLayout = ItemLotLayout.Extract(mapParam);
+            var enemyLayout = ItemLotLayout.Extract(enemyParam);
+
             var mapRowMap = new Dictionary<int, PARAM.Row>(mapParam.Rows.Count);
             foreach (var r in mapParam.Rows) mapRowMap[r.ID] = r;
 
@@ -116,10 +119,12 @@ namespace LootForge.RegTool
             AddLandmark(1038430510, "Murkwater Cave Patches Trap Chest", EntityProgressionTier.Early);
             AddLandmark(20600, "Morne Tunnel Hidden Chest", EntityProgressionTier.Early);
 
+            int mId = mapLayout.ItemIdIndices[0];
+            int mCat = mapLayout.CategoryIndices[0];
             foreach (var r in mapParam.Rows)
             {
                 if (seenChestIds.Contains(r.ID)) continue;
-                int itm1 = ParamHelper.GetCellInt(r, "lotItemId01");
+                int itm1 = ParamHelper.GetCellIntFast(r, mId);
                 if (itm1 <= 0) continue;
 
                 string name = r.Name ?? "";
@@ -133,7 +138,7 @@ namespace LootForge.RegTool
                                  || lower.Contains("treasure") || lower.Contains("cache") || lower.Contains("coffer")
                                  || lower.Contains("urn") || lower.StartsWith("[chest -");
 
-                int cat1 = ParamHelper.GetCellInt(r, "lotItemCategory01");
+                int cat1 = ParamHelper.GetCellIntFast(r, mCat);
                 bool isWorldPickupOrMod = (r.ID >= 1000000000 && (cat1 == 2 || cat1 == 3 || cat1 == 4))
                                        || (r.ID >= 100000 && r.ID < 1000000000 && (name.Contains("[LootForge]") || name.Contains("Mod")));
 
@@ -180,8 +185,7 @@ namespace LootForge.RegTool
                     else
                     {
                         // Custom items exhausted for this chest: pick from curated pool
-                        var tierWeapons = CuratedWeaponPool.WEAPONS.Where(w => w.Tier == tier).ToList();
-                        if (tierWeapons.Count == 0) tierWeapons = CuratedWeaponPool.WEAPONS;
+                        var tierWeapons = CuratedWeaponPool.GetWeaponsByTier(tier);
                         var w = tierWeapons[rng.Next(tierWeapons.Count)];
                         chosenForChest.Add((w.Id, w.Name, 2, w.Tier));
                     }
@@ -204,23 +208,23 @@ namespace LootForge.RegTool
                             ID = chainedId,
                             Name = $"[Chest Drop T{(int)tier}] {itm.Name} (in {chestName})"
                         };
-                        for (int s = 1; s <= 8; s++)
+                        for (int s = 0; s < 8; s++)
                         {
-                            ParamHelper.SetCellIfExists(chainedRow, $"lotItemId0{s}", 0);
-                            ParamHelper.SetCellIfExists(chainedRow, $"lotItemCategory0{s}", 0);
-                            ParamHelper.SetCellIfExists(chainedRow, $"lotItemBasePoint0{s}", (ushort)0);
-                            ParamHelper.SetCellIfExists(chainedRow, $"lotItemNum0{s}", (byte)0);
-                            ParamHelper.SetCellIfExists(chainedRow, $"getItemFlagId0{s}", 0u);
+                            ParamHelper.SetCellFast(chainedRow, mapLayout.ItemIdIndices[s], 0);
+                            ParamHelper.SetCellFast(chainedRow, mapLayout.CategoryIndices[s], 0);
+                            ParamHelper.SetCellFast(chainedRow, mapLayout.BasePointIndices[s], (ushort)0);
+                            ParamHelper.SetCellFast(chainedRow, mapLayout.NumIndices[s], (byte)0);
+                            ParamHelper.SetCellFast(chainedRow, mapLayout.FlagIdIndices[s], 0u);
                         }
                         mapParam.Rows.Add(chainedRow);
                         mapRowMap[chainedId] = chainedRow;
                     }
 
-                    ParamHelper.SetCellIfExists(chainedRow, "lotItemId01", itm.Id);
-                    ParamHelper.SetCellIfExists(chainedRow, "lotItemCategory01", itm.Category);
-                    ParamHelper.SetCellIfExists(chainedRow, "lotItemBasePoint01", (ushort)1000);
-                    ParamHelper.SetCellIfExists(chainedRow, "lotItemNum01", (byte)1);
-                    ParamHelper.SetCellIfExists(chainedRow, "getItemFlagId01", 0u);
+                    ParamHelper.SetCellFast(chainedRow, mapLayout.ItemIdIndices[0], itm.Id);
+                    ParamHelper.SetCellFast(chainedRow, mapLayout.CategoryIndices[0], itm.Category);
+                    ParamHelper.SetCellFast(chainedRow, mapLayout.BasePointIndices[0], (ushort)1000);
+                    ParamHelper.SetCellFast(chainedRow, mapLayout.NumIndices[0], (byte)1);
+                    ParamHelper.SetCellFast(chainedRow, mapLayout.FlagIdIndices[0], 0u);
                     totalItemsInChests++;
                 }
 
@@ -235,15 +239,16 @@ namespace LootForge.RegTool
             if (remainingCustom.Count > 0)
             {
                 Console.WriteLine($"[ChestLootPool] Randomly routing {remainingCustom.Count} remaining custom items across random enemy pools...");
-                // Discover all active non-boss enemy drop tables and shuffle them randomly
+                int eId0 = enemyLayout.ItemIdIndices[0];
+                int eBp0 = enemyLayout.BasePointIndices[0];
                 var candidateEnemyRows = enemyParam.Rows.Where(r => {
-                    int itm1 = ParamHelper.GetCellInt(r, "lotItemId01");
-                    int p1 = ParamHelper.GetCellInt(r, "lotItemBasePoint01");
+                    int itm1 = ParamHelper.GetCellIntFast(r, eId0);
+                    int p1 = ParamHelper.GetCellIntFast(r, eBp0);
                     return itm1 > 0 && p1 < 1000;
                 }).OrderBy(_ => rng.Next()).ToList();
 
                 if (candidateEnemyRows.Count == 0)
-                    candidateEnemyRows = enemyParam.Rows.Where(r => ParamHelper.GetCellInt(r, "lotItemId01") > 0).OrderBy(_ => rng.Next()).ToList();
+                    candidateEnemyRows = enemyParam.Rows.Where(r => ParamHelper.GetCellIntFast(r, eId0) > 0).OrderBy(_ => rng.Next()).ToList();
 
                 int enemyRowIdx = 0;
                 foreach (var itm in remainingCustom)
@@ -252,15 +257,16 @@ namespace LootForge.RegTool
                     for (int attempts = 0; attempts < candidateEnemyRows.Count && !placed; attempts++)
                     {
                         var eRow = candidateEnemyRows[(enemyRowIdx + attempts) % candidateEnemyRows.Count];
-                        for (int s = 2; s <= 8; s++)
+                        for (int s = 1; s < 8; s++) // slots 2..8
                         {
-                            if (ParamHelper.GetCellInt(eRow, $"lotItemId0{s}") == 0)
+                            int cellIdx = enemyLayout.ItemIdIndices[s];
+                            if (ParamHelper.GetCellIntFast(eRow, cellIdx) == 0)
                             {
-                                ParamHelper.SetCellIfExists(eRow, $"lotItemId0{s}", itm.Id);
-                                ParamHelper.SetCellIfExists(eRow, $"lotItemCategory0{s}", itm.Category);
-                                ParamHelper.SetCellIfExists(eRow, $"lotItemBasePoint0{s}", (ushort)250);
-                                ParamHelper.SetCellIfExists(eRow, $"lotItemNum0{s}", (byte)1);
-                                ParamHelper.SetCellIfExists(eRow, $"getItemFlagId0{s}", 0u);
+                                ParamHelper.SetCellFast(eRow, cellIdx, itm.Id);
+                                ParamHelper.SetCellFast(eRow, enemyLayout.CategoryIndices[s], itm.Category);
+                                ParamHelper.SetCellFast(eRow, enemyLayout.BasePointIndices[s], (ushort)250);
+                                ParamHelper.SetCellFast(eRow, enemyLayout.NumIndices[s], (byte)1);
+                                ParamHelper.SetCellFast(eRow, enemyLayout.FlagIdIndices[s], 0u);
                                 placed = true;
                                 placedItemIds.Add(itm.Id);
                                 routedToEnemies++;

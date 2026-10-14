@@ -5,6 +5,7 @@ Stages replacement 3D model files into the output mod directory using newly allo
 standalone IDs, ensuring original vanilla game assets remain untouched.
 """
 
+import os
 import shutil
 import re
 from pathlib import Path
@@ -34,6 +35,31 @@ class AssetRenumberer:
         self._parts_dir = self._output_dir / "parts"
         self._parts_dir.mkdir(parents=True, exist_ok=True)
 
+    @staticmethod
+    def _sync_part_file(src: Path, dst: Path) -> None:
+        """
+        Fast incremental file deployment:
+        - If destination already exists with identical file size and destination mtime >= source mtime,
+          skip the operation entirely (zero disk I/O).
+        - Otherwise, attempt hardlink (os.link) for instant 0-second deployment on NTFS/same-volume.
+        - Fallback safely to shutil.copy2 if cross-volume or permission restricted.
+        """
+        if dst.exists():
+            try:
+                src_stat = src.stat()
+                dst_stat = dst.stat()
+                if src_stat.st_size == dst_stat.st_size and dst_stat.st_mtime >= src_stat.st_mtime:
+                    return
+            except OSError:
+                pass
+
+        try:
+            if dst.exists():
+                dst.unlink()
+            os.link(src, dst)
+        except (OSError, AttributeError):
+            shutil.copy2(src, dst)
+
     def stage_mod_set(self, input_base: str, mod_set: DetectedModSet) -> List[str]:
         """
         Copies each part file of the mod set to the output parts directory,
@@ -62,7 +88,7 @@ class AssetRenumberer:
             new_name = old_name.replace(part.target_model_id, new_model_id).lower()
             dest_file = self._parts_dir / new_name
 
-            shutil.copy2(source_file, dest_file)
+            self._sync_part_file(source_file, dest_file)
             staged_files.append(str(dest_file.relative_to(self._output_dir)))
             staged_by_name[new_name] = dest_file
 
@@ -84,7 +110,7 @@ class AssetRenumberer:
             if opposing_name not in staged_by_name:
                 opposing_dest = self._parts_dir / opposing_name
                 try:
-                    shutil.copy2(staged_path, opposing_dest)
+                    self._sync_part_file(staged_path, opposing_dest)
                     staged_files.append(str(opposing_dest.relative_to(self._output_dir)))
                     staged_by_name[opposing_name] = opposing_dest
                     system_logger.info(

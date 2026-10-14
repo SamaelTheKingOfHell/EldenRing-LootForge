@@ -69,5 +69,25 @@ namespace LootForge.RegTool
             new(7040000, "Eclipse Shotel", EntityProgressionTier.Endgame),
             new(4040000, "Royal Greatsword", EntityProgressionTier.Endgame)
         };
+
+        private static readonly Dictionary<EntityProgressionTier, List<CuratedWeapon>> _byTier = new();
+
+        static CuratedWeaponPool()
+        {
+            foreach (var w in WEAPONS)
+            {
+                if (!_byTier.TryGetValue(w.Tier, out var list))
+                {
+                    list = new List<CuratedWeapon>();
+                    _byTier[w.Tier] = list;
+                }
+                list.Add(w);
+            }
+        }
+
+        public static List<CuratedWeapon> GetWeaponsByTier(EntityProgressionTier tier)
+        {
+            return _byTier.TryGetValue(tier, out var list) && list.Count > 0 ? list : WEAPONS;
+        }
     }
 }

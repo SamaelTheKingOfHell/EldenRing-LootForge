@@ -34,6 +34,22 @@ namespace LootForge.RegTool
             }
         }
 
+        public static int GetCellIntFast(PARAM.Row row, int index)
+        {
+            if (index < 0 || index >= row.Cells.Count) return 0;
+            var val = row.Cells[index].Value;
+            if (val == null) return 0;
+            try { return Convert.ToInt32(val); } catch { return 0; }
+        }
+
+        public static void SetCellFast(PARAM.Row row, int index, object value)
+        {
+            if (index >= 0 && index < row.Cells.Count)
+            {
+                row.Cells[index].Value = value;
+            }
+        }
+
         public static void SetCellValue(PARAM.Cell cell, JsonElement jsonVal)
         {
             switch (cell.Def.DisplayType)
@@ -120,6 +136,42 @@ namespace LootForge.RegTool
             catch { }
 
             return null;
+        }
+    }
+
+    /// <summary>
+    /// In-memory pre-resolved field indices for ItemLotParam, dynamically extracted from
+    /// the active regulation before patching to guarantee zero disk files and zero string scans.
+    /// </summary>
+    public class ItemLotLayout
+    {
+        public readonly int[] ItemIdIndices = new int[8];
+        public readonly int[] CategoryIndices = new int[8];
+        public readonly int[] BasePointIndices = new int[8];
+        public readonly int[] NumIndices = new int[8];
+        public readonly int[] FlagIdIndices = new int[8];
+
+        private static int FindCellIndex(System.Collections.Generic.IReadOnlyList<PARAM.Cell> cells, string name)
+        {
+            for (int i = 0; i < cells.Count; i++)
+                if (string.Equals(cells[i].Def?.InternalName, name, StringComparison.OrdinalIgnoreCase)) return i;
+            return -1;
+        }
+
+        public static ItemLotLayout Extract(PARAM param)
+        {
+            var layout = new ItemLotLayout();
+            if (param.Rows.Count == 0) return layout;
+            var cells = param.Rows[0].Cells;
+            for (int s = 1; s <= 8; s++)
+            {
+                layout.ItemIdIndices[s - 1] = FindCellIndex(cells, $"lotItemId0{s}");
+                layout.CategoryIndices[s - 1] = FindCellIndex(cells, $"lotItemCategory0{s}");
+                layout.BasePointIndices[s - 1] = FindCellIndex(cells, $"lotItemBasePoint0{s}");
+                layout.NumIndices[s - 1] = FindCellIndex(cells, $"lotItemNum0{s}");
+                layout.FlagIdIndices[s - 1] = FindCellIndex(cells, $"getItemFlagId0{s}");
+            }
+            return layout;
         }
     }
 }
