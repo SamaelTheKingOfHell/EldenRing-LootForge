@@ -89,45 +89,27 @@ class PricingEngine:
     @staticmethod
     def _normalize_tier(tier: Optional[Union[int, str, Any]]) -> int:
         """Converts diverse tier representations into an integer between 1 and 4."""
-        if tier is None:
-            return 1
-        if isinstance(tier, int):
-            return max(1, min(4, tier))
-        
-        # Check enum value or attribute
+        if tier is None: return 1
+        if isinstance(tier, int): return max(1, min(4, tier))
         if hasattr(tier, "value"):
-            try:
-                return max(1, min(4, int(tier.value)))
-            except (ValueError, TypeError):
-                pass
-
+            try: return max(1, min(4, int(tier.value)))
+            except (ValueError, TypeError): pass
         s = str(tier).strip().lower()
-        if "end" in s or "4" in s:
-            return 4
-        if "late" in s or "3" in s:
-            return 3
-        if "mid" in s or "2" in s:
-            return 2
+        if "end" in s or "4" in s: return 4
+        if "late" in s or "3" in s: return 3
+        if "mid" in s or "2" in s: return 2
         return 1
 
     @staticmethod
     def _normalize_slot(slot: Optional[Union[str, EquipmentSlot]]) -> str:
         """Normalizes slot representation to lowercase canonical slot string."""
-        if slot is None:
-            return "weapon"
-        if isinstance(slot, EquipmentSlot):
-            return slot.value.lower()
+        if slot is None: return "weapon"
+        if isinstance(slot, EquipmentSlot): return slot.value.lower()
         s = str(slot).strip().lower()
-        if "head" in s or "helm" in s:
-            return "head"
-        if "body" in s or "chest" in s or "armor" in s:
-            return "body"
-        if "arm" in s or "gauntlet" in s or "hand" in s:
-            return "arms"
-        if "leg" in s or "boot" in s or "pant" in s:
-            return "legs"
-        if "acc" in s or "talisman" in s:
-            return "accessory"
+        for kw, out in [("head", "head"), ("helm", "head"), ("body", "body"), ("chest", "body"),
+                        ("armor", "body"), ("arm", "arms"), ("gauntlet", "arms"), ("hand", "arms"),
+                        ("leg", "legs"), ("boot", "legs"), ("pant", "legs"), ("acc", "accessory"), ("talisman", "accessory")]:
+            if kw in s: return out
         return "weapon"
 
     def calculate_item_power(
@@ -142,62 +124,32 @@ class PricingEngine:
         is_boss: bool = False,
         field_updates: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        """
-        Calculates an item's raw power score along with an audit breakdown.
-        """
+        """Calculates an item's raw power score along with an audit breakdown."""
         norm_slot = "weapon" if is_weapon else ("accessory" if is_accessory else self._normalize_slot(slot))
         norm_tier = self._normalize_tier(tier)
         norm_rarity = rarity if isinstance(rarity, RarityTier) else RarityTier.COMMON
 
-        # 1. Base slot power
         base_slot_value = self.SLOT_BASE_VALUE.get(norm_slot, 2000)
-
-        # 2. Progression tier multiplier
         tier_mult = self.PROGRESSION_TIER_MULTIPLIERS.get(norm_tier, 1.0)
-
-        # 3. Rarity multiplier
         rarity_mult = self.RARITY_MULTIPLIERS.get(norm_rarity, 1.0)
-
-        # 4. Boss prestige multiplier
         boss_mult = self.BOSS_PRESTIGE_MULTIPLIER if is_boss else 1.0
-
-        # Core scaled power
         scaled_base = base_slot_value * tier_mult * rarity_mult * boss_mult
 
-        # 5. Affix power calculation
         affix_power = 0
         affix_count = 0
         if affixes:
             for aff in affixes:
                 affix_count += 1
-                # Attack bonuses
-                for atk_key in ["attackBasePhysics", "attackBaseMagic", "attackBaseFire", "attackBaseThunder", "attackBaseDark"]:
-                    val = aff.field_modifiers.get(atk_key, 0)
-                    if val > 0:
-                        affix_power += val * 40
-
-                # Defense bonuses
-                for def_key in ["defensePhysics", "defenseSlash", "defenseBlow", "defenseThrust", "defenseMagic", "defenseFire", "defenseThunder", "defenseDark"]:
-                    val = aff.field_modifiers.get(def_key, 0)
-                    if val > 0:
-                        affix_power += val * 35
-
-                # Poise bonus
-                poise_val = aff.field_modifiers.get("toughnessCorrectRate", 0)
-                if poise_val > 0:
-                    affix_power += poise_val * 50
-
-                # Stat scaling bonuses
-                for stat_key in ["correctStrength", "correctAgility", "correctMagic", "correctFaith"]:
-                    stat_val = aff.field_modifiers.get(stat_key, 0)
-                    if stat_val > 0:
-                        affix_power += stat_val * 30
-
-                # SpEffect passive perks (e.g. Rotten Winged, Alexander Shard, HP regen, Blood loss)
+                for k in ["attackBasePhysics", "attackBaseMagic", "attackBaseFire", "attackBaseThunder", "attackBaseDark"]:
+                    affix_power += aff.field_modifiers.get(k, 0) * 40
+                for k in ["defensePhysics", "defenseSlash", "defenseBlow", "defenseThrust", "defenseMagic", "defenseFire", "defenseThunder", "defenseDark"]:
+                    affix_power += aff.field_modifiers.get(k, 0) * 35
+                for k in ["correctStrength", "correctAgility", "correctMagic", "correctFaith"]:
+                    affix_power += aff.field_modifiers.get(k, 0) * 30
+                if aff.field_modifiers.get("toughnessCorrectRate", 0) > 0:
+                    affix_power += aff.field_modifiers["toughnessCorrectRate"] * 50
                 if getattr(aff, "sp_effect_id", None):
                     affix_power += 2500
-
-                # Status / element UI effect
                 if getattr(aff, "sp_effect_msg_id", None):
                     affix_power += 500
 

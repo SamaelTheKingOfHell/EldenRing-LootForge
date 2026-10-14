@@ -47,13 +47,15 @@ class DiabloTextFormatter:
         affixes: List[AffixDefinition],
         boss_name: Optional[str] = None,
         skill: Optional[WeaponSkill] = None,
-        pricing: Optional[Dict[str, Any]] = None
+        pricing: Optional[Dict[str, Any]] = None,
+        stats_multiplier: float = 1.0
     ) -> str:
         """Appends formatted rarity, skill, pricing, and affix breakdown to the bottom of item description."""
         lines = [base_caption.rstrip(), ""]
         lines.append("----------------------------------------")
         tier_title = f"GIGA {rarity.display_name.upper()}" if boss_name else rarity.display_name.upper()
-        lines.append(f"RARITY: {tier_title} {rarity.stars}")
+        mult_tag = f" (Stats x{stats_multiplier:g})" if stats_multiplier != 1.0 else ""
+        lines.append(f"RARITY: {tier_title} {rarity.stars}{mult_tag}")
 
         if skill:
             lines.append(f"SKILL: {skill.name}")
@@ -66,10 +68,19 @@ class DiabloTextFormatter:
 
         if affixes:
             lines.append("----------------------------------------")
-            lines.append("DIABLO AFFIXES:")
+            header = "DIABLO AFFIXES:"
+            if stats_multiplier != 1.0:
+                header += f" (Potency x{stats_multiplier:g})"
+            lines.append(header)
             for aff in affixes:
                 aff_type_str = "Prefix" if aff.affix_type == AffixType.PREFIX else "Suffix"
-                lines.append(f"- [{aff_type_str}] {aff.name}: {aff.description}")
+                desc = aff.description
+                if stats_multiplier != 1.0 and aff.field_modifiers:
+                    for delta in aff.field_modifiers.values():
+                        if isinstance(delta, (int, float)) and delta != 0:
+                            scaled = int(round(delta * stats_multiplier)) if isinstance(delta, int) else round(delta * stats_multiplier, 1)
+                            desc = desc.replace(f"+{delta}", f"+{scaled}").replace(f"{delta}%", f"{scaled}%")
+                lines.append(f"- [{aff_type_str}] {aff.name}: {desc}")
         else:
             lines.append("----------------------------------------")
             lines.append("- Standard Mundane Quality (No Magical Affixes)")

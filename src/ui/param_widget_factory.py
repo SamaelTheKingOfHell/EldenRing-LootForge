@@ -57,10 +57,7 @@ class ParamWidgetFactory:
             combo = QComboBox(parent)
             combo.setToolTip(desc.description)
             if desc.enum_options:
-                for label, val in desc.enum_options:
-                    combo.addItem(label, val)
-            
-            # Select matching item
+                for label, val in desc.enum_options: combo.addItem(label, val)
             for i in range(combo.count()):
                 item_data = combo.itemData(i)
                 enum_val = getattr(item_data, "value", item_data)
@@ -68,34 +65,25 @@ class ParamWidgetFactory:
                 if item_data == initial_value or enum_val == curr_val:
                     combo.setCurrentIndex(i)
                     break
-
             combo.currentIndexChanged.connect(lambda idx: on_change(desc.key, combo.itemData(idx)))
             return combo, combo
 
         elif desc.param_type == ParamType.INT:
             spin = QSpinBox(parent)
-            spin.setRange(
-                desc.min_value if desc.min_value is not None else 0,
-                desc.max_value if desc.max_value is not None else 999999
-            )
+            spin.setRange(desc.min_value if desc.min_value is not None else 0, desc.max_value if desc.max_value is not None else 999999)
             spin.setSingleStep(desc.step if desc.step is not None else 1)
             spin.setValue(int(initial_value) if initial_value is not None else (desc.default or 0))
-            if desc.unit:
-                spin.setSuffix(f" {desc.unit}")
+            if desc.unit: spin.setSuffix(f" {desc.unit}")
             spin.setToolTip(desc.description)
             spin.valueChanged.connect(lambda val: on_change(desc.key, val))
             return spin, spin
 
         elif desc.param_type == ParamType.FLOAT:
             spin = QDoubleSpinBox(parent)
-            spin.setRange(
-                desc.min_value if desc.min_value is not None else 0.0,
-                desc.max_value if desc.max_value is not None else 100000.0
-            )
+            spin.setRange(desc.min_value if desc.min_value is not None else 0.0, desc.max_value if desc.max_value is not None else 100000.0)
             spin.setSingleStep(desc.step if desc.step is not None else 1.0)
             spin.setValue(float(initial_value) if initial_value is not None else (desc.default or 0.0))
-            if desc.unit:
-                spin.setSuffix(f" {desc.unit}")
+            if desc.unit: spin.setSuffix(f" {desc.unit}")
             spin.setToolTip(desc.description)
             spin.valueChanged.connect(lambda val: on_change(desc.key, val))
             return spin, spin
@@ -105,27 +93,21 @@ class ParamWidgetFactory:
             row_layout = QHBoxLayout(row_widget)
             row_layout.setContentsMargins(0, 0, 0, 0)
             row_layout.setSpacing(6)
-
             line_edit = QLineEdit(row_widget)
             line_edit.setText(str(initial_value or ""))
             line_edit.setToolTip(desc.description)
             line_edit.textChanged.connect(lambda text: on_change(desc.key, text.strip()))
             row_layout.addWidget(line_edit, stretch=1)
-
             btn_text = "📄 Browse File..." if desc.param_type == ParamType.PATH_FILE else "📁 Browse Folder..."
             browse_btn = QPushButton(btn_text, row_widget)
-
             def _browse():
                 curr = line_edit.text().strip()
                 start_dir = curr if curr and Path(curr).exists() else ""
                 if desc.param_type == ParamType.PATH_FILE:
-                    f_filter = desc.file_filter or "All Files (*)"
-                    path, _ = QFileDialog.getOpenFileName(parent, f"Select {desc.label}", start_dir, f_filter)
+                    path, _ = QFileDialog.getOpenFileName(parent, f"Select {desc.label}", start_dir, desc.file_filter or "All Files (*)")
                 else:
                     path = QFileDialog.getExistingDirectory(parent, f"Select {desc.label}", start_dir)
-                if path:
-                    line_edit.setText(path)
-
+                if path: line_edit.setText(path)
             browse_btn.clicked.connect(_browse)
             row_layout.addWidget(browse_btn)
             return row_widget, line_edit
@@ -173,24 +155,16 @@ class ParamWidgetFactory:
         btns_row.setSpacing(8)
         use_mod_btn = QPushButton("Use Mod Engine (mod/regulation.bin)", card)
         use_mod_btn.clicked.connect(on_mod_engine)
-        btns_row.addWidget(use_mod_btn)
-
         use_vanilla_btn = QPushButton("Use Vanilla Game Regulation", card)
         use_vanilla_btn.clicked.connect(on_vanilla)
-        btns_row.addWidget(use_vanilla_btn)
-
-        btns_row.addStretch()
-
         backup_btn = QPushButton("Create Backup", card)
         backup_btn.clicked.connect(on_backup)
-        btns_row.addWidget(backup_btn)
-        controls["backup_btn"] = backup_btn
-
         restore_btn = QPushButton("Restore Latest Backup", card)
         restore_btn.clicked.connect(on_restore)
-        btns_row.addWidget(restore_btn)
-        controls["restore_btn"] = restore_btn
-
+        for b in [use_mod_btn, use_vanilla_btn]: btns_row.addWidget(b)
+        btns_row.addStretch()
+        for b in [backup_btn, restore_btn]: btns_row.addWidget(b)
+        controls["backup_btn"], controls["restore_btn"] = backup_btn, restore_btn
         layout.addLayout(btns_row)
         return card, controls
 

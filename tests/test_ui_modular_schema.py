@@ -152,6 +152,58 @@ class TestUIModularSchema(unittest.TestCase):
         spinbox.setValue(45.0)
         self.assertIn(("item_1", 45.0), rate_changes)
 
+    def test_multipliers_widget_factory_card_and_synchronization(self):
+        """Verify MultipliersWidgetFactory synchronized Master, Stats, and Price sliders."""
+        from src.ui.multipliers_widget_factory import MultipliersWidgetFactory
+        cfg = LootForgeConfig()
+        changes = {}
+
+        def _on_change(k, v):
+            changes[k] = v
+
+        card, ctrls = MultipliersWidgetFactory.build_multipliers_card(cfg, _on_change)
+        self.assertIsNotNone(card)
+        self.assertIn("master_multiplier", ctrls)
+        self.assertIn("stats_multiplier", ctrls)
+        self.assertIn("price_multiplier", ctrls)
+
+        master_slider = ctrls["master_multiplier"]
+        stats_slider = ctrls["stats_multiplier"]
+        price_slider = ctrls["price_multiplier"]
+
+        self.assertEqual(master_slider.value(), 100)
+        self.assertEqual(stats_slider.value(), 100)
+        self.assertEqual(price_slider.value(), 100)
+
+        # 1. Moving master slider updates both stats and price
+        master_slider.setValue(200)
+        self.assertEqual(stats_slider.value(), 200)
+        self.assertEqual(price_slider.value(), 200)
+        self.assertEqual(changes.get("master_multiplier"), 2.0)
+        self.assertEqual(changes.get("stats_multiplier"), 2.0)
+        self.assertEqual(changes.get("price_multiplier"), 2.0)
+        self.assertIn("200%", ctrls["master_label"].text())
+        self.assertIn("200%", ctrls["stats_label"].text())
+        self.assertIn("200%", ctrls["price_label"].text())
+
+        # 2. Moving stats slider independently
+        stats_slider.setValue(150)
+        self.assertEqual(stats_slider.value(), 150)
+        self.assertEqual(changes.get("stats_multiplier"), 1.5)
+        self.assertEqual(price_slider.value(), 200)
+
+        # 3. Moving price slider independently
+        price_slider.setValue(80)
+        self.assertEqual(price_slider.value(), 80)
+        self.assertEqual(changes.get("price_multiplier"), 0.8)
+        self.assertEqual(stats_slider.value(), 150)
+
+        # 4. Master reset resets both
+        ctrls["master_reset"].click()
+        self.assertEqual(master_slider.value(), 100)
+        self.assertEqual(stats_slider.value(), 100)
+        self.assertEqual(price_slider.value(), 100)
+
 
 if __name__ == "__main__":
     unittest.main()

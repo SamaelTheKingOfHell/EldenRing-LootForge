@@ -29,6 +29,7 @@ class ParamPurpose(Enum):
     """
     DROP_STYLE = "Loot & Drop Rules"
     DIABLO_ARPG = "Diablo ARPG Procedural Relics"
+    ECONOMY_STATS = "Item Power & Economy Multipliers"
     PATHS = "Active Regulation & Paths"
     GENERAL = "Display & Mystery Settings"
 
@@ -178,7 +179,33 @@ def get_generator_param_descriptors() -> List[ParamDescriptor]:
             default=True
         ),
 
-        # --- Group 3: Paths & Installation ---
+        # --- Group 3: Item Power & Price Multipliers ---
+        ParamDescriptor(
+            key="master_multiplier",
+            label="Master Multiplier",
+            param_type=ParamType.FLOAT,
+            purpose=ParamPurpose.ECONOMY_STATS,
+            description="Synchronized multiplier scaling item stats/boosts and prices simultaneously (1.0 = 100% baseline).",
+            default=1.0, min_value=0.1, max_value=5.0, step=0.05, unit="x"
+        ),
+        ParamDescriptor(
+            key="stats_multiplier",
+            label="Stats & Boosts Multiplier",
+            param_type=ParamType.FLOAT,
+            purpose=ParamPurpose.ECONOMY_STATS,
+            description="Scaling multiplier applied to item attack power, defense, stat scalings, and affix boosts.",
+            default=1.0, min_value=0.1, max_value=5.0, step=0.05, unit="x"
+        ),
+        ParamDescriptor(
+            key="price_multiplier",
+            label="Item Price Multiplier",
+            param_type=ParamType.FLOAT,
+            purpose=ParamPurpose.ECONOMY_STATS,
+            description="Scaling multiplier applied to item purchase costs, sell values, and shop rune prices.",
+            default=1.0, min_value=0.1, max_value=5.0, step=0.05, unit="x"
+        ),
+
+        # --- Group 4: Paths & Installation ---
         ParamDescriptor(
             key="active_regulation_path",
             label="Active regulation.bin",

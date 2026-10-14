@@ -18,7 +18,8 @@ class DiabloEquipmentModifier:
         field_updates: Dict[str, Any],
         affixes: List[AffixDefinition],
         is_weapon: bool,
-        is_accessory: bool = False
+        is_accessory: bool = False,
+        stats_multiplier: float = 1.0
     ) -> None:
         """Applies stat deltas and routes SpEffect passive buffs to appropriate slots."""
         wep_behavior_slot = 0
@@ -27,9 +28,16 @@ class DiabloEquipmentModifier:
         armor_resident_slot = 0
         acc_resident_slot = 1
 
+        mult = max(0.0, float(stats_multiplier))
         for aff in affixes:
             for field_name, delta in aff.field_modifiers.items():
-                field_updates[field_name] = field_updates.get(field_name, 0) + delta
+                if isinstance(delta, (int, float)):
+                    scaled_delta = delta * mult
+                    if isinstance(delta, int):
+                        scaled_delta = int(round(scaled_delta))
+                else:
+                    scaled_delta = delta
+                field_updates[field_name] = field_updates.get(field_name, 0) + scaled_delta
 
             if aff.sp_effect_id:
                 if is_accessory:

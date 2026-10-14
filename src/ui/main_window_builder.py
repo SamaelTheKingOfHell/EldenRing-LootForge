@@ -20,6 +20,7 @@ except (ImportError, Exception):
 
 from src.ui.param_schema import get_generator_param_descriptors
 from src.ui.param_widget_factory import ParamWidgetFactory
+from src.ui.multipliers_widget_factory import MultipliersWidgetFactory
 
 
 class MainWindowBuilder:
@@ -136,6 +137,18 @@ class MainWindowBuilder:
         window.diablo_seed_spin = diablo_ctrls["diablo_seed"]
 
         top_layout.addLayout(rules_row)
+
+        multipliers_card, mult_ctrls = MultipliersWidgetFactory.build_multipliers_card(
+            window.config, window._on_param_changed, parent=top_container
+        )
+        top_layout.addWidget(multipliers_card)
+        window.master_multiplier_slider = mult_ctrls["master_multiplier"]
+        window.stats_multiplier_slider = mult_ctrls["stats_multiplier"]
+        window.price_multiplier_slider = mult_ctrls["price_multiplier"]
+        window.master_multiplier_label = mult_ctrls["master_label"]
+        window.stats_multiplier_label = mult_ctrls["stats_label"]
+        window.price_multiplier_label = mult_ctrls["price_label"]
+
         window.top_scroll.setWidget(top_container)
         window.main_splitter.addWidget(window.top_scroll)
 

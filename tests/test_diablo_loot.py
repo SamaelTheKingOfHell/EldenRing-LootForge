@@ -813,6 +813,83 @@ class TestDiabloLoot(unittest.TestCase):
         boss_pools_enabled = cfg.boss_loot_pools_enabled and cfg.diablo_use_vanilla_base_items
         self.assertFalse(boss_pools_enabled, "Boss loot pools must be suppressed when diablo_use_vanilla_base_items is False!")
 
+    def test_stats_multiplier_scaling(self):
+        """Verifies stats_multiplier accurately scales affix field modifiers."""
+        from src.diablo_equipment_modifier import DiabloEquipmentModifier
+        from src.diablo_affixes import AffixDefinition, AffixType, RarityTier
+
+        aff = AffixDefinition(
+            name="Fiery", affix_type=AffixType.PREFIX, tier_min=RarityTier.MAGIC,
+            applies_to_weapon=True, applies_to_armor=False,
+            field_modifiers={"attackBaseFire": 40, "attackBasePhysics": 20}
+        )
+
+        # Baseline (1.0x)
+        updates_1x = {}
+        DiabloEquipmentModifier.apply_affixes_to_equipment(updates_1x, [aff], is_weapon=True, stats_multiplier=1.0)
+        self.assertEqual(updates_1x["attackBaseFire"], 40)
+        self.assertEqual(updates_1x["attackBasePhysics"], 20)
+
+        # Doubled (2.0x)
+        updates_2x = {}
+        DiabloEquipmentModifier.apply_affixes_to_equipment(updates_2x, [aff], is_weapon=True, stats_multiplier=2.0)
+        self.assertEqual(updates_2x["attackBaseFire"], 80)
+        self.assertEqual(updates_2x["attackBasePhysics"], 40)
+
+        # Halved (0.5x)
+        updates_half = {}
+        DiabloEquipmentModifier.apply_affixes_to_equipment(updates_half, [aff], is_weapon=True, stats_multiplier=0.5)
+        self.assertEqual(updates_half["attackBaseFire"], 20)
+        self.assertEqual(updates_half["attackBasePhysics"], 10)
+
+    def test_price_multiplier_scaling(self):
+        """Verifies price_multiplier accurately scales buy and sell prices."""
+        from src.pricing_engine import PricingEngine
+        from src.diablo_affixes import RarityTier
+
+        engine_1x = PricingEngine(price_multiplier=1.0)
+        prices_1x = engine_1x.calculate_item_prices(slot="weapon", tier=2, rarity=RarityTier.RARE, is_weapon=True)
+
+        engine_2x = PricingEngine(price_multiplier=2.0)
+        prices_2x = engine_2x.calculate_item_prices(slot="weapon", tier=2, rarity=RarityTier.RARE, is_weapon=True)
+
+        engine_half = PricingEngine(price_multiplier=0.5)
+        prices_half = engine_half.calculate_item_prices(slot="weapon", tier=2, rarity=RarityTier.RARE, is_weapon=True)
+
+        self.assertGreater(prices_2x["buy_price"], prices_1x["buy_price"])
+        self.assertGreater(prices_1x["buy_price"], prices_half["buy_price"])
+        # Price should be approximately double / half (allowing for rounding to nearest 50/100)
+        ratio_2x = prices_2x["buy_price"] / prices_1x["buy_price"]
+        ratio_half = prices_half["buy_price"] / prices_1x["buy_price"]
+        self.assertAlmostEqual(ratio_2x, 2.0, delta=0.1)
+        self.assertAlmostEqual(ratio_half, 0.5, delta=0.1)
+
+    def test_caption_stats_multiplier_reflection(self):
+        """Verifies caption formats scaled potencies and stats numbers when stats_multiplier != 1.0."""
+        from src.diablo_text_formatter import DiabloTextFormatter
+        from src.diablo_affixes import AffixDefinition, AffixType, RarityTier
+
+        aff = AffixDefinition(
+            name="Fiery", affix_type=AffixType.PREFIX, tier_min=RarityTier.MAGIC,
+            applies_to_weapon=True, applies_to_armor=False,
+            field_modifiers={"attackBaseFire": 35},
+            description="+35 Fire Damage"
+        )
+
+        caption_2x = DiabloTextFormatter.build_caption_with_affixes(
+            "Moonveil", RarityTier.MAGIC, [aff], stats_multiplier=2.0
+        )
+        self.assertIn("Stats x2", caption_2x)
+        self.assertIn("Potency x2", caption_2x)
+        self.assertIn("+70 Fire Damage", caption_2x)
+
+    def test_diablo_loot_generator_multipliers_integration(self):
+        """Verifies DiabloLootGenerator integrates stats_multiplier and price_multiplier seamlessly."""
+        gen = DiabloLootGenerator(seed=123, stats_multiplier=2.0, price_multiplier=1.5)
+        self.assertEqual(gen.stats_multiplier, 2.0)
+        self.assertEqual(gen.price_multiplier, 1.5)
+        self.assertEqual(gen.pricing_engine.price_multiplier, 1.5)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -64,6 +64,8 @@ class LootForgeConfig:
         boss_weapons_per_pool: int = 3,
         price_power_scaling_enabled: bool = True,
         price_multiplier: float = 1.0,
+        stats_multiplier: float = 1.0,
+        master_multiplier: float = 1.0,
         sell_price_ratio: float = 0.30,
         item_custom_art_toggles: Optional[Dict[str, bool]] = None,
         import_custom_skills_movesets: bool = True
@@ -103,6 +105,8 @@ class LootForgeConfig:
         self.boss_weapons_per_pool = boss_weapons_per_pool
         self.price_power_scaling_enabled = price_power_scaling_enabled
         self.price_multiplier = price_multiplier
+        self.stats_multiplier = stats_multiplier
+        self.master_multiplier = master_multiplier
         self.sell_price_ratio = sell_price_ratio
 
         # Auto-discover game directory if not specified
@@ -130,25 +134,21 @@ class LootForgeConfig:
         """
         Discovers the Elden Ring installation directory across common locations.
         """
-        candidate_paths = []
-
         if self.is_windows:
-            candidate_paths.extend([
+            candidate_paths = [
                 r"C:\Program Files (x86)\Steam\steamapps\common\ELDEN RING\Game",
                 r"D:\SteamLibrary\steamapps\common\ELDEN RING\Game",
                 r"E:\SteamLibrary\steamapps\common\ELDEN RING\Game",
-                r"C:\Games\ELDEN RING\Game",
-                r"D:\Games\ELDEN RING\Game"
-            ])
+                r"C:\Games\ELDEN RING\Game", r"D:\Games\ELDEN RING\Game"
+            ]
         else:
-            # Linux and Steam Deck common installation roots
             home = str(Path.home())
-            candidate_paths.extend([
+            candidate_paths = [
                 os.path.join(home, ".steam/steam/steamapps/common/ELDEN RING/Game"),
                 os.path.join(home, ".local/share/Steam/steamapps/common/ELDEN RING/Game"),
-                "/run/media/mmcblk0p1/steamapps/common/ELDEN RING/Game",  # MicroSD card on Deck
+                "/run/media/mmcblk0p1/steamapps/common/ELDEN RING/Game",
                 os.path.join(home, "Games/ELDEN RING/Game")
-            ])
+            ]
 
         for path in candidate_paths:
             p = Path(path)
@@ -224,6 +224,8 @@ class LootForgeConfig:
             "boss_weapons_per_pool": self.boss_weapons_per_pool,
             "price_power_scaling_enabled": self.price_power_scaling_enabled,
             "price_multiplier": self.price_multiplier,
+            "stats_multiplier": self.stats_multiplier,
+            "master_multiplier": self.master_multiplier,
             "sell_price_ratio": self.sell_price_ratio,
             "is_windows": self.is_windows,
             "is_steam_deck": self.is_steam_deck
@@ -286,6 +288,8 @@ class LootForgeConfig:
                 boss_weapons_per_pool=int(data.get("boss_weapons_per_pool", 3)),
                 price_power_scaling_enabled=bool(data.get("price_power_scaling_enabled", True)),
                 price_multiplier=float(data.get("price_multiplier", 1.0)),
+                stats_multiplier=float(data.get("stats_multiplier", 1.0)),
+                master_multiplier=float(data.get("master_multiplier", 1.0)),
                 sell_price_ratio=float(data.get("sell_price_ratio", 0.30))
             )
         except Exception as e:

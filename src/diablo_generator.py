@@ -57,7 +57,9 @@ class DiabloLootGenerator:
         randomize_weapon_skills: bool = False,
         balance_weapon_skills_by_progression: bool = True,
         weapon_skills_pool: Optional[List[WeaponSkill]] = None,
-        pricing_engine: Optional[Any] = None
+        pricing_engine: Optional[Any] = None,
+        stats_multiplier: float = 1.0,
+        price_multiplier: float = 1.0
     ):
         self._rng = random.Random(seed)
         self._knowledge_base = knowledge_base
@@ -73,8 +75,10 @@ class DiabloLootGenerator:
         self._assigned_bosses: Set[str] = set()
         self._chest_cursor: int = 0
         self._boss_cursor: int = 0
+        self.stats_multiplier = max(0.0, float(stats_multiplier))
+        self.price_multiplier = max(0.0, float(price_multiplier))
         from src.pricing_engine import PricingEngine
-        self.pricing_engine = pricing_engine if pricing_engine is not None else PricingEngine()
+        self.pricing_engine = pricing_engine if pricing_engine is not None else PricingEngine(price_multiplier=self.price_multiplier)
 
     def roll_weapon_skill(self, tier: Optional[Union[ProgressionTier, int]] = None) -> WeaponSkill:
         """Rolls an authentic Ash of War or weapon skill from the weapon skill pool."""
@@ -85,19 +89,34 @@ class DiabloLootGenerator:
             tier=tier
         )
 
-    @staticmethod
     def apply_affixes_to_equipment(
-        field_updates: Dict[str, Any],
-        affixes: List[AffixDefinition],
-        is_weapon: bool,
-        is_accessory: bool = False
+        *args,
+        is_weapon: bool = False,
+        is_accessory: bool = False,
+        stats_multiplier: Optional[float] = None,
+        **kwargs
     ) -> None:
-        """Applies affix modifiers to equip param dictionary."""
+        """Applies affix modifiers to equip param dictionary with stats multiplier scaling."""
+        if len(args) >= 1 and isinstance(args[0], DiabloLootGenerator):
+            gen = args[0]
+            field_updates = args[1]
+            affixes = args[2] if len(args) > 2 else kwargs.get("affixes", [])
+            wep = args[3] if len(args) > 3 else kwargs.get("is_weapon", is_weapon)
+            acc = args[4] if len(args) > 4 else kwargs.get("is_accessory", is_accessory)
+            mult = gen.stats_multiplier if stats_multiplier is None else stats_multiplier
+        else:
+            field_updates = args[0] if len(args) > 0 else kwargs.get("field_updates", {})
+            affixes = args[1] if len(args) > 1 else kwargs.get("affixes", [])
+            wep = args[2] if len(args) > 2 else kwargs.get("is_weapon", is_weapon)
+            acc = args[3] if len(args) > 3 else kwargs.get("is_accessory", is_accessory)
+            mult = 1.0 if stats_multiplier is None else stats_multiplier
+
         DiabloEquipmentModifier.apply_affixes_to_equipment(
             field_updates=field_updates,
             affixes=affixes,
-            is_weapon=is_weapon,
-            is_accessory=is_accessory
+            is_weapon=bool(wep),
+            is_accessory=bool(acc),
+            stats_multiplier=mult
         )
 
     def is_shop_capacity_exceeded(self, shop_id: str, is_enia: bool = False) -> bool:
@@ -225,7 +244,8 @@ class DiabloLootGenerator:
     ) -> str:
         """Appends formatted rarity, skill, and affix breakdown to item description."""
         return DiabloTextFormatter.build_caption_with_affixes(
-            base_caption, rarity, affixes, boss_name=boss_name, skill=skill, pricing=pricing
+            base_caption, rarity, affixes, boss_name=boss_name, skill=skill, pricing=pricing,
+            stats_multiplier=self.stats_multiplier
         )
 
     def generate_variants_for_spec(

@@ -196,10 +196,10 @@ class PatchOrchestrator:
             if config.diablo_loot_enabled and config.diablo_variants_per_item > 1:
                 from src.diablo_generator import DiabloLootGenerator
                 diablo_gen = DiabloLootGenerator(
-                    seed=config.diablo_seed,
-                    knowledge_base=knowledge_base,
+                    seed=config.diablo_seed, knowledge_base=knowledge_base,
                     randomize_weapon_skills=config.diablo_randomize_weapon_skills,
-                    balance_weapon_skills_by_progression=config.diablo_balance_weapon_skills_by_progression
+                    balance_weapon_skills_by_progression=config.diablo_balance_weapon_skills_by_progression,
+                    stats_multiplier=config.stats_multiplier, price_multiplier=config.price_multiplier
                 )
                 variants = diablo_gen.generate_variants_for_spec(
                     base_spec, variants_per_item=config.diablo_variants_per_item
@@ -216,10 +216,10 @@ class PatchOrchestrator:
         if config.diablo_use_vanilla_base_items:
             from src.diablo_generator import DiabloLootGenerator
             diablo_gen = DiabloLootGenerator(
-                seed=config.diablo_seed,
-                knowledge_base=knowledge_base,
+                seed=config.diablo_seed, knowledge_base=knowledge_base,
                 randomize_weapon_skills=config.diablo_randomize_weapon_skills,
-                balance_weapon_skills_by_progression=config.diablo_balance_weapon_skills_by_progression
+                balance_weapon_skills_by_progression=config.diablo_balance_weapon_skills_by_progression,
+                stats_multiplier=config.stats_multiplier, price_multiplier=config.price_multiplier
             )
             vanilla_dist_specs = diablo_gen.generate_vanilla_base_distribution_specs(
                 knowledge_base=knowledge_base,
