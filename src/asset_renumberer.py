@@ -129,6 +129,26 @@ class AssetRenumberer:
         )
         return staged_files
 
+    def stage_all_mod_sets(self, input_base: str, mod_sets: List[DetectedModSet]) -> Dict[str, List[str]]:
+        """
+        Batch renumber and stage all mod sets in a single unified pass before patching.
+        Returns mapping of set_id -> list of staged file paths relative to output_dir.
+        """
+        staged_map: Dict[str, List[str]] = {}
+        total_files = 0
+        for s in mod_sets:
+            if not getattr(s, "allocation", None) or not getattr(s, "is_enabled", True):
+                continue
+            staged = self.stage_mod_set(input_base, s)
+            staged_map[s.set_id] = staged
+            total_files += len(staged)
+
+        system_logger.info(
+            f"Batch renumbered and staged {total_files} file(s) across {len(staged_map)} mod set(s) in a single pass.",
+            source="AssetRenumberer"
+        )
+        return staged_map
+
     def cleanup_files(self, relative_file_paths: List[str]) -> None:
         """
         Removes staged files during uninstallation.

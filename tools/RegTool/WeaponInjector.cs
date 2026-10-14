@@ -15,10 +15,45 @@ namespace LootForge.RegTool
     public static class WeaponInjector
     {
         private static readonly Dictionary<(int, int), PARAM.Row> _baseWeaponCache = new();
+        private static Dictionary<int, PARAM.Row>? _modelIdToWeaponMap;
+        private static PARAM.Row? _defaultValidWeapon;
 
         public static void ResetCache()
         {
             _baseWeaponCache.Clear();
+            _modelIdToWeaponMap = null;
+            _defaultValidWeapon = null;
+        }
+
+        private static void EnsureModelIndex(PARAM param)
+        {
+            if (_modelIdToWeaponMap != null) return;
+            _modelIdToWeaponMap = new Dictionary<int, PARAM.Row>();
+            if (param.Rows.Count == 0) return;
+            int modelIdx = -1, iconIdx = -1;
+            for (int i = 0; i < param.Rows[0].Cells.Count; i++)
+            {
+                var name = param.Rows[0].Cells[i].Def?.InternalName;
+                if (string.Equals(name, "equipModelId", StringComparison.OrdinalIgnoreCase)) modelIdx = i;
+                else if (string.Equals(name, "iconId", StringComparison.OrdinalIgnoreCase)) iconIdx = i;
+            }
+
+            foreach (var r in param.Rows)
+            {
+                if (r.ID <= 0 || r.ID >= 90000000) continue;
+                if (r.ID >= 9000000 && r.ID < 9900000 && r.Name != null && r.Name.Contains("[LootForge]")) continue;
+                if (string.IsNullOrWhiteSpace(r.Name) || r.Name.Contains("[ERROR]") || r.Name.Contains("Dummy") || r.Name.StartsWith("?")) continue;
+                int icon = iconIdx >= 0 ? ParamHelper.GetCellIntFast(r, iconIdx) : 0;
+                if (icon <= 0 || icon == 3141 || icon == 3142) continue;
+
+                if (_defaultValidWeapon == null) _defaultValidWeapon = r;
+                if (modelIdx >= 0)
+                {
+                    int mId = ParamHelper.GetCellIntFast(r, modelIdx);
+                    if (mId > 0 && (!_modelIdToWeaponMap.ContainsKey(mId) || (r.ID % 100 == 0)))
+                        _modelIdToWeaponMap[mId] = r;
+                }
+            }
         }
 
         public static bool IsValidWeaponRow(PARAM.Row r)
@@ -49,6 +84,7 @@ namespace LootForge.RegTool
             if (_baseWeaponCache.TryGetValue(cacheKey, out var cached))
                 return cached;
 
+            EnsureModelIndex(param);
             PARAM.Row? baseRow = null;
 
             // 1. Direct baseCloneId lookup if valid and matching targetModelId
@@ -61,25 +97,14 @@ namespace LootForge.RegTool
                 }
             }
 
-            // 2. Direct lookup by authentic equipModelId (prefer base uninfused weapon ID % 100 == 0)
-            if (baseRow == null && targetModelId > 0)
+            // 2. Direct O(1) lookup by authentic equipModelId
+            if (baseRow == null && targetModelId > 0 && _modelIdToWeaponMap != null && _modelIdToWeaponMap.TryGetValue(targetModelId, out var mRow))
             {
-                baseRow = param.Rows.FirstOrDefault(r => IsValidWeaponRow(r) && ParamHelper.GetCellInt(r, "equipModelId") == targetModelId && (r.ID % 100 == 0))
-                       ?? param.Rows.FirstOrDefault(r => IsValidWeaponRow(r) && ParamHelper.GetCellInt(r, "equipModelId") == targetModelId);
+                baseRow = mRow;
             }
 
-            // 3. Fallback: first valid weapon row
-            if (baseRow == null)
-            {
-                baseRow = param.Rows.FirstOrDefault(IsValidWeaponRow);
-            }
-
-            // 4. Guaranteed retail fallback: Longsword (ID 2020000)
-            if (baseRow == null)
-            {
-                baseRow = (rowMap.TryGetValue(2020000, out var fb) ? fb : null)
-                       ?? param.Rows.FirstOrDefault(IsValidWeaponRow);
-            }
+            // 3. Fallback: first valid weapon row or Longsword (ID 2020000)
+            baseRow ??= _defaultValidWeapon ?? (rowMap.TryGetValue(2020000, out var fb) ? fb : null);
 
             if (baseRow != null)
             {

@@ -120,6 +120,7 @@ namespace LootForge.RegTool
             }
 
             var targetRow = candidateRows[0];
+            var layout = ItemLotLayout.Extract(itemLotParam);
             ushort pts = (ushort)(isMapTable || dropRatePercent >= 100.0 ? 1000 : Math.Clamp((int)(dropRatePercent * 10), 1, 1000));
             var overflowItems = new List<int>();
 
@@ -130,21 +131,21 @@ namespace LootForge.RegTool
                 int lotCategory = isAccessory ? 4 : (isArmor ? 3 : 2);
 
                 int slotToUse = -1;
-                // Never touch slot 1 (preserves original vanilla/mod loot). Scan slots 2 to 8
-                for (int s = 2; s <= 8; s++)
+                // Never touch slot 1 (preserves original vanilla/mod loot). Scan slots 2 to 8 (indices 1..7)
+                for (int s = 1; s < 8; s++)
                 {
-                    int cur = ParamHelper.GetCellInt(targetRow, $"lotItemId0{s}");
+                    int cur = ParamHelper.GetCellIntFast(targetRow, layout.ItemIdIndices[s]);
                     if (cur == itemId) { slotToUse = s; break; }
                     if (cur == 0 && slotToUse == -1) slotToUse = s;
                 }
 
                 if (slotToUse != -1)
                 {
-                    ParamHelper.SetCellIfExists(targetRow, $"lotItemId0{slotToUse}", itemId);
-                    ParamHelper.SetCellIfExists(targetRow, $"lotItemCategory0{slotToUse}", lotCategory);
-                    ParamHelper.SetCellIfExists(targetRow, $"lotItemBasePoint0{slotToUse}", pts);
-                    ParamHelper.SetCellIfExists(targetRow, $"lotItemNum0{slotToUse}", (byte)1);
-                    ParamHelper.SetCellIfExists(targetRow, $"getItemFlagId0{slotToUse}", 0u);
+                    ParamHelper.SetCellFast(targetRow, layout.ItemIdIndices[slotToUse], itemId);
+                    ParamHelper.SetCellFast(targetRow, layout.CategoryIndices[slotToUse], lotCategory);
+                    ParamHelper.SetCellFast(targetRow, layout.BasePointIndices[slotToUse], pts);
+                    ParamHelper.SetCellFast(targetRow, layout.NumIndices[slotToUse], (byte)1);
+                    ParamHelper.SetCellFast(targetRow, layout.FlagIdIndices[slotToUse], 0u);
                 }
                 else
                 {
@@ -155,26 +156,28 @@ namespace LootForge.RegTool
             if (overflowItems.Count > 0)
             {
                 var (mapParam, _) = getOrLoadParam("ItemLotParam_map", "ItemLotParam");
+                var mapLayout = ItemLotLayout.Extract(mapParam);
+                int mId0 = mapLayout.ItemIdIndices[0];
                 var remaining = new List<int>();
                 foreach (int itm in overflowItems)
                 {
                     bool placed = false;
                     foreach (var mRow in mapParam.Rows)
                     {
-                        if (ParamHelper.GetCellInt(mRow, "lotItemId01") > 0)
+                        if (ParamHelper.GetCellIntFast(mRow, mId0) > 0)
                         {
-                            for (int s = 2; s <= 8; s++)
+                            for (int s = 1; s < 8; s++)
                             {
-                                if (ParamHelper.GetCellInt(mRow, $"lotItemId0{s}") == 0)
+                                if (ParamHelper.GetCellIntFast(mRow, mapLayout.ItemIdIndices[s]) == 0)
                                 {
                                     bool isAccessory = itemIdToIsAccessory.TryGetValue(itm, out var ia) && ia;
                                     bool isArmor = itemIdToIsProtector.TryGetValue(itm, out var ip) ? ip : (!isAccessory && !itemIdToIsWeapon.GetValueOrDefault(itm, false));
                                     int lotCategory = isAccessory ? 4 : (isArmor ? 3 : 2);
-                                    ParamHelper.SetCellIfExists(mRow, $"lotItemId0{s}", itm);
-                                    ParamHelper.SetCellIfExists(mRow, $"lotItemCategory0{s}", lotCategory);
-                                    ParamHelper.SetCellIfExists(mRow, $"lotItemBasePoint0{s}", (ushort)1000);
-                                    ParamHelper.SetCellIfExists(mRow, $"lotItemNum0{s}", (byte)1);
-                                    ParamHelper.SetCellIfExists(mRow, $"getItemFlagId0{s}", 0u);
+                                    ParamHelper.SetCellFast(mRow, mapLayout.ItemIdIndices[s], itm);
+                                    ParamHelper.SetCellFast(mRow, mapLayout.CategoryIndices[s], lotCategory);
+                                    ParamHelper.SetCellFast(mRow, mapLayout.BasePointIndices[s], (ushort)1000);
+                                    ParamHelper.SetCellFast(mRow, mapLayout.NumIndices[s], (byte)1);
+                                    ParamHelper.SetCellFast(mRow, mapLayout.FlagIdIndices[s], 0u);
                                     placed = true;
                                     break;
                                 }

@@ -15,10 +15,59 @@ namespace LootForge.RegTool
     public static class ProtectorInjector
     {
         private static readonly Dictionary<(int, int, int), PARAM.Row> _baseProtectorCache = new();
+        private static Dictionary<(int ModelId, int Cat), PARAM.Row>? _modelAndCatToRow;
+        private static Dictionary<int, PARAM.Row>? _catFallback;
+        private static PARAM.Row? _defaultValidProtector;
 
         public static void ResetCache()
         {
             _baseProtectorCache.Clear();
+            _modelAndCatToRow = null;
+            _catFallback = null;
+            _defaultValidProtector = null;
+        }
+
+        private static void EnsureModelIndex(PARAM param)
+        {
+            if (_modelAndCatToRow != null) return;
+            _modelAndCatToRow = new();
+            _catFallback = new();
+            if (param.Rows.Count == 0) return;
+
+            int mIdx = -1, catIdx = -1, iconMIdx = -1, iconFIdx = -1;
+            for (int i = 0; i < param.Rows[0].Cells.Count; i++)
+            {
+                var n = param.Rows[0].Cells[i].Def?.InternalName;
+                if (string.Equals(n, "equipModelId", StringComparison.OrdinalIgnoreCase)) mIdx = i;
+                else if (string.Equals(n, "protectorCategory", StringComparison.OrdinalIgnoreCase)) catIdx = i;
+                else if (string.Equals(n, "iconIdM", StringComparison.OrdinalIgnoreCase)) iconMIdx = i;
+                else if (string.Equals(n, "iconIdF", StringComparison.OrdinalIgnoreCase)) iconFIdx = i;
+            }
+
+            foreach (var r in param.Rows)
+            {
+                if (r.ID <= 0 || r.ID >= 9000000) continue;
+                if (r.ID >= 10000 && r.ID <= 10300) continue;
+                if (r.ID >= 900000 && r.ID < 902000) continue;
+                if (r.ID >= 1960000 && r.ID <= 1980000) continue;
+                if (string.IsNullOrWhiteSpace(r.Name) || r.Name.Contains("[ERROR]") || r.Name.Contains("Dummy") || r.Name.StartsWith("?")) continue;
+
+                int iM = iconMIdx >= 0 ? ParamHelper.GetCellIntFast(r, iconMIdx) : 0;
+                int iF = iconFIdx >= 0 ? ParamHelper.GetCellIntFast(r, iconFIdx) : 0;
+                if (iM <= 0 && iF <= 0) continue;
+                if (iM == 3141 || iM == 3142 || iF == 3141 || iF == 3142) continue;
+
+                if (_defaultValidProtector == null) _defaultValidProtector = r;
+                int c = catIdx >= 0 ? ParamHelper.GetCellIntFast(r, catIdx) : 0;
+                if (!_catFallback.ContainsKey(c)) _catFallback[c] = r;
+
+                if (mIdx >= 0)
+                {
+                    int m = ParamHelper.GetCellIntFast(r, mIdx);
+                    if (m > 0 && !_modelAndCatToRow.ContainsKey((m, c)))
+                        _modelAndCatToRow[(m, c)] = r;
+                }
+            }
         }
 
         public static bool IsValidProtectorRow(PARAM.Row r)
@@ -53,6 +102,7 @@ namespace LootForge.RegTool
             if (_baseProtectorCache.TryGetValue(cacheKey, out var cached))
                 return cached;
 
+            EnsureModelIndex(param);
             int targetCat = slotOffset == 0 ? 0 : slotOffset == 100 ? 1 : slotOffset == 200 ? 2 : 3;
             PARAM.Row? baseRow = null;
 
@@ -66,29 +116,28 @@ namespace LootForge.RegTool
                 }
             }
 
-            // 2. Direct lookup by authentic equipModelId
-            if (baseRow == null && targetModelId > 0)
+            // 2. Direct O(1) lookup by authentic equipModelId and category
+            if (baseRow == null && targetModelId > 0 && _modelAndCatToRow != null)
             {
-                baseRow = param.Rows.FirstOrDefault(r => IsValidProtectorRow(r) && ParamHelper.GetCellInt(r, "protectorCategory") == targetCat && ParamHelper.GetCellInt(r, "equipModelId") == targetModelId)
-                       ?? param.Rows.FirstOrDefault(r => IsValidProtectorRow(r) && ParamHelper.GetCellInt(r, "equipModelId") == targetModelId);
-            }
-
-            // 2b. Nearby model variant in same set family (within +- 10)
-            if (baseRow == null && targetModelId > 0)
-            {
-                baseRow = param.Rows
-                    .Where(r => IsValidProtectorRow(r) && ParamHelper.GetCellInt(r, "protectorCategory") == targetCat && Math.Abs(ParamHelper.GetCellInt(r, "equipModelId") - targetModelId) <= 10)
-                    .OrderBy(r => Math.Abs(ParamHelper.GetCellInt(r, "equipModelId") - targetModelId))
-                    .FirstOrDefault();
+                if (_modelAndCatToRow.TryGetValue((targetModelId, targetCat), out var mRow))
+                    baseRow = mRow;
+                else
+                {
+                    for (int delta = 1; delta <= 10 && baseRow == null; delta++)
+                    {
+                        if (_modelAndCatToRow.TryGetValue((targetModelId + delta, targetCat), out var near)) baseRow = near;
+                        else if (_modelAndCatToRow.TryGetValue((targetModelId - delta, targetCat), out var near2)) baseRow = near2;
+                    }
+                }
             }
 
             // 3. Category and slot fallback
-            if (baseRow == null)
+            if (baseRow == null && _catFallback != null && _catFallback.TryGetValue(targetCat, out var catRow))
             {
-                baseRow = param.Rows.FirstOrDefault(r => IsValidProtectorRow(r) && ParamHelper.GetCellInt(r, "protectorCategory") == targetCat && r.ID % 1000 == slotOffset)
-                       ?? param.Rows.FirstOrDefault(r => IsValidProtectorRow(r) && ParamHelper.GetCellInt(r, "protectorCategory") == targetCat)
-                       ?? param.Rows.FirstOrDefault(r => IsValidProtectorRow(r));
+                baseRow = catRow;
             }
+
+            baseRow ??= _defaultValidProtector;
 
             // 4. Retail fallback set
             if (baseRow == null)

@@ -199,15 +199,20 @@ class PatchOrchestrator:
                 stats_multiplier=config.stats_multiplier, price_multiplier=config.price_multiplier
             )
 
+        # Phase 1: Batch renumber and stage all assets in a single unified pass
+        input_p = Path(config.input_directory)
+        if not input_p.is_absolute():
+            input_p = base_dir / input_p
+        staged_by_set = asset_renumberer.stage_all_mod_sets(str(input_p), scanned_sets)
+
+        all_deployed_files = []
         for s, cfg in zip(scanned_sets, drop_configs):
             s.import_custom_moveset = getattr(config, "import_custom_skills_movesets", True) and getattr(cfg, "import_custom_art", True)
             if s.loot_target:
                 s.loot_target.chance_or_cost = distributor.calculate_final_rate(cfg.user_rate, global_multiplier_percent)
 
-            input_p = Path(config.input_directory)
-            if not input_p.is_absolute():
-                input_p = base_dir / input_p
-            staged = asset_renumberer.stage_mod_set(str(input_p), s)
+            staged = staged_by_set.get(s.set_id, [])
+            all_deployed_files.extend(staged)
 
             base_spec = param_builder.build_patch_spec(s)
             if diablo_gen and config.diablo_loot_enabled and config.diablo_variants_per_item > 1:
@@ -220,7 +225,7 @@ class PatchOrchestrator:
             manifest_store.record_set(s, staged)
             injected_count += 1
 
-        # Inject vanilla base items for distribution if enabled
+        # Phase 2: Inject vanilla base items for distribution if enabled
         if diablo_gen and config.diablo_use_vanilla_base_items:
             vanilla_dist_specs = diablo_gen.generate_vanilla_base_distribution_specs(
                 knowledge_base=knowledge_base, id_allocator=id_allocator,
@@ -231,6 +236,7 @@ class PatchOrchestrator:
             injected_count += len(vanilla_dist_specs)
             system_logger.info(f"Generated {len(vanilla_dist_specs)} procedural relics from vanilla base items.", source="PatchOrchestrator")
 
+        # Phase 3: Single-pass in-memory regulation patch
         boss_pools_enabled = config.boss_loot_pools_enabled
         patch_result = regulation_manager.execute_patch(
             specs=patch_specs,
@@ -239,28 +245,16 @@ class PatchOrchestrator:
             game_dir=config.game_directory,
             boss_loot_pools_enabled=boss_pools_enabled,
             boss_weapons_per_pool=config.boss_weapons_per_pool,
+            chest_loot_pools_enabled=config.chest_loot_pools_enabled,
+            chest_min_items=config.chest_min_items,
+            chest_max_items=config.chest_max_items,
             sweep_vanilla_items=config.diablo_loot_enabled and config.diablo_inject_vanilla_stats
         )
 
-        output_dir = target_reg.parent
-        input_dir = Path(config.input_directory)
-        if not input_dir.is_absolute():
-            input_dir = base_dir / input_dir
-        parts_deployed = regulation_manager.deploy_parts(
-            mod_sets=scanned_sets,
-            input_base_dir=input_dir,
-            output_dir=output_dir,
-            backup_manager=backup_manager
-        )
-
-        deployed_parts = getattr(regulation_manager, "last_deployed_files", [])
-        parts_backed_up = getattr(regulation_manager, "last_backed_up_files", {})
-        if parts_backed_up:
-            backed_up_files.update(parts_backed_up)
-
+        # Phase 4: Record deployment manifest (no duplicate deployer pass!)
         manifest_store.record_deployment(
             target_regulation_path=str(target_reg),
-            deployed_files=deployed_parts,
+            deployed_files=all_deployed_files,
             created_msg_files=created_msg_files,
             backed_up_files=backed_up_files
         )
