@@ -67,6 +67,8 @@ namespace LootForge.RegTool
                         return FmgInjector.ExecuteSyncDlcMsg(options);
                     case "audit-loot":
                         return LootAuditService.ExecuteAuditLoot(options);
+                    case "port-souls-set":
+                        return SoulsPort.SoulsPortService.ExecutePortSoulsSet(options);
                     case "find-tutorial":
                         TutorialFinder.Find();
                         return 0;

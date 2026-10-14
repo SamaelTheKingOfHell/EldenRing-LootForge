@@ -71,5 +71,55 @@ namespace LootForge.RegTool
                     break;
             }
         }
+
+        private static readonly System.Collections.Generic.Dictionary<string, string> ParamdefAliases = new(StringComparer.OrdinalIgnoreCase)
+        {
+            { "AtkParam_Pc", "AtkParam" },
+            { "AtkParam_Npc", "AtkParam" },
+            { "BehaviorParam_PC", "BehaviorParam" },
+            { "ItemLotParam_enemy", "ItemLotParam" },
+            { "ItemLotParam_map", "ItemLotParam" },
+            { "SpEffectParam", "SpEffect" },
+            { "SpEffectVfxParam", "SpEffectVfx" },
+        };
+
+        public static string? ResolveDefFile(string defsDir, string defName)
+        {
+            if (ParamdefAliases.TryGetValue(defName, out var alias))
+            {
+                string path = System.IO.Path.Combine(defsDir, $"{alias}.xml");
+                if (System.IO.File.Exists(path)) return path;
+            }
+
+            foreach (var suffix in new[] { "_Pc", "_PC", "_enemy", "_map" })
+            {
+                if (defName.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+                {
+                    string candidate = defName.Substring(0, defName.Length - suffix.Length);
+                    string path = System.IO.Path.Combine(defsDir, $"{candidate}.xml");
+                    if (System.IO.File.Exists(path)) return path;
+                }
+            }
+
+            if (defName.EndsWith("Param", StringComparison.OrdinalIgnoreCase) && defName.Length > 5)
+            {
+                string candidate = defName.Substring(0, defName.Length - 5);
+                string path = System.IO.Path.Combine(defsDir, $"{candidate}.xml");
+                if (System.IO.File.Exists(path)) return path;
+            }
+
+            try
+            {
+                if (System.IO.Directory.Exists(defsDir))
+                {
+                    var match = System.IO.Directory.EnumerateFiles(defsDir, "*.xml", System.IO.SearchOption.TopDirectoryOnly)
+                        .FirstOrDefault(f => System.IO.Path.GetFileNameWithoutExtension(f).Equals(defName, StringComparison.OrdinalIgnoreCase));
+                    if (match != null) return match;
+                }
+            }
+            catch { }
+
+            return null;
+        }
     }
 }

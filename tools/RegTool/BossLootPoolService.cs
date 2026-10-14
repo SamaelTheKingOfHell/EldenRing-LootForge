@@ -45,7 +45,34 @@ namespace LootForge.RegTool
 
             var enemyParam = LoadParam("ItemLotParam_enemy");
             var mapParam = LoadParam("ItemLotParam_map");
+            PARAM? wepParam = null, protParam = null;
+            var wepFile = bnd.Files.FirstOrDefault(f => f.Name.EndsWith("EquipParamWeapon.param", StringComparison.OrdinalIgnoreCase));
+            if (wepFile != null) wepParam = PARAM.Read(wepFile.Bytes);
+            var protFile = bnd.Files.FirstOrDefault(f => f.Name.EndsWith("EquipParamProtector.param", StringComparison.OrdinalIgnoreCase));
+            if (protFile != null) protParam = PARAM.Read(protFile.Bytes);
 
+            EnrichBossLootPools(enemyParam, mapParam, wepParam, protParam, weaponsPerBoss);
+
+            // Write back both tables
+            var enemyFile = bnd.Files.First(f => f.Name.EndsWith("ItemLotParam_enemy.param", StringComparison.OrdinalIgnoreCase));
+            enemyFile.Bytes = enemyParam.Write();
+
+            var mapFile = bnd.Files.First(f => f.Name.EndsWith("ItemLotParam_map.param", StringComparison.OrdinalIgnoreCase));
+            mapFile.Bytes = mapParam.Write();
+
+            string? outDir = Path.GetDirectoryName(outputPath);
+            if (!string.IsNullOrEmpty(outDir) && !Directory.Exists(outDir))
+                Directory.CreateDirectory(outDir);
+
+            Console.WriteLine($"[BossLootPool] Encrypting and saving updated regulation to: {outputPath}...");
+            RegulationDecryptor.EncryptERRegulation(outputPath, bnd);
+            Console.WriteLine($"[BossLootPool SUCCESS] Saved {new FileInfo(outputPath).Length} bytes. All bosses and tutorial encounters enriched!");
+
+            return 0;
+        }
+
+        public static int EnrichBossLootPools(PARAM enemyParam, PARAM mapParam, PARAM? wepParam, PARAM? protParam, int weaponsPerBoss = 3)
+        {
             var enemyRowMap = new Dictionary<int, PARAM.Row>(enemyParam.Rows.Count);
             foreach (var r in enemyParam.Rows) enemyRowMap[r.ID] = r;
 
@@ -101,11 +128,9 @@ namespace LootForge.RegTool
 
             // Gather custom weapons and armors to prioritize on bosses
             var customBossItems = new List<(int Id, string Name, int Category, EntityProgressionTier Tier)>();
-            var wepFile = bnd.Files.FirstOrDefault(f => f.Name.EndsWith("EquipParamWeapon.param", StringComparison.OrdinalIgnoreCase));
-            if (wepFile != null)
+            if (wepParam != null)
             {
-                var wepP = PARAM.Read(wepFile.Bytes);
-                foreach (var r in wepP.Rows)
+                foreach (var r in wepParam.Rows)
                 {
                     if (r.ID >= 9000000 && r.ID < 99000000)
                     {
@@ -115,11 +140,9 @@ namespace LootForge.RegTool
                 }
             }
 
-            var protFile = bnd.Files.FirstOrDefault(f => f.Name.EndsWith("EquipParamProtector.param", StringComparison.OrdinalIgnoreCase));
-            if (protFile != null)
+            if (protParam != null)
             {
-                var protP = PARAM.Read(protFile.Bytes);
-                foreach (var r in protP.Rows)
+                foreach (var r in protParam.Rows)
                 {
                     if (r.ID >= 9000000 && r.ID < 99000000)
                     {
@@ -236,23 +259,7 @@ namespace LootForge.RegTool
             }
 
             Console.WriteLine($"[BossLootPool] Successfully enriched {bossesEnriched} bosses (including tutorial encounters) with {totalItemsInjected} non-repeating weapons!");
-
-            // Write back both tables
-            var enemyFile = bnd.Files.First(f => f.Name.EndsWith("ItemLotParam_enemy.param", StringComparison.OrdinalIgnoreCase));
-            enemyFile.Bytes = enemyParam.Write();
-
-            var mapFile = bnd.Files.First(f => f.Name.EndsWith("ItemLotParam_map.param", StringComparison.OrdinalIgnoreCase));
-            mapFile.Bytes = mapParam.Write();
-
-            string? outDir = Path.GetDirectoryName(outputPath);
-            if (!string.IsNullOrEmpty(outDir) && !Directory.Exists(outDir))
-                Directory.CreateDirectory(outDir);
-
-            Console.WriteLine($"[BossLootPool] Encrypting and saving updated regulation to: {outputPath}...");
-            RegulationDecryptor.EncryptERRegulation(outputPath, bnd);
-            Console.WriteLine($"[BossLootPool SUCCESS] Saved {new FileInfo(outputPath).Length} bytes. All bosses and tutorial encounters enriched!");
-
-            return 0;
+            return bossesEnriched;
         }
     }
 }

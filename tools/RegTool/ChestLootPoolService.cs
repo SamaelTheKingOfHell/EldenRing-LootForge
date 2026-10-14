@@ -50,6 +50,28 @@ namespace LootForge.RegTool
             var protParam = LoadParam("EquipParamProtector");
             var wepParam = LoadParam("EquipParamWeapon");
 
+            EnrichChestLootPools(mapParam, enemyParam, protParam, wepParam, minItems, maxItems);
+
+            // Write back tables and encrypt
+            var mapFile = bnd.Files.First(f => f.Name.EndsWith("ItemLotParam_map.param", StringComparison.OrdinalIgnoreCase));
+            mapFile.Bytes = mapParam.Write();
+
+            var enemyFile = bnd.Files.First(f => f.Name.EndsWith("ItemLotParam_enemy.param", StringComparison.OrdinalIgnoreCase));
+            enemyFile.Bytes = enemyParam.Write();
+
+            string? outDir = Path.GetDirectoryName(outputPath);
+            if (!string.IsNullOrEmpty(outDir) && !Directory.Exists(outDir))
+                Directory.CreateDirectory(outDir);
+
+            Console.WriteLine($"[ChestLootPool] Encrypting and saving updated regulation to: {outputPath}...");
+            RegulationDecryptor.EncryptERRegulation(outputPath, bnd);
+            Console.WriteLine($"[ChestLootPool SUCCESS] Saved {new FileInfo(outputPath).Length} bytes. All chests populated with 1-4 random custom items!");
+
+            return 0;
+        }
+
+        public static int EnrichChestLootPools(PARAM mapParam, PARAM enemyParam, PARAM protParam, PARAM wepParam, int minItems = 1, int maxItems = 4)
+        {
             var mapRowMap = new Dictionary<int, PARAM.Row>(mapParam.Rows.Count);
             foreach (var r in mapParam.Rows) mapRowMap[r.ID] = r;
 
@@ -250,23 +272,7 @@ namespace LootForge.RegTool
                 }
                 Console.WriteLine($"[ChestLootPool] Successfully routed {routedToEnemies} overflow custom items randomly across normal enemy drop tables.");
             }
-
-            // Write back tables and encrypt
-            var mapFile = bnd.Files.First(f => f.Name.EndsWith("ItemLotParam_map.param", StringComparison.OrdinalIgnoreCase));
-            mapFile.Bytes = mapParam.Write();
-
-            var enemyFile = bnd.Files.First(f => f.Name.EndsWith("ItemLotParam_enemy.param", StringComparison.OrdinalIgnoreCase));
-            enemyFile.Bytes = enemyParam.Write();
-
-            string? outDir = Path.GetDirectoryName(outputPath);
-            if (!string.IsNullOrEmpty(outDir) && !Directory.Exists(outDir))
-                Directory.CreateDirectory(outDir);
-
-            Console.WriteLine($"[ChestLootPool] Encrypting and saving updated regulation to: {outputPath}...");
-            RegulationDecryptor.EncryptERRegulation(outputPath, bnd);
-            Console.WriteLine($"[ChestLootPool SUCCESS] Saved {new FileInfo(outputPath).Length} bytes. All chests populated with 1-4 random custom items!");
-
-            return 0;
+            return chestsEnriched;
         }
     }
 }

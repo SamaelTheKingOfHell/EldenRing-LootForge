@@ -121,6 +121,12 @@ class RegulationManager:
                 base_args.extend(["--msg", str(msg_dir)])
                 system_logger.info(f"FMG source directory: {msg_dir}", source="RegulationManager")
 
+            if boss_loot_pools_enabled:
+                base_args.extend(["--enrich-bosses", "true", "--boss-count", str(max(1, min(5, boss_weapons_per_pool)))])
+
+            if chest_loot_pools_enabled:
+                base_args.extend(["--enrich-chests", "true", "--chest-min-items", str(chest_min_items), "--chest-max-items", str(chest_max_items)])
+
             cmd = self._get_regtool_cmd("patch") + base_args
             system_logger.info(f"Running RegTool command: {' '.join(cmd)}", source="RegulationManager")
 
@@ -133,28 +139,6 @@ class RegulationManager:
             system_logger.info(f"RegTool stdout: {res.stdout.strip()}", source="RegulationManager")
             if not target_reg.exists() or target_reg.stat().st_size < 100000:
                 raise RuntimeError(f"RegTool completed but target regulation was not created or is invalid: {target_reg}")
-
-            if boss_loot_pools_enabled:
-                try:
-                    b_cmd = self._get_regtool_cmd("inject-boss-loot-pools") + ["--input", str(target_reg), "--output", str(target_reg), "--defs", str(self.defs_dir), "--count", str(max(1, min(5, boss_weapons_per_pool)))]
-                    b_res = subprocess.run(b_cmd, capture_output=True, text=True, cwd=str(self.base_dir), check=False)
-                    if b_res.returncode == 0:
-                        system_logger.info("Enriched all bosses with progression-tier weapon loot pools.", source="RegulationManager")
-                    else:
-                        system_logger.warning(f"Boss loot pool injection returned code {b_res.returncode}: {b_res.stderr or b_res.stdout}", source="RegulationManager")
-                except Exception as be:
-                    system_logger.warning(f"Boss loot pool notice: {be}", source="RegulationManager")
-
-            if chest_loot_pools_enabled:
-                try:
-                    c_cmd = self._get_regtool_cmd("inject-chest-loot-pools") + ["--input", str(target_reg), "--output", str(target_reg), "--defs", str(self.defs_dir), "--min-items", str(chest_min_items), "--max-items", str(chest_max_items)]
-                    c_res = subprocess.run(c_cmd, capture_output=True, text=True, cwd=str(self.base_dir), check=False)
-                    if c_res.returncode == 0:
-                        system_logger.info("Enriched dynamically discovered chests with 1-4 custom items.", source="RegulationManager")
-                    else:
-                        system_logger.warning(f"Chest loot pool injection code {c_res.returncode}: {c_res.stderr or c_res.stdout}", source="RegulationManager")
-                except Exception as ce:
-                    system_logger.warning(f"Chest loot pool notice: {ce}", source="RegulationManager")
 
             if sweep_vanilla_items:
                 try:

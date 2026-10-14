@@ -77,7 +77,7 @@ namespace LootForge.RegTool
                     string xmlFile = Path.Combine(defsDir, $"{defName}.xml");
                     if (!File.Exists(xmlFile))
                     {
-                        string? resolved = ResolveDefFile(defsDir, defName);
+                        string? resolved = ParamHelper.ResolveDefFile(defsDir, defName);
                         if (resolved != null && File.Exists(resolved))
                         {
                             xmlFile = resolved;
@@ -208,6 +208,28 @@ namespace LootForge.RegTool
                 }
             }
 
+            // Optional In-Memory Single-Pass Enrichment for Bosses and Chests
+            if (options.TryGetValue("enrich-bosses", out var eb) && eb.Equals("true", StringComparison.OrdinalIgnoreCase))
+            {
+                int bCount = options.TryGetValue("boss-count", out var bcStr) && int.TryParse(bcStr, out int bc) ? bc : 3;
+                var enemyP = GetOrLoadParam("ItemLotParam_enemy", "ItemLotParam").Param;
+                var mapP = GetOrLoadParam("ItemLotParam_map", "ItemLotParam").Param;
+                var wepP = GetOrLoadParam("EquipParamWeapon", "EquipParamWeapon").Param;
+                var protP = GetOrLoadParam("EquipParamProtector", "EquipParamProtector").Param;
+                BossLootPoolService.EnrichBossLootPools(enemyP, mapP, wepP, protP, bCount);
+            }
+
+            if (options.TryGetValue("enrich-chests", out var ec) && ec.Equals("true", StringComparison.OrdinalIgnoreCase))
+            {
+                int minItms = options.TryGetValue("chest-min-items", out var miStr) && int.TryParse(miStr, out int mi) ? mi : 1;
+                int maxItms = options.TryGetValue("chest-max-items", out var mxStr) && int.TryParse(mxStr, out int mx) ? mx : 4;
+                var mapP = GetOrLoadParam("ItemLotParam_map", "ItemLotParam").Param;
+                var enemyP = GetOrLoadParam("ItemLotParam_enemy", "ItemLotParam").Param;
+                var protP = GetOrLoadParam("EquipParamProtector", "EquipParamProtector").Param;
+                var wepP = GetOrLoadParam("EquipParamWeapon", "EquipParamWeapon").Param;
+                ChestLootPoolService.EnrichChestLootPools(mapP, enemyP, protP, wepP, minItms, maxItms);
+            }
+
             Parallel.ForEach(paramCache, kvp =>
             {
                 var (param, file) = kvp.Value;
@@ -243,56 +265,6 @@ namespace LootForge.RegTool
             Console.WriteLine($" - Injected FMG text entries:  {injectedFmgCount}");
             Console.WriteLine($" - Output file size: {new FileInfo(outputPath).Length} bytes");
             return 0;
-        }
-
-        private static readonly Dictionary<string, string> ParamdefAliases = new(StringComparer.OrdinalIgnoreCase)
-        {
-            { "AtkParam_Pc", "AtkParam" },
-            { "AtkParam_Npc", "AtkParam" },
-            { "BehaviorParam_PC", "BehaviorParam" },
-            { "ItemLotParam_enemy", "ItemLotParam" },
-            { "ItemLotParam_map", "ItemLotParam" },
-            { "SpEffectParam", "SpEffect" },
-            { "SpEffectVfxParam", "SpEffectVfx" },
-        };
-
-        internal static string? ResolveDefFile(string defsDir, string defName)
-        {
-            if (ParamdefAliases.TryGetValue(defName, out var alias))
-            {
-                string path = Path.Combine(defsDir, $"{alias}.xml");
-                if (File.Exists(path)) return path;
-            }
-
-            foreach (var suffix in new[] { "_Pc", "_PC", "_enemy", "_map" })
-            {
-                if (defName.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
-                {
-                    string candidate = defName.Substring(0, defName.Length - suffix.Length);
-                    string path = Path.Combine(defsDir, $"{candidate}.xml");
-                    if (File.Exists(path)) return path;
-                }
-            }
-
-            if (defName.EndsWith("Param", StringComparison.OrdinalIgnoreCase) && defName.Length > 5)
-            {
-                string candidate = defName.Substring(0, defName.Length - 5);
-                string path = Path.Combine(defsDir, $"{candidate}.xml");
-                if (File.Exists(path)) return path;
-            }
-
-            try
-            {
-                if (Directory.Exists(defsDir))
-                {
-                    var match = Directory.EnumerateFiles(defsDir, "*.xml", SearchOption.TopDirectoryOnly)
-                        .FirstOrDefault(f => Path.GetFileNameWithoutExtension(f).Equals(defName, StringComparison.OrdinalIgnoreCase));
-                    if (match != null) return match;
-                }
-            }
-            catch { }
-
-            return null;
         }
     }
 }

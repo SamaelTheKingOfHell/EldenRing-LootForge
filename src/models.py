@@ -223,6 +223,7 @@ class DetectedModSet:
     is_enabled: bool = True
     import_custom_moveset: bool = True
     skill_moveset: Optional[SkillMovesetMetadata] = None
+    souls_port_meta: Optional[Dict[str, Any]] = None
 
     @property
     def gender_restriction(self) -> Optional[str]:
