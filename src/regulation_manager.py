@@ -86,6 +86,21 @@ class RegulationManager:
             return ["dotnet", str(self.regtool_dll), subcmd]
         return ["dotnet", "run", "--project", str(self.regtool_proj), "--", subcmd]
 
+    def equipment_row_counts(self, source_reg: Path) -> Dict[str, int]:
+        """Read exact surviving row counts, cached only while source and native tool identities match."""
+        stat = source_reg.stat()
+        tool = self.regtool_dll if self.regtool_dll.exists() else self.regtool_proj
+        identity = (str(source_reg.resolve()), stat.st_size, stat.st_mtime_ns, tool.stat().st_mtime_ns)
+        if getattr(self, "_capacity_identity", None) == identity:
+            return dict(self._capacity_counts)
+        response = subprocess.run(self._get_regtool_cmd("capacity") + ["--input", str(source_reg)],
+                                  capture_output=True, text=True, cwd=self.base_dir, check=False)
+        if response.returncode:
+            raise RuntimeError(f"Could not calculate regulation capacity: {response.stderr or response.stdout}")
+        counts = json.loads(response.stdout[response.stdout.index("{"):])
+        self._capacity_identity, self._capacity_counts = identity, counts
+        return dict(counts)
+
     def execute_patch(
         self,
         specs: List[Dict[str, Any]],
@@ -97,7 +112,9 @@ class RegulationManager:
         chest_loot_pools_enabled: bool = True,
         chest_min_items: int = 1,
         chest_max_items: int = 4,
-        sweep_vanilla_items: bool = False
+        sweep_vanilla_items: bool = False,
+        randomize_skills: bool = True,
+        seed: Optional[int] = None
     ) -> Dict[str, Any]:
         """Executes RegTool to inject patch specifications into target regulation.bin."""
         if not source_reg.exists():
@@ -105,17 +122,25 @@ class RegulationManager:
         if not self.defs_dir.exists():
             raise FileNotFoundError(f"Paramdex definitions directory not found: {self.defs_dir}")
 
+        from src.patch_validation import iter_compact_specs, validate_patch_specs
+        validate_patch_specs(specs)
+
         target_reg.parent.mkdir(parents=True, exist_ok=True)
         if game_dir:
             regtool_dir = self.regtool_exe.parent if self.regtool_exe.exists() else self.regtool_dll.parent
             GameAssetsService.ensure_oodle_copied(game_dir, regtool_dir)
 
-        msg_dir = self._resolve_msg_dir(game_dir, target_reg)
-        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as tf:
-            json.dump(specs, tf, separators=(',', ':'))
-            temp_spec_path = tf.name
-
+        temp_spec_path = None
         try:
+            with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as tf:
+                temp_spec_path = tf.name
+                tf.write("[")
+                for index, spec in enumerate(iter_compact_specs(specs)):
+                    if index:
+                        tf.write(",")
+                    json.dump(spec, tf, separators=(',', ':'))
+                tf.write("]")
+            msg_dir = self._resolve_msg_dir(game_dir, target_reg)
             base_args = ["--input", str(source_reg), "--output", str(target_reg), "--defs", str(self.defs_dir), "--spec", temp_spec_path]
             if msg_dir:
                 base_args.extend(["--msg", str(msg_dir)])
@@ -126,6 +151,11 @@ class RegulationManager:
 
             if chest_loot_pools_enabled:
                 base_args.extend(["--enrich-chests", "true", "--chest-min-items", str(chest_min_items), "--chest-max-items", str(chest_max_items)])
+
+            if sweep_vanilla_items:
+                base_args.extend(["--sweep-vanilla", "true", "--randomize-skills", str(randomize_skills).lower()])
+                if seed is not None:
+                    base_args.extend(["--seed", str(seed)])
 
             cmd = self._get_regtool_cmd("patch") + base_args
             system_logger.info(f"Running RegTool command: {' '.join(cmd)}", source="RegulationManager")
@@ -140,23 +170,6 @@ class RegulationManager:
             if not target_reg.exists() or target_reg.stat().st_size < 100000:
                 raise RuntimeError(f"RegTool completed but target regulation was not created or is invalid: {target_reg}")
 
-            if sweep_vanilla_items:
-                try:
-                    sweep_cmd = self._get_regtool_cmd("sweep-vanilla") + [
-                        "--input", str(target_reg),
-                        "--output", str(target_reg),
-                        "--defs", str(self.defs_dir),
-                    ]
-                    if msg_dir:
-                        sweep_cmd.extend(["--msg", str(msg_dir)])
-                    s_res = subprocess.run(sweep_cmd, capture_output=True, text=True, cwd=str(self.base_dir), check=False)
-                    if s_res.returncode == 0:
-                        system_logger.info("Successfully swept and infused all vanilla items across the regulation file.", source="RegulationManager")
-                    else:
-                        system_logger.warning(f"Vanilla sweeper returned code {s_res.returncode}: {s_res.stderr or s_res.stdout}", source="RegulationManager")
-                except Exception as se:
-                    system_logger.warning(f"Vanilla sweeper notice: {se}", source="RegulationManager")
-
             return {
                 "success": True,
                 "source_path": str(source_reg),
@@ -165,7 +178,7 @@ class RegulationManager:
                 "log": res.stdout.strip()
             }
         finally:
-            if os.path.exists(temp_spec_path):
+            if temp_spec_path and os.path.exists(temp_spec_path):
                 try:
                     os.remove(temp_spec_path)
                 except Exception:

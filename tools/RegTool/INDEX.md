@@ -27,3 +27,12 @@ Adheres to `[CS-MODULAR]`, `[CS-GRANULARITY]`, and `[CS-DECOUPLE]` by decomposin
 | `SkillMovesetService.cs` | `SkillMovesetService` | Mod regulation introspection, extracting custom weapon skills (`SwordArtsParam`), moveset behaviors (`BehaviorParam_PC`, `AtkParam_Pc`), and injection. |
 | `ParamHelper.cs` | `ParamHelper` | Utility methods for safely reading, writing, and type-converting PARAM cell values. |
 | `RegTool.csproj` | - | .NET 9.0 project definition linking `SoulsFormatsNEXT`. |
+
+
+## Patcher performance and capacity
+
+- `CapacityService.cs`: Fast surviving equipment row counts from source metadata.
+- `PatchPreflight.cs`: Native collision and row-limit validation before large batch cloning.
+- `PatchOutputTransaction.cs`: Staged regulation/FMG publication with rollback on commit failure.
+- `LootSlotAllocator.cs`: Amortized-linear free overflow slot allocation.
+- `SweepFmgService.cs`: Indexed infusion text updates preserving base and DLC-exclusive entries.

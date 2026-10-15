@@ -50,7 +50,8 @@ namespace LootForge.RegTool
         }
 
         public static void PurgePreviousInjections(
-            Func<string, string, (PARAM Param, BinderFile File)> getOrLoadParam)
+            Func<string, string, (PARAM Param, BinderFile File)> getOrLoadParam,
+            Action<string, string>? purgeNamedRows = null)
         {
             var allLfItemIds = new HashSet<int>();
 
@@ -111,8 +112,12 @@ namespace LootForge.RegTool
             // 4. Purge LootForge rows in SpEffectParam
             try
             {
-                var (spEffectParam, _) = getOrLoadParam("SpEffectParam", "SpEffect");
-                spEffectParam.Rows.RemoveAll(r => r.Name != null && r.Name.Contains("[LootForge]"));
+                if (purgeNamedRows != null) purgeNamedRows("SpEffectParam", "SpEffect");
+                else
+                {
+                    var (spEffectParam, _) = getOrLoadParam("SpEffectParam", "SpEffect");
+                    spEffectParam.Rows.RemoveAll(r => r.Name != null && r.Name.Contains("[LootForge]"));
+                }
             }
             catch {}
 
@@ -184,7 +189,7 @@ namespace LootForge.RegTool
             }
 
             // 8. Purge LootForge custom skills and moveset behaviors
-            SkillMovesetService.PurgePreviousInjections(getOrLoadParam);
+            SkillMovesetService.PurgePreviousInjections(getOrLoadParam, purgeNamedRows);
         }
     }
 }

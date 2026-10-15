@@ -189,3 +189,15 @@ This roadmap defines the implementation phases for the cross-platform Standalone
   - Guaranteed custom accessory, weapon, and armor text entries are written to all active DLC FMG containers.
 
 
+
+
+## Patcher Performance & Capacity (2026-10-14)
+- [x] Share imported payloads and cache schema, world/tier and free-slot lookups.
+- [x] Combine patching and vanilla infusion into one regulation/archive pass.
+- [x] Allocate unique procedural IDs and reject row collisions/engine overflow.
+- [x] Calculate and enforce selection/source-aware variant maximums, including vanilla bases and companion talismans, in the Qt UI and forge pipeline.
+- [x] Preserve existing loot chain/tutorial rewards and make repeated infusion stable.
+- [x] Stage native output transactionally and deploy independent assets beside the selected regulation.
+- [x] Retain real-regulation benchmark, Python/native tests and actual Qt capacity transitions. See `docs/PATCHER_PERFORMANCE.md`.
+- [ ] Independent copied-profile/gameplay acceptance of acquisition, save/reload, visuals and new item IDs.
+- [ ] Follow-up audits: finite loot destination overflow, strict progression fallbacks, imported-regulation cache identity, asynchronous forging and full asset/manifest transactionality.

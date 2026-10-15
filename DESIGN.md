@@ -77,3 +77,12 @@ Governs how items with guaranteed (100%) boss drops are handled, strictly locked
 - Dark Souls QSS styling: deep obsidian slate (`#0c0d12`), antique gold accents (`#c5a059`, `#ffd475`), custom tables, and status badges.
 - Prominent Mod Manager Banner instructing users to target their current active `regulation.bin`.
 - Floating developer console drawer (`[CS-DEBUG]`).
+
+
+## Patcher performance and capacity contract (2026-10-14)
+
+One generator owns IDs and destination state for an entire forge. Imported moveset rows are shared, validated for conflicts and emitted once. World/tier candidate partitions and loot-slot/schema indices are cached per relevant owner. Vanilla infusion occurs in the loaded patch pipeline and marks rows to avoid repeated compounding.
+
+Variant capacity is a product constraint, owned by `src/variant_capacity.py`, using the actual generator destination planner in count-only mode and native source metadata from `CapacityService.cs`. It includes surviving vanilla/overhaul rows, selected mod pieces, companion talismans and optional vanilla-base distribution. The Qt worker debounces recalculation and clamps its input; forge-time and native preflight checks enforce it again. In-place vanilla infusion adds no rows.
+
+Native regulation and FMG output is staged and published together with rollback on failed replacement. Assets are independent copies staged beside the selected regulation. See `docs/PATCHER_PERFORMANCE.md` for measurements, current limits and acceptance boundaries.

@@ -75,16 +75,8 @@ class TestAccessoryModularInjection(unittest.TestCase):
 
     def test_diablo_companion_accessory_icon_id(self):
         """Verifies DiabloVariantBuilder assigns valid authentic iconId (>= 18000) to companion accessories."""
-        mock_generator = MagicMock()
-        mock_generator.pricing_engine.calculate_item_prices.return_value = {
-            "buy_price": 5000,
-            "sell_price": 2500
-        }
-        mock_generator.roll_rarity.return_value = MagicMock(display_name="Magic")
-        mock_generator.roll_affixes.return_value = []
-        mock_generator.build_item_name.side_effect = lambda name, *args, **kwargs: name
-        mock_generator.build_caption_with_affixes.side_effect = lambda cap, *args, **kwargs: cap
-        mock_generator.get_weapon_skills_for_weapon.return_value = []
+        from src.diablo_generator import DiabloLootGenerator
+        mock_generator = DiabloLootGenerator(seed=42, knowledge_base=self.kb)
 
         base_spec = {
             "set_id": "test_boss_set",

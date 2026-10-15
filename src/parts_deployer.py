@@ -30,27 +30,9 @@ class PartsDeployer:
 
     @staticmethod
     def _sync_file(src: Path, dst: Path) -> None:
-        """
-        Transfers src to dst quickly:
-        - If dst exists with identical size and equal/newer mtime, skip copy.
-        - Attempts hardlink (os.link) first for instant staging on same drive.
-        - Falls back safely to shutil.copy2.
-        """
-        if dst.exists():
-            try:
-                src_stat = src.stat()
-                dst_stat = dst.stat()
-                if src_stat.st_size == dst_stat.st_size and dst_stat.st_mtime >= src_stat.st_mtime:
-                    return
-            except OSError:
-                pass
-
-        try:
-            if dst.exists():
-                dst.unlink()
-            os.link(src, dst)
-        except (OSError, AttributeError):
-            shutil.copy2(src, dst)
+        """Incrementally copy assets without aliasing downloaded source files."""
+        from src.file_deployment import sync_asset
+        sync_asset(src, dst)
 
     def deploy_parts(
         self,

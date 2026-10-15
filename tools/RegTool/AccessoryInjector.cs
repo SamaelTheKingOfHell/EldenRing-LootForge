@@ -109,6 +109,8 @@ namespace LootForge.RegTool
             if (rowMap.TryGetValue(newParamId, out var existingRow))
             {
                 bool updateExisting = ep.TryGetProperty("update_existing", out var ue) && ue.GetBoolean();
+                if (!updateExisting)
+                    throw new InvalidOperationException($"Equipment ID {newParamId} already exists. Refusing to discard or overwrite an item.");
                 if (updateExisting && ep.TryGetProperty("field_updates", out var fieldsElUpdate) && fieldsElUpdate.ValueKind == JsonValueKind.Object)
                 {
                     ApplyFieldUpdates(existingRow, fieldsElUpdate);
@@ -166,7 +168,7 @@ namespace LootForge.RegTool
                 if (fieldName.StartsWith("_lf_", StringComparison.OrdinalIgnoreCase))
                     continue;
 
-                var cell = row.Cells.FirstOrDefault(c => string.Equals(c.Def.InternalName, fieldName, StringComparison.OrdinalIgnoreCase));
+                var cell = ParamHelper.FindCell(row, fieldName);
                 if (cell != null)
                 {
                     ParamHelper.SetCellValue(cell, prop.Value);

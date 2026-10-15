@@ -74,11 +74,24 @@ class DiabloLootGenerator:
         self._assigned_chests: Set[int] = set()
         self._assigned_bosses: Set[str] = set()
         self._chest_cursor: int = 0
+        self._chest_queues = {}
+        self._chest_pool_cache = {}
         self._boss_cursor: int = 0
+        # Keep procedural rows outside vanilla and standalone base namespaces.
+        # One generator owns the entire forge run, including companion talismans.
+        self._next_variant_id: int = 100_000_000
         self.stats_multiplier = max(0.0, float(stats_multiplier))
         self.price_multiplier = max(0.0, float(price_multiplier))
         from src.pricing_engine import PricingEngine
         self.pricing_engine = pricing_engine if pricing_engine is not None else PricingEngine(price_multiplier=self.price_multiplier)
+
+    def allocate_variant_id(self) -> int:
+        """Allocate a unique procedural item ID below the inventory category bits."""
+        if self._next_variant_id >= 0x10000000:
+            raise RuntimeError("Procedural equipment ID namespace exhausted.")
+        item_id = self._next_variant_id
+        self._next_variant_id += 1
+        return item_id
 
     def roll_weapon_skill(self, tier: Optional[Union[ProgressionTier, int]] = None) -> WeaponSkill:
         """Rolls an authentic Ash of War or weapon skill from the weapon skill pool."""
@@ -141,23 +154,39 @@ class DiabloLootGenerator:
         """Selects next available chest, prioritizing unassigned chests without repeating."""
         if not candidate_chests:
             return None
+        from collections import deque
         excluded = excluded_ids or set()
-        unassigned = [c for c in candidate_chests if c.get("lotParamId", 0) not in self._assigned_chests and c.get("lotParamId", 0) not in excluded]
-        if unassigned:
-            chosen = unassigned[self._chest_cursor % len(unassigned)]
+        cached = self._chest_pool_cache.get(id(candidate_chests))
+        if cached is None:
+            pool_key = tuple(chest.get("lotParamId", 0) for chest in candidate_chests)
+            queue = self._chest_queues.get(pool_key)
+            if queue is None:
+                queue = self._chest_queues[pool_key] = deque(candidate_chests)
+            self._chest_pool_cache[id(candidate_chests)] = (candidate_chests, queue)
+        else:
+            _, queue = cached
+        for _ in range(len(queue)):
+            chest = queue.popleft()
+            lot_id = chest.get("lotParamId", 0)
+            if lot_id in self._assigned_chests:
+                continue
+            if lot_id in excluded:
+                queue.append(chest)
+                continue
+            return chest
+        # Once all chests have been used, cycle without building/scanning a new
+        # list for every relic; a set still never repeats an excluded location.
+        for _ in range(len(candidate_chests)):
+            chest = candidate_chests[self._chest_cursor % len(candidate_chests)]
             self._chest_cursor += 1
-            return chosen
-        available = [c for c in candidate_chests if c.get("lotParamId", 0) not in excluded]
-        if available:
-            chosen = available[self._chest_cursor % len(available)]
-            self._chest_cursor += 1
-            return chosen
-        chosen = candidate_chests[self._chest_cursor % len(candidate_chests)]
-        self._chest_cursor += 1
-        return chosen
+            if chest.get("lotParamId", 0) not in excluded:
+                return chest
+        return None
 
     def get_next_boss(self, candidate_bosses: List[Dict[str, Any]], excluded_ids: Optional[Set[str]] = None) -> Optional[Dict[str, Any]]:
         """Selects next available boss, prioritizing unassigned bosses with shop capacity."""
+        if self._total_shop_allocations >= self.max_total_shop_rows or self._shop_allocations.get("finger_reader_enia", 0) >= self.max_enia_rows:
+            return None
         if not candidate_bosses:
             return None
         excluded = excluded_ids or set()
@@ -192,6 +221,8 @@ class DiabloLootGenerator:
     def reset_distribution_state(self) -> None:
         """Resets all tracked assignments across chests, bosses, and shops."""
         self._assigned_chests.clear()
+        self._chest_queues.clear()
+        self._chest_pool_cache.clear()
         self._assigned_bosses.clear()
         self._chest_cursor = 0
         self._boss_cursor = 0

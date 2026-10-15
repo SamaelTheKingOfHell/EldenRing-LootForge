@@ -69,7 +69,7 @@ class ParamBuilder:
         self.pricing_engine = pricing_engine if pricing_engine is not None else PricingEngine()
 
 
-    def build_patch_spec(self, mod_set: DetectedModSet) -> Dict[str, Any]:
+    def build_patch_spec(self, mod_set: DetectedModSet, include_custom_art: bool = True) -> Dict[str, Any]:
         """
         Builds the complete parameter and loot patch dictionary for a mod set.
         """
@@ -176,7 +176,7 @@ class ParamBuilder:
                     field_updates.update(SoulsPortAdapter.get_er_field_updates(mod_set, slot))
             else:
                 # If weapon has custom skill or moveset metadata, apply it
-                if getattr(mod_set, "import_custom_moveset", True) and mod_set.skill_moveset:
+                if include_custom_art and getattr(mod_set, "import_custom_moveset", True) and mod_set.skill_moveset:
                     if not mod_set.skill_moveset.is_deep_introspected and mod_set.skill_moveset.regulation_path:
                         try:
                             from src.skill_moveset_importer import SkillMovesetImporter
@@ -335,10 +335,11 @@ class ParamBuilder:
                 "item_prices": item_prices
             }
 
-        system_logger.info(
-            f"Built patch spec for '{mod_set.set_id}': {len(equip_params)} item(s) routed to {target.display_name}",
-            source="ParamBuilder"
-        )
+        if include_custom_art:
+            system_logger.info(
+                f"Built patch spec for '{mod_set.set_id}': {len(equip_params)} item(s) routed to {target.display_name}",
+                source="ParamBuilder"
+            )
 
         patch_spec = {
             "set_id": mod_set.set_id,
@@ -347,7 +348,7 @@ class ParamBuilder:
             "loot_distribution": loot_spec
         }
 
-        if mod_set.is_weapon and getattr(mod_set, "import_custom_moveset", True) and mod_set.skill_moveset:
+        if include_custom_art and mod_set.is_weapon and getattr(mod_set, "import_custom_moveset", True) and mod_set.skill_moveset:
             sm = mod_set.skill_moveset
             if sm.custom_skills_spec:
                 patch_spec["custom_skills"] = sm.custom_skills_spec

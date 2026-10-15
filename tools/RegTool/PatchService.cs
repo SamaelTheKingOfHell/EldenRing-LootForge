@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Diagnostics;
 using SoulsFormats;
 using SoulsFormats.Cryptography;
 
@@ -17,6 +18,8 @@ namespace LootForge.RegTool
     {
         public static int ExecutePatch(Dictionary<string, string> options)
         {
+            var timer = Stopwatch.StartNew();
+            void Stage(string name) => Console.WriteLine($"[RegTool TIMING] {name}: {timer.Elapsed.TotalSeconds:F3}s elapsed");
             if (!options.TryGetValue("input", out string? inputPath) || string.IsNullOrEmpty(inputPath))
             {
                 Console.Error.WriteLine("Missing required argument: --input <source_regulation.bin>");
@@ -66,6 +69,7 @@ namespace LootForge.RegTool
 
             Console.WriteLine($"[RegTool] Decrypting source regulation: {inputPath}...");
             BND4 bnd = RegulationDecryptor.DecryptERRegulation(inputPath);
+            Stage("decrypt");
 
             var paramdefCache = new Dictionary<string, PARAMDEF>(StringComparer.OrdinalIgnoreCase);
             var paramCache = new Dictionary<string, (PARAM Param, BinderFile File)>(StringComparer.OrdinalIgnoreCase);
@@ -104,11 +108,24 @@ namespace LootForge.RegTool
                     }
                     var param = PARAM.Read(file.Bytes);
                     var def = GetParamdef(defName);
-                    param.ApplyParamdefSomewhatCarefully(def);
+                    if (!param.ApplyParamdefSomewhatCarefully(def))
+                        throw new InvalidDataException($"Paramdef does not match table {tableName}.");
                     entry = (param, file);
                     paramCache[tableName] = entry;
                 }
                 return entry;
+            }
+
+            // PARAM row names are readable without materializing every cell.
+            // Most runs contain no generated effects/skills; leave those large tables untouched.
+            void PurgeNamedRows(string tableName, string defName)
+            {
+                var file = bnd.Files.FirstOrDefault(f => f.Name.EndsWith($"{tableName}.param", StringComparison.OrdinalIgnoreCase));
+                if (file == null) return;
+                var metadata = PARAM.Read(file.Bytes);
+                if (!metadata.Rows.Any(r => r.Name?.Contains("[LootForge]") == true)) return;
+                var param = GetOrLoadParam(tableName, defName).Param;
+                param.Rows.RemoveAll(r => r.Name?.Contains("[LootForge]") == true);
             }
 
             int injectedEquipCount = 0;
@@ -135,9 +152,11 @@ namespace LootForge.RegTool
             }
 
             // 0. Purge any stale or previous LootForge injections to ensure a pristine baseline
-            ParamInjector.PurgePreviousInjections(GetOrLoadParam);
+            ParamInjector.PurgePreviousInjections(GetOrLoadParam, PurgeNamedRows);
             EquipInjector.ResetCache();
             LootInjector.ResetCache();
+            PatchPreflight.Validate(specs, GetOrLoadParam);
+            Stage("load and purge");
 
             foreach (var setSpec in specs)
             {
@@ -208,6 +227,7 @@ namespace LootForge.RegTool
                 }
             }
 
+            Stage("inject specifications");
             // Optional In-Memory Single-Pass Enrichment for Bosses and Chests
             if (options.TryGetValue("enrich-bosses", out var eb) && eb.Equals("true", StringComparison.OrdinalIgnoreCase))
             {
@@ -216,7 +236,7 @@ namespace LootForge.RegTool
                 var mapP = GetOrLoadParam("ItemLotParam_map", "ItemLotParam").Param;
                 var wepP = GetOrLoadParam("EquipParamWeapon", "EquipParamWeapon").Param;
                 var protP = GetOrLoadParam("EquipParamProtector", "EquipParamProtector").Param;
-                BossLootPoolService.EnrichBossLootPools(enemyP, mapP, wepP, protP, bCount, itemIdToIsWeapon.Keys.ToHashSet(), itemIdToIsProtector.Keys.ToHashSet());
+                BossLootPoolService.EnrichBossLootPools(enemyP, mapP, wepP, protP, bCount, itemIdToIsWeapon.Where(x => x.Value).Select(x => x.Key).ToHashSet(), itemIdToIsProtector.Where(x => x.Value).Select(x => x.Key).ToHashSet());
             }
 
             if (options.TryGetValue("enrich-chests", out var ec) && ec.Equals("true", StringComparison.OrdinalIgnoreCase))
@@ -227,15 +247,30 @@ namespace LootForge.RegTool
                 var enemyP = GetOrLoadParam("ItemLotParam_enemy", "ItemLotParam").Param;
                 var protP = GetOrLoadParam("EquipParamProtector", "EquipParamProtector").Param;
                 var wepP = GetOrLoadParam("EquipParamWeapon", "EquipParamWeapon").Param;
-                ChestLootPoolService.EnrichChestLootPools(mapP, enemyP, protP, wepP, minItms, maxItms, itemIdToIsProtector.Keys.ToHashSet(), itemIdToIsWeapon.Keys.ToHashSet());
+                ChestLootPoolService.EnrichChestLootPools(mapP, enemyP, protP, wepP, minItms, maxItms, itemIdToIsProtector.Where(x => x.Value).Select(x => x.Key).ToHashSet(), itemIdToIsWeapon.Where(x => x.Value).Select(x => x.Key).ToHashSet());
             }
 
-            Parallel.ForEach(paramCache, kvp =>
+            var sweepEffects = new List<SweepFmgService.Effect>();
+            if (options.TryGetValue("sweep-vanilla", out var sweep) && bool.TryParse(sweep, out var sweepEnabled) && sweepEnabled)
+            {
+                bool randomize = !options.TryGetValue("randomize-skills", out var rs) || bool.Parse(rs);
+                int seed = options.TryGetValue("seed", out var seedText) ? int.Parse(seedText) : 42;
+                sweepEffects = UniversalSweeperService.InfuseParams(GetOrLoadParam, randomize, seed);
+            }
+            Stage("enrich and infuse");
+
+            // Validate all tables before any output is replaced.
+            foreach (var entry in paramCache)
+                if (entry.Value.Param.Rows.Count > ushort.MaxValue)
+                    throw new InvalidOperationException($"{entry.Key} has {entry.Value.Param.Rows.Count} rows; Elden Ring allows at most {ushort.MaxValue}. Reduce variants per item.");
+
+            Parallel.ForEach(paramCache, new ParallelOptions { MaxDegreeOfParallelism = Math.Min(4, Environment.ProcessorCount) }, kvp =>
             {
                 var (param, file) = kvp.Value;
                 Console.WriteLine($"[RegTool] Serializing modified table: {kvp.Key} ({param.Rows.Count} rows)...");
                 file.Bytes = param.Write();
             });
+            Stage("serialize tables");
 
             string? outDir = Path.GetDirectoryName(outputPath);
             if (!string.IsNullOrEmpty(outDir) && !Directory.Exists(outDir))
@@ -244,12 +279,15 @@ namespace LootForge.RegTool
             }
 
             Console.WriteLine($"[RegTool] Encrypting and saving modified regulation to: {outputPath}...");
-            RegulationDecryptor.EncryptERRegulation(outputPath, bnd);
+            using var output = new PatchOutputTransaction(outputPath);
+            RegulationDecryptor.EncryptERRegulation(output.RegulationPath, bnd);
+            Stage("encrypt and save");
 
             // Phase 2: FMG Text Injection
-            if (options.TryGetValue("msg", out string? msgDir) && !string.IsNullOrEmpty(msgDir) && allFmgTexts.Count > 0)
+            if (options.TryGetValue("msg", out string? msgDir) && !string.IsNullOrEmpty(msgDir) && (allFmgTexts.Count > 0 || sweepEffects.Count > 0))
             {
-                injectedFmgCount = FmgInjector.InjectFmgTexts(msgDir, outputPath, allFmgTexts);
+                injectedFmgCount = FmgInjector.InjectFmgTexts(msgDir, output.RegulationPath, allFmgTexts,
+                    sweepEffects.Count > 0 ? archive => SweepFmgService.Apply(archive, sweepEffects) : null);
             }
             else if (allFmgTexts.Count > 0)
             {
@@ -257,6 +295,8 @@ namespace LootForge.RegTool
                 Console.WriteLine("     Items will display as ?ProtectorName? / ?WeaponName? in-game.");
             }
 
+            output.Commit();
+            Stage("messages and total");
             Console.WriteLine($"[RegTool SUCCESS] Successfully patched regulation.bin!");
             Console.WriteLine($" - Injected equipment entries: {injectedEquipCount}");
             Console.WriteLine($" - Injected loot/shop entries: {injectedLootCount}");

@@ -37,28 +37,9 @@ class AssetRenumberer:
 
     @staticmethod
     def _sync_part_file(src: Path, dst: Path) -> None:
-        """
-        Fast incremental file deployment:
-        - If destination already exists with identical file size and destination mtime >= source mtime,
-          skip the operation entirely (zero disk I/O).
-        - Otherwise, attempt hardlink (os.link) for instant 0-second deployment on NTFS/same-volume.
-        - Fallback safely to shutil.copy2 if cross-volume or permission restricted.
-        """
-        if dst.exists():
-            try:
-                src_stat = src.stat()
-                dst_stat = dst.stat()
-                if src_stat.st_size == dst_stat.st_size and dst_stat.st_mtime >= src_stat.st_mtime:
-                    return
-            except OSError:
-                pass
-
-        try:
-            if dst.exists():
-                dst.unlink()
-            os.link(src, dst)
-        except (OSError, AttributeError):
-            shutil.copy2(src, dst)
+        """Incrementally copy assets without aliasing downloaded source files."""
+        from src.file_deployment import sync_asset
+        sync_asset(src, dst)
 
     def stage_mod_set(self, input_base: str, mod_set: DetectedModSet) -> List[str]:
         """
@@ -148,7 +129,7 @@ class AssetRenumberer:
                     staged_map[set_id] = staged
                     total_files += len(staged)
                 except Exception as ex:
-                    system_logger.error(f"Failed to stage set '{set_id}': {ex}", source="AssetRenumberer")
+                    raise RuntimeError(f"Failed to stage set '{set_id}': {ex}") from ex
 
         system_logger.info(
             f"Batch renumbered and staged {total_files} file(s) across {len(staged_map)} mod set(s) in a single pass.",

@@ -15,3 +15,8 @@ Adheres to `[CS-MODULAR]` and `[CS-GRANULARITY]`.
 | `main_window_builder.py` | `MainWindowBuilder` | Constructs GUI layout hierarchy, setting cards, splitters, and dev console drawer. |
 | `patch_orchestrator.py` | `PatchOrchestrator` | Coordinates end-to-end patch generation, backup creation, forging pipeline, and asset deployment. |
 | `mod_scanner_service.py` | `ModScannerService` | Handles mod directory scanning, ID allocation, moveset extraction, and loot distribution calculation. |
+
+
+## Patcher performance and capacity
+
+- `variant_capacity_controller.py`: Debounced background Qt capacity calculation and dynamic variants limit.

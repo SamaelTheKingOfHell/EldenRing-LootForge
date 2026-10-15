@@ -57,9 +57,11 @@ namespace LootForge.RegTool
             var effects = InfuseParams(Load, randomizeSkills, seed);
             foreach (var entry in loaded.Values) entry.File.Bytes = entry.Param.Write();
             Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(outputPath))!);
-            RegulationDecryptor.EncryptERRegulation(outputPath, bnd);
+            using var output = new PatchOutputTransaction(outputPath);
+            RegulationDecryptor.EncryptERRegulation(output.RegulationPath, bnd);
             if (!string.IsNullOrEmpty(msgDir))
-                FmgInjector.InjectFmgTexts(msgDir, outputPath, new List<FmgInjector.FmgTextSpec>(), archive => SweepFmgService.Apply(archive, effects));
+                FmgInjector.InjectFmgTexts(msgDir, output.RegulationPath, new List<FmgInjector.FmgTextSpec>(), archive => SweepFmgService.Apply(archive, effects));
+            output.Commit();
             return 0;
         }
 
@@ -135,11 +137,11 @@ namespace LootForge.RegTool
                         ParamHelper.SetCellIfExists(row, "attackBasePhysics", (ushort)Math.Clamp((int)Math.Round(basePhys * dmgMult), 1, 65535));
                     }
 
-                    int strScale = ParamHelper.GetCellInt(row, "correctStrength");
+                    float strScale = Convert.ToSingle(ParamHelper.FindCell(row, "correctStrength")?.Value ?? 0f);
                     if (strScale > 0)
                         ParamHelper.SetCellIfExists(row, "correctStrength", (float)(strScale + scalingAdd));
 
-                    int dexScale = ParamHelper.GetCellInt(row, "correctAgility");
+                    float dexScale = Convert.ToSingle(ParamHelper.FindCell(row, "correctAgility")?.Value ?? 0f);
                     if (dexScale > 0)
                         ParamHelper.SetCellIfExists(row, "correctAgility", (float)(dexScale + scalingAdd));
 

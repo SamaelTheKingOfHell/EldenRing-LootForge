@@ -208,7 +208,9 @@ namespace LootForge.RegTool
                 {
                     for (int i = 0; i < chosenItems.Count; i++)
                     {
-                        int offset = i + 1;
+                        int offset = 1;
+                        while (offset <= 9 && mapRowMap.ContainsKey(baseLotId + offset)) offset++;
+                        if (offset > 9) continue;
                         int chainedId = baseLotId + offset;
                         var itm = chosenItems[i];
                         PARAM.Row? chainedRow = mapRowMap.TryGetValue(chainedId, out var existing) ? existing : null;
@@ -217,7 +219,7 @@ namespace LootForge.RegTool
                             chainedRow = new PARAM.Row(baseRow)
                             {
                                 ID = chainedId,
-                                Name = $"[Boss Pool T{(int)tier}] {itm.Name} (for {bossName})"
+                                Name = $"[LootForge] [Boss Pool T{(int)tier}] {itm.Name} (for {bossName})"
                             };
                             for (int s = 0; s < 8; s++)
                             {
@@ -242,20 +244,8 @@ namespace LootForge.RegTool
                 }
                 else if (!isMap && enemyRowMap.TryGetValue(baseLotId, out var targetRow))
                 {
-                    int slotIdx = 0;
-                    if (baseLotId == 431100000 && chosenItems.Count > 0)
-                    {
-                        var firstItm = chosenItems[0];
-                        ParamHelper.SetCellFast(targetRow, enemyLayout.ItemIdIndices[0], firstItm.Id);
-                        ParamHelper.SetCellFast(targetRow, enemyLayout.CategoryIndices[0], firstItm.Category);
-                        ParamHelper.SetCellFast(targetRow, enemyLayout.BasePointIndices[0], (ushort)1000);
-                        ParamHelper.SetCellFast(targetRow, enemyLayout.NumIndices[0], (byte)1);
-                        ParamHelper.SetCellFast(targetRow, enemyLayout.FlagIdIndices[0], 0u);
-                        totalItemsInjected++;
-                        slotIdx = 1;
-                    }
-
-                    for (int i = (baseLotId == 431100000 ? 1 : 0); i < chosenItems.Count; i++)
+                    int slotIdx = 1;
+                    for (int i = 0; i < chosenItems.Count; i++)
                     {
                         var itm = chosenItems[i];
                         while (slotIdx < 8 && ParamHelper.GetCellIntFast(targetRow, enemyLayout.ItemIdIndices[slotIdx]) > 0)

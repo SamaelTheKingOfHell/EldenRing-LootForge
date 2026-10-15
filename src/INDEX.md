@@ -36,3 +36,11 @@ This directory contains the core Python engine implementation for LootForge, org
 | `ui/` | UI Components | Themed styles (`theme.py`), modular parameter schema, widget factory, builder, orchestrator, and modals. |
 | `qt_app.py` | `LootForgeMainWindow` | Full Qt desktop GUI coordinating layout, settings, and modal inspection. |
 | `server.py` | `LootForgeServer` | Lightweight cross-platform local HTTP server serving UI and REST APIs. |
+
+
+## Patcher performance and capacity
+
+- `diablo_distribution_context.py`: Per-forge cached world/tier candidates shared by generation and capacity planning.
+- `variant_capacity.py`: Exact per-table variant maximum including vanilla bases and companion talismans.
+- `patch_validation.py`: Early collision/row-limit checks and imported row compaction.
+- `file_deployment.py`: Independent, atomic incremental asset copies.

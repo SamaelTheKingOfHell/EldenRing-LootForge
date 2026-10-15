@@ -42,6 +42,7 @@ class IdAllocator:
 
         self._allocated_models: Set[int] = set()
         self._set_to_allocation: Dict[str, StandaloneAllocation] = {}
+        self._virtual_allocations: Dict[str, StandaloneAllocation] = {}
 
     def register_used_model_id(self, model_id: int) -> None:
         """Marks a model ID as in-use."""
@@ -87,7 +88,21 @@ class IdAllocator:
             self._allocated_models.discard(model_int)
             system_logger.debug(f"Released model ID {model_int} for set '{set_id}'", source="IdAllocator")
 
+    def allocate_virtual(self, set_id: str) -> StandaloneAllocation:
+        """Allocate param-only vanilla relics without consuming scarce replacement model IDs."""
+        if set_id not in self._virtual_allocations:
+            offset = len(self._virtual_allocations)
+            item_id = 200_000_000 + offset * 1000
+            if item_id + 999 >= 0x10000000:
+                raise RuntimeError("Vanilla relic parameter namespace exhausted.")
+            self._virtual_allocations[set_id] = StandaloneAllocation(
+                new_model_id="0", new_equip_param_id=item_id,
+                new_item_lot_id=self._base_item_lot_id + offset, marker_tag="[LootForge]"
+            )
+        return self._virtual_allocations[set_id]
+
     def reset(self) -> None:
         """Clears all dynamic allocations."""
         self._allocated_models.clear()
         self._set_to_allocation.clear()
+        self._virtual_allocations.clear()

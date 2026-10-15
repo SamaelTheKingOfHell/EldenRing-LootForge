@@ -62,7 +62,8 @@ namespace LootForge.RegTool
         public static int InjectFmgTexts(
             string msgDir,
             string regulationOutputPath,
-            List<FmgTextSpec> fmgTexts)
+            List<FmgTextSpec> fmgTexts,
+            Action<BND4>? transform = null)
         {
             string itemMsgBndPath = Path.Combine(msgDir, "item.msgbnd.dcx");
             if (!File.Exists(itemMsgBndPath))
@@ -88,10 +89,12 @@ namespace LootForge.RegTool
             BND4 msgBnd = BND4.Read(itemMsgBndPath);
 
             int count = InjectFmgEntriesIntoBnd(msgBnd, fmgTexts);
+            transform?.Invoke(msgBnd);
 
             // Determine output directory alongside regulation.bin
             string baseOutDir = Path.GetDirectoryName(regulationOutputPath)!;
-            string outputMsgDir = Path.Combine(baseOutDir, "msg", "engUS");
+            string sourceLanguage = Path.GetFileName(Path.TrimEndingDirectorySeparator(msgDir));
+            string outputMsgDir = Path.Combine(baseOutDir, "msg", sourceLanguage == "engus" ? "engus" : "engUS");
             if (!Directory.Exists(outputMsgDir))
             {
                 string outputMsgDirLower = Path.Combine(baseOutDir, "msg", "engus");
@@ -114,13 +117,14 @@ namespace LootForge.RegTool
                         Console.WriteLine($"[RegTool] Mirroring {count} FMG entries to DLC archive: {dlcFile}...");
                         BND4 dlcBnd = BND4.Read(srcDlc);
                         InjectFmgEntriesIntoBnd(dlcBnd, fmgTexts);
+                        transform?.Invoke(dlcBnd);
                         string outDlc = Path.Combine(outputMsgDir, dlcFile);
                         dlcBnd.Write(outDlc);
                         Console.WriteLine($"[RegTool] Successfully mirrored into DLC archive: {outDlc}");
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"[RegTool WARN] Could not mirror FMG to {dlcFile}: {ex.Message}");
+                        throw new IOException($"Could not patch DLC message archive {dlcFile}.", ex);
                     }
                 }
             }

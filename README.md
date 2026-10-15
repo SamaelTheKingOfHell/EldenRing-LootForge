@@ -101,3 +101,12 @@ Run the automated test suite:
 ```bash
 python -m unittest discover tests
 ```
+
+
+## Patcher speed and automatic variant limits
+
+The native patcher shares imported moveset data, reuses indexed lookups and performs vanilla infusion in the main patch pass. A controlled real-regulation 4,000-item patch plus infusion improved from 7.84 s to 3.16 s; timings for a complete installed mod collection will differ.
+
+The variants control automatically calculates its maximum from the selected regulation, scanned items, companion talismans and optional vanilla base items. Enabling vanilla base distribution can lower that maximum. Oversized saved values are clamped automatically, and the forge checks the current source again. Elden Ring permits 65,535 rows per equipment table. In-place vanilla infusion uses existing rows.
+
+Rebuild native tooling with `dotnet build tools/RegTool/RegTool.csproj -c Release` and restart `python run_lootforge.py` after updates. See [performance and validation details](docs/PATCHER_PERFORMANCE.md), including remaining game-runtime acceptance and known audit findings.

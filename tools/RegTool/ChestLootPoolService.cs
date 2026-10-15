@@ -193,7 +193,6 @@ namespace LootForge.RegTool
                     {
                         var itm = combinedCustomPool[poolCursor++];
                         chosenForChest.Add(itm);
-                        placedItemIds.Add(itm.Id);
                     }
                     else
                     {
@@ -209,7 +208,9 @@ namespace LootForge.RegTool
                 // Inject via contiguous sequential chained rows (baseLotId + offset)
                 for (int i = 0; i < chosenForChest.Count; i++)
                 {
-                    int offset = i + 1;
+                    int offset = 1;
+                    while (offset <= 9 && mapRowMap.ContainsKey(baseLotId + offset)) offset++;
+                    if (offset > 9) continue;
                     int chainedId = baseLotId + offset;
                     var itm = chosenForChest[i];
 
@@ -219,7 +220,7 @@ namespace LootForge.RegTool
                         chainedRow = new PARAM.Row(baseRow)
                         {
                             ID = chainedId,
-                            Name = $"[Chest Drop T{(int)tier}] {itm.Name} (in {chestName})"
+                            Name = $"[LootForge] [Chest Drop T{(int)tier}] {itm.Name} (in {chestName})"
                         };
                         for (int s = 0; s < 8; s++)
                         {
@@ -238,6 +239,7 @@ namespace LootForge.RegTool
                     ParamHelper.SetCellFast(chainedRow, mapLayout.BasePointIndices[0], (ushort)1000);
                     ParamHelper.SetCellFast(chainedRow, mapLayout.NumIndices[0], (byte)1);
                     ParamHelper.SetCellFast(chainedRow, mapLayout.FlagIdIndices[0], 0u);
+                    placedItemIds.Add(itm.Id);
                     totalItemsInChests++;
                 }
 
@@ -281,8 +283,7 @@ namespace LootForge.RegTool
                                 ParamHelper.SetCellFast(eRow, enemyLayout.NumIndices[s], (byte)1);
                                 ParamHelper.SetCellFast(eRow, enemyLayout.FlagIdIndices[s], 0u);
                                 placed = true;
-                                placedItemIds.Add(itm.Id);
-                                routedToEnemies++;
+                                        routedToEnemies++;
                                 enemyRowIdx = (enemyRowIdx + attempts + 1) % candidateEnemyRows.Count;
                                 break;
                             }

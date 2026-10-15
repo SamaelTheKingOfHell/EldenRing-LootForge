@@ -128,7 +128,7 @@ def get_generator_param_descriptors() -> List[ParamDescriptor]:
             label="Variants Per Item Set",
             param_type=ParamType.INT,
             purpose=ParamPurpose.DIABLO_ARPG,
-            description="Number of uniquely-rolled procedural ARPG variants generated for each mod item set (1 to 1,000 instances).",
+            description="Number of procedural variants per item set. The maximum is calculated from the selected regulation, mod sets, vanilla base items, and companion talismans.",
             default=3,
             min_value=1,
             max_value=1000,

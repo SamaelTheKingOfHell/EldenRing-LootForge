@@ -86,6 +86,8 @@ class LootForgeMainWindow(QMainWindow):
 
         self._init_modal()
         MainWindowBuilder.build_main_ui(self)
+        from src.ui.variant_capacity_controller import VariantCapacityController
+        self.capacity_controller = VariantCapacityController(self)
         self._load_initial_data()
 
         self.log_timer = QTimer(self)
@@ -160,6 +162,8 @@ class LootForgeMainWindow(QMainWindow):
             self.asset_renumberer.output_dir = out_p
         elif key in ("diablo_loot_enabled", "import_custom_skills_movesets"):
             self._sync_modal_data()
+        if key in ("active_regulation_path", "game_directory", "output_directory", "diablo_use_vanilla_base_items", "diablo_inject_vanilla_stats", "diablo_loot_enabled") and hasattr(self, "capacity_controller"):
+            self.capacity_controller.schedule()
 
     def _on_page_size_changed_from_modal(self, val: int):
         self.items_per_page = val
@@ -252,6 +256,8 @@ class LootForgeMainWindow(QMainWindow):
             global_multiplier_percent=self.global_multiplier_percent
         )
         self._sync_modal_data()
+        if hasattr(self, "capacity_controller"):
+            self.capacity_controller.schedule()
 
     def _on_user_rate_changed(self, cfg: ItemDropConfig, val: float):
         ModScannerService.update_item_user_rate(self.config, self.config_path, cfg, val)

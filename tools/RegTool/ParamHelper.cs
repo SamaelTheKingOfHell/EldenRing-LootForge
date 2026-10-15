@@ -1,6 +1,8 @@
 using System;
 using System.Linq;
 using System.Text.Json;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using SoulsFormats;
 
 namespace LootForge.RegTool
@@ -11,9 +13,31 @@ namespace LootForge.RegTool
     /// </summary>
     public static class ParamHelper
     {
+        private static readonly ConditionalWeakTable<PARAMDEF, Dictionary<string, int>> FieldIndices = new();
+
+        /// <summary>Resolve fields once per schema, with validation for version-filtered layouts.</summary>
+        public static PARAM.Cell? FindCell(PARAM.Row row, string fieldName)
+        {
+            if (row.Cells == null) return null;
+            if (row.Def != null)
+            {
+                var indices = FieldIndices.GetValue(row.Def, _ =>
+                {
+                    var map = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                    for (int i = 0; i < row.Cells.Count; i++)
+                        map.TryAdd(row.Cells[i].Def.InternalName, i);
+                    return map;
+                });
+                if (indices.TryGetValue(fieldName, out int index) && index < row.Cells.Count &&
+                    string.Equals(row.Cells[index].Def.InternalName, fieldName, StringComparison.OrdinalIgnoreCase))
+                    return row.Cells[index];
+            }
+            return row.Cells.FirstOrDefault(c => string.Equals(c.Def.InternalName, fieldName, StringComparison.OrdinalIgnoreCase));
+        }
+
         public static int GetCellInt(PARAM.Row row, string fieldName)
         {
-            var cell = row.Cells.FirstOrDefault(c => string.Equals(c.Def.InternalName, fieldName, StringComparison.OrdinalIgnoreCase));
+            var cell = FindCell(row, fieldName);
             if (cell == null || cell.Value == null) return 0;
             try
             {
@@ -27,7 +51,7 @@ namespace LootForge.RegTool
 
         public static void SetCellIfExists(PARAM.Row row, string fieldName, object value)
         {
-            var cell = row.Cells.FirstOrDefault(c => string.Equals(c.Def.InternalName, fieldName, StringComparison.OrdinalIgnoreCase));
+            var cell = FindCell(row, fieldName);
             if (cell != null)
             {
                 cell.Value = value;
@@ -145,6 +169,7 @@ namespace LootForge.RegTool
     /// </summary>
     public class ItemLotLayout
     {
+        private static readonly ConditionalWeakTable<PARAM, ItemLotLayout> Layouts = new();
         public readonly int[] ItemIdIndices = new int[8];
         public readonly int[] CategoryIndices = new int[8];
         public readonly int[] BasePointIndices = new int[8];
@@ -159,8 +184,13 @@ namespace LootForge.RegTool
         }
 
         public static ItemLotLayout Extract(PARAM param)
+            => Layouts.GetValue(param, Build);
+
+        private static ItemLotLayout Build(PARAM param)
         {
             var layout = new ItemLotLayout();
+            foreach (var indices in new[] { layout.ItemIdIndices, layout.CategoryIndices, layout.BasePointIndices, layout.NumIndices, layout.FlagIdIndices })
+                Array.Fill(indices, -1);
             if (param.Rows.Count == 0) return layout;
             var cells = param.Rows[0].Cells;
             for (int s = 1; s <= 8; s++)

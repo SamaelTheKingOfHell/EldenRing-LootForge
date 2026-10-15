@@ -27,9 +27,7 @@ class PatchOrchestrator:
         reg_path = window.active_reg_input.text().strip() or os.path.join(window.config.game_directory, "regulation.bin")
         try:
             if not Path(reg_path).exists():
-                Path(reg_path).parent.mkdir(parents=True, exist_ok=True)
-                with open(reg_path, "wb") as f:
-                    f.write(b"ELDEN_RING_REGULATION_PLACEHOLDER")
+                raise FileNotFoundError(f"Regulation file not found: {reg_path}")
             rec = window.backup_manager.create_backup(reg_path)
             QMessageBox.information(window, "Backup Created", f"Successfully created backup:\n{rec.backup_file_name}")
         except Exception as e:
@@ -92,11 +90,11 @@ class PatchOrchestrator:
             QMessageBox.warning(window, "No Mods", "No mod sets detected in input_mods, and vanilla item injection is not enabled.")
             return
 
-        window._recalculate_distribution()
-        window._ensure_all_deep_introspected()
         active_input = window.active_reg_input.text().strip()
 
         try:
+            window._recalculate_distribution()
+            window._ensure_all_deep_introspected()
             result = cls.forge_mods(
                 base_dir=window.base_dir,
                 config=window.config,
@@ -163,22 +161,34 @@ class PatchOrchestrator:
         except Exception as ie:
             system_logger.warning(f"Real-time world introspection notice: {ie}", source="PatchOrchestrator")
 
+        from src.variant_capacity import calculate_capacity, clamp_variants
+        param_builder.kb = knowledge_base
+        capacity_specs = [param_builder.build_patch_spec(mod, include_custom_art=False)
+                          for mod in scanned_sets if getattr(mod, "is_enabled", True)]
+        capacity = calculate_capacity(regulation_manager.equipment_row_counts(source_reg), capacity_specs,
+                                      knowledge_base, config.diablo_use_vanilla_base_items)
+        if clamp_variants(config, capacity):
+            config.save(config_path)
+            system_logger.info(f"Variants capped at {capacity.maximum} for this selection and regulation.", source="Forge")
+
         target_reg = regulation_manager.resolve_target_regulation(
             active_path=active_input,
             output_dir=config.output_directory,
             game_dir=config.game_directory
         )
 
-        if target_reg.exists():
-            backup_manager.create_backup(str(target_reg))
-
         # Pre-backup or track existing msg files in target directory
         created_msg_files = []
         backed_up_files = {}
+        seen_msg_paths = set()
         for lang in ["engUS", "engus"]:
             lang_dir = target_reg.parent / "msg" / lang
             for fname in ["item.msgbnd.dcx", "item_dlc02.msgbnd.dcx", "item_dlc01.msgbnd.dcx"]:
                 mf = lang_dir / fname
+                msg_key = os.path.normcase(str(mf.resolve()))
+                if msg_key in seen_msg_paths:
+                    continue
+                seen_msg_paths.add(msg_key)
                 if mf.exists():
                     bak_rec = backup_manager.create_file_backup(str(mf), category="msg")
                     backed_up_files[str(mf)] = bak_rec.backup_file_name
@@ -199,20 +209,18 @@ class PatchOrchestrator:
                 stats_multiplier=config.stats_multiplier, price_multiplier=config.price_multiplier
             )
 
-        # Phase 1: Batch renumber and stage all assets in a single unified pass
+        # Generate and validate the patch before staging any assets.
         input_p = Path(config.input_directory)
         if not input_p.is_absolute():
             input_p = base_dir / input_p
-        staged_by_set = asset_renumberer.stage_all_mod_sets(str(input_p), scanned_sets)
-
-        all_deployed_files = []
+        if len(scanned_sets) != len(drop_configs):
+            raise ValueError("Mod sets and loot settings do not match. Scan the mods again.")
         for s, cfg in zip(scanned_sets, drop_configs):
+            if not getattr(s, "is_enabled", True):
+                continue
             s.import_custom_moveset = getattr(config, "import_custom_skills_movesets", True) and getattr(cfg, "import_custom_art", True)
             if s.loot_target:
                 s.loot_target.chance_or_cost = distributor.calculate_final_rate(cfg.user_rate, global_multiplier_percent)
-
-            staged = staged_by_set.get(s.set_id, [])
-            all_deployed_files.extend(staged)
 
             base_spec = param_builder.build_patch_spec(s)
             if diablo_gen and config.diablo_loot_enabled and config.diablo_variants_per_item > 1:
@@ -222,7 +230,6 @@ class PatchOrchestrator:
             else:
                 patch_specs.append(base_spec)
 
-            manifest_store.record_set(s, staged, save_now=False)
             injected_count += 1
 
         # Phase 2: Inject vanilla base items for distribution if enabled
@@ -236,6 +243,22 @@ class PatchOrchestrator:
             injected_count += len(vanilla_dist_specs)
             system_logger.info(f"Generated {len(vanilla_dist_specs)} procedural relics from vanilla base items.", source="PatchOrchestrator")
 
+        from src.patch_validation import validate_patch_specs
+        validate_patch_specs(patch_specs)
+        if target_reg.exists():
+            backup_manager.create_backup(str(target_reg))
+
+        # Stage beside the selected regulation, including an external mod-manager profile.
+        from src.asset_renumberer import AssetRenumberer
+        deployer = AssetRenumberer(str(target_reg.parent))
+        staged_by_set = deployer.stage_all_mod_sets(str(input_p), scanned_sets)
+        all_deployed_files = []
+        for s in scanned_sets:
+            if not getattr(s, "is_enabled", True):
+                continue
+            staged = staged_by_set.get(s.set_id, [])
+            all_deployed_files.extend(str(target_reg.parent / path) for path in staged)
+
         # Phase 3: Single-pass in-memory regulation patch
         patch_result = regulation_manager.execute_patch(
             specs=patch_specs,
@@ -247,8 +270,21 @@ class PatchOrchestrator:
             chest_loot_pools_enabled=getattr(config, "chest_loot_pools_enabled", True),
             chest_min_items=getattr(config, "chest_min_items", 1),
             chest_max_items=getattr(config, "chest_max_items", 4),
-            sweep_vanilla_items=getattr(config, "diablo_loot_enabled", False) and getattr(config, "diablo_inject_vanilla_stats", False)
+            sweep_vanilla_items=getattr(config, "diablo_loot_enabled", False) and getattr(config, "diablo_inject_vanilla_stats", False),
+            randomize_skills=config.diablo_randomize_weapon_skills,
+            seed=config.diablo_seed
         )
+
+        for s in scanned_sets:
+            if getattr(s, "is_enabled", True):
+                manifest_store.record_set(s, staged_by_set.get(s.set_id, []), save_now=False)
+
+        from src.skill_moveset_importer import SkillMovesetImporter
+        moveset_importer = SkillMovesetImporter(base_dir)
+        for s in scanned_sets:
+            if getattr(s, "is_enabled", True) and s.is_weapon and s.import_custom_moveset and s.skill_moveset:
+                all_deployed_files.extend(moveset_importer.deploy_moveset_assets(s, input_p, target_reg.parent, backup_manager))
+                backed_up_files.update(moveset_importer.last_backed_up_files)
 
         # Phase 4: Record deployment manifest in ONE single disk write
         manifest_store.record_deployment(

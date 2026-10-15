@@ -226,7 +226,7 @@ class TestRegulationManager(unittest.TestCase):
             "equip_params": [
                 {
                     "param_table": "EquipParamWeapon",
-                    "new_param_id": 9080000,
+                    "new_param_id": 100800000,
                     "base_clone_id": 11000000,
                     "target_model_id": 556,
                     "row_name": "[LootForge] Kuro Hasu",
@@ -240,7 +240,7 @@ class TestRegulationManager(unittest.TestCase):
                 "route_type": "shop_lineup",
                 "target_id": "remembrance_malenia",
                 "chance_or_cost": 50000,
-                "award_items": [{"id": 9080000, "name": "Kuro Hasu", "chance": 100.0}]
+                "award_items": [{"id": 100800000, "name": "Kuro Hasu", "chance": 100.0}]
             },
             "custom_skills": [
                 {

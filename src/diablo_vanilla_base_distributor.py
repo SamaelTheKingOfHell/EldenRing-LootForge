@@ -37,7 +37,7 @@ class VanillaBaseDistributor:
                 continue
 
             set_id = f"vanilla_base_weapon_{model_id}"
-            alloc = id_allocator.allocate(set_id)
+            alloc = id_allocator.allocate_virtual(set_id)
             clean_name = w_info.get("name", "Weapon")
             clean_desc = w_info.get("description", "A classic weapon of the Lands Between.")
 
@@ -91,7 +91,7 @@ class VanillaBaseDistributor:
                 continue
 
             set_id = f"vanilla_base_armor_{model_id}"
-            alloc = id_allocator.allocate(set_id)
+            alloc = id_allocator.allocate_virtual(set_id)
             clean_set_name = p_info.get("name", "Armor Set")
             clean_desc = p_info.get("description", "Authentic armor of the Lands Between.")
 
@@ -174,7 +174,7 @@ class VanillaBaseDistributor:
                 continue
 
             set_id = f"vanilla_base_accessory_{model_id}"
-            alloc = id_allocator.allocate(set_id)
+            alloc = id_allocator.allocate_virtual(set_id)
             clean_name = a_info.get("name", "Talisman")
             clean_desc = a_info.get("description", "A classic talisman of the Lands Between.")
 

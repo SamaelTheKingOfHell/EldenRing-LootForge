@@ -25,3 +25,11 @@ Automated verification suites adhering to `[CS-NO-MOCK]`. Tests exercise concret
 | `verify_server.py` | End-to-end integration test validating HTTP API endpoints and UI asset serving (`[CS-NO-MOCK]`). |
 
 
+
+
+## Patcher performance and capacity
+
+- `test_patch_performance.py`: Large multi-set variant, batch validation and incremental file safety regressions.
+- `test_variant_capacity.py`: Exact maximum, source occupancy, vanilla inclusion and real companion-count parity.
+- `RegToolChecks/`: Dependency-free native PARAM/FMG, enrichment, infusion and transaction checks.
+- `benchmark_patcher.py`: Reproducible pre-change versus current patch/generation benchmark.

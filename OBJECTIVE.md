@@ -45,3 +45,8 @@ Develop a cross-platform desktop application and mod engine for *Elden Ring* tha
    - Valuation engine integrates slot impact (weapon > body > head/legs > arms), regional progression tier (Early to Endgame), Diablo rarity tier (Common to Mythic), rolled affix stat points and passive buffs, weapon skill tiers, and boss remembrance prestige.
    - Granular piece pricing ensures multi-piece sets price high-stat armor appropriately relative to minor accessories or gauntlets.
 
+
+9. **Fast, bounded patching**:
+   - Avoid per-variant copies of shared imported data and repeated whole-table searches or regulation passes.
+   - Calculate the supported variant maximum from the selected regulation and mod/vanilla selection, including companion accessories; clamp the UI and revalidate before patching.
+   - Preserve failed-output recovery and disclose separate game-runtime acceptance gaps.

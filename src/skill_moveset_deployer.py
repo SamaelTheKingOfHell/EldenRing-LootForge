@@ -7,6 +7,7 @@ Adheres to [CS-MODULAR] and [CS-GRANULARITY].
 """
 
 import shutil
+import os
 from pathlib import Path
 from typing import List, Dict, Optional, Any, Set
 from src.models import DetectedModSet
@@ -37,6 +38,27 @@ class SkillMovesetDeployer:
     def __init__(self):
         self.last_deployed_files: List[str] = []
         self.last_backed_up_files: Dict[str, str] = {}
+        self._copied = set()
+        self._backed_up = set()
+
+    def _copy_asset(self, source: Path, target: Path, backup_manager: Optional[Any]) -> bool:
+        """Copy each input/target pair once per session and retain the original overwritten asset."""
+        from src.file_deployment import sync_asset
+        key = (source.resolve(), target.resolve())
+        if key in self._copied:
+            return False
+        if target.exists():
+            source_stat, target_stat = source.stat(), target.stat()
+            if (source_stat.st_size, source_stat.st_mtime_ns) == (target_stat.st_size, target_stat.st_mtime_ns) and not os.path.samefile(source, target):
+                self._copied.add(key)
+                return False
+        if target.exists() and target.resolve() not in self._backed_up and backup_manager:
+            record = backup_manager.create_file_backup(str(target), category="moveset")
+            self.last_backed_up_files[str(target)] = record.backup_file_name
+            self._backed_up.add(target.resolve())
+        changed = sync_asset(source, target)
+        self._copied.add(key)
+        return changed
 
     def deploy_moveset_assets(
         self,
@@ -59,7 +81,7 @@ class SkillMovesetDeployer:
         out_path = Path(output_dir)
 
         # 1. Deploy chr/ assets (animations, behaviors)
-        chr_candidates = [source_mod_dir / "chr"] + list(source_mod_dir.rglob("chr"))
+        chr_candidates = ([source_mod_dir / "chr"] if (source_mod_dir / "chr").is_dir() else source_mod_dir.rglob("chr"))
         for cand in chr_candidates:
             if cand.is_dir() and cand != (out_path / "chr"):
                 out_chr = out_path / "chr"
@@ -76,13 +98,13 @@ class SkillMovesetDeployer:
                                 )
                                 continue
 
-                        shutil.copy2(str(item), str(target))
-                        deployed_files.append(str(target))
+                        if self._copy_asset(item, target, backup_manager):
+                            deployed_files.append(str(target))
                         system_logger.debug(f"Deployed animation: {item.name} -> {target.name}", source="SkillMovesetDeployer")
                 break
 
         # 2. Deploy sfx/ assets
-        sfx_candidates = [source_mod_dir / "sfx"] + list(source_mod_dir.rglob("sfx"))
+        sfx_candidates = ([source_mod_dir / "sfx"] if (source_mod_dir / "sfx").is_dir() else source_mod_dir.rglob("sfx"))
         for cand in sfx_candidates:
             if cand.is_dir() and cand != (out_path / "sfx"):
                 out_sfx = out_path / "sfx"
@@ -90,13 +112,13 @@ class SkillMovesetDeployer:
                 for item in cand.iterdir():
                     if item.is_file() and item.name.endswith(".dcx"):
                         target = out_sfx / item.name.lower()
-                        shutil.copy2(str(item), str(target))
-                        deployed_files.append(str(target))
+                        if self._copy_asset(item, target, backup_manager):
+                            deployed_files.append(str(target))
                         system_logger.debug(f"Deployed VFX: {item.name} -> {target.name}", source="SkillMovesetDeployer")
                 break
 
         # 3. Deploy action/ assets
-        action_candidates = [source_mod_dir / "action"] + list(source_mod_dir.rglob("action"))
+        action_candidates = ([source_mod_dir / "action"] if (source_mod_dir / "action").is_dir() else source_mod_dir.rglob("action"))
         for cand in action_candidates:
             if cand.is_dir() and cand != (out_path / "action"):
                 out_action = out_path / "action"
@@ -115,8 +137,8 @@ class SkillMovesetDeployer:
                                 )
                                 continue
 
-                        shutil.copy2(str(item), str(target))
-                        deployed_files.append(str(target))
+                        if self._copy_asset(item, target, backup_manager):
+                            deployed_files.append(str(target))
                 break
 
         self.last_deployed_files = deployed_files

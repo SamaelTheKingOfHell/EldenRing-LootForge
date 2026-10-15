@@ -30,6 +30,8 @@ namespace LootForge.RegTool
                 {
                     case "patch":
                         return PatchService.ExecutePatch(options);
+                    case "capacity":
+                        return CapacityService.Execute(options);
                     case "verify":
                         return DiagnosticService.ExecuteVerify(options);
                     case "extract-msg":

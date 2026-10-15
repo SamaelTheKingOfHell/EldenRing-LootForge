@@ -54,7 +54,7 @@ class BackupManager:
             raise FileNotFoundError(f"Source file not found at {file_path}")
 
         timestamp_str = time.strftime("%Y%m%d_%H%M%S")
-        backup_name = f"{source.name}.bak_{timestamp_str}"
+        backup_name = f"{source.name}.bak_{timestamp_str}_{time.time_ns() % 1_000_000_000:09d}"
         dest = self._backup_dir / backup_name
 
         shutil.copy2(source, dest)

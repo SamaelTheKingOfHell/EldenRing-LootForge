@@ -14,6 +14,9 @@ namespace LootForge.RegTool
     {
         private static HashSet<int>? _shopRowIds = null;
 
+        /// <summary>Release table-specific state between patch operations.</summary>
+        public static void ResetCache() => _shopRowIds = null;
+
         public static void InjectShopLineup(
             JsonElement lootEl,
             Func<string, string, (PARAM Param, BinderFile File)> getOrLoadParam,
@@ -167,25 +170,17 @@ namespace LootForge.RegTool
             bool isArmor = itemIdToIsProtector.TryGetValue(itemId, out var ip) ? ip : (!isAccessory && !itemIdToIsWeapon.GetValueOrDefault(itemId, false));
             int lotCategory = isAccessory ? 4 : (isArmor ? 3 : 2);
 
-            // Never overwrite slot 1. Find any valid enemy row with an empty slot 2..8
-            foreach (var row in itemLotParam.Rows)
+            var layout = ItemLotLayout.Extract(itemLotParam);
+            var freeSlot = LootSlotAllocator.Next(itemLotParam, layout);
+            if (freeSlot is { } free)
             {
-                if (ParamHelper.GetCellInt(row, "lotItemId01") <= 0) continue;
-
-                for (int s = 2; s <= 8; s++)
-                {
-                    int cur = ParamHelper.GetCellInt(row, $"lotItemId0{s}");
-                    if (cur == 0 || cur == itemId)
-                    {
-                        ParamHelper.SetCellIfExists(row, $"lotItemId0{s}", itemId);
-                        ParamHelper.SetCellIfExists(row, $"lotItemCategory0{s}", lotCategory);
-                        ParamHelper.SetCellIfExists(row, $"lotItemBasePoint0{s}", (ushort)250);
-                        ParamHelper.SetCellIfExists(row, $"lotItemNum0{s}", (byte)1);
-                        ParamHelper.SetCellIfExists(row, $"getItemFlagId0{s}", 0u);
-                        injectedLootCount++;
-                        return;
-                    }
-                }
+                ParamHelper.SetCellFast(free.Row, layout.ItemIdIndices[free.Slot], itemId);
+                ParamHelper.SetCellFast(free.Row, layout.CategoryIndices[free.Slot], lotCategory);
+                ParamHelper.SetCellFast(free.Row, layout.BasePointIndices[free.Slot], (ushort)250);
+                ParamHelper.SetCellFast(free.Row, layout.NumIndices[free.Slot], (byte)1);
+                ParamHelper.SetCellFast(free.Row, layout.FlagIdIndices[free.Slot], 0u);
+                injectedLootCount++;
+                return;
             }
             Console.WriteLine($"[RegTool WARN] Could not find open enemy lot slot for item {itemId}.");
         }

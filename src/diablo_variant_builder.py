@@ -6,7 +6,7 @@ Complies with [CS-MODULAR] and [CS-GRANULARITY] (<= 300 lines).
 """
 
 import copy
-from typing import List, Dict, Any, Optional, Set
+from typing import List, Dict, Any, Optional, Set, Union
 from src.diablo_affixes import RarityTier, WeaponSkill
 from src.logger import system_logger
 
@@ -21,48 +21,40 @@ class DiabloVariantBuilder:
         generator: Any,
         base_spec: Dict[str, Any],
         variants_per_item: int = 3,
-        knowledge_base: Optional[Any] = None
-    ) -> List[Dict[str, Any]]:
+        knowledge_base: Optional[Any] = None,
+        count_only: bool = False
+    ) -> Union[List[Dict[str, Any]], Dict[str, int]]:
         if variants_per_item <= 1:
+            if count_only:
+                from collections import Counter
+                return dict(Counter(ep["param_table"] for ep in base_spec.get("equip_params", [])))
             return [base_spec]
 
         kb = knowledge_base or generator._knowledge_base
-        pools = kb.get_diablo_distribution_pools() if (kb and hasattr(kb, "get_diablo_distribution_pools")) else None
-
         variant_specs: List[Dict[str, Any]] = []
-
+        from collections import Counter
+        row_counts = Counter()
         tier = base_spec.get("tier")
         if tier is None and kb and hasattr(kb, "get_progression_tier_for_spec"):
             tier = kb.get_progression_tier_for_spec(base_spec)
-
+        elif tier is not None and kb and hasattr(kb, "get_progression_tier"):
+            tier = kb.get_progression_tier(tier)
+        from src.diablo_distribution_context import distribution_context
+        pools, raw_bosses, raw_chests, boss_pool, chest_pool, merchant_pool, enemy_pool, elites, acc_catalog = distribution_context(generator, kb, tier)
         item_assigned_chests: Set[int] = set()
         item_assigned_bosses: Set[str] = set()
 
-        raw_bosses, raw_merchants, raw_chests = [], [], []
-        boss_pool, chest_pool, merchant_pool, enemy_pool = [], [], [], []
-        if pools:
-            raw_bosses = pools.get("bosses", [])
-            raw_merchants = pools.get("merchants", [])
-            raw_chests = pools.get("chests", [])
-            raw_elites = pools.get("elites", [])
-            raw_roaming = pools.get("roaming", [])
-
-            if tier and kb and hasattr(kb, "get_progression_tier"):
-                boss_pool = [b for b in raw_bosses if kb.get_progression_tier(b) == tier] or raw_bosses
-                chest_pool = [c for c in raw_chests if kb.get_progression_tier(c) == tier] or raw_chests
-                merchant_pool = [m for m in raw_merchants if kb.get_progression_tier(m) == tier] or raw_merchants
-                elites = [e for e in raw_elites if kb.get_progression_tier(e) == tier] or raw_elites
-                roaming = [r for r in raw_roaming if kb.get_progression_tier(r) == tier] or raw_roaming
-            else:
-                boss_pool, chest_pool, merchant_pool = raw_bosses, raw_chests, raw_merchants
-                elites, roaming = raw_elites, raw_roaming
-            enemy_pool = (elites + roaming) if (elites or roaming) else []
-
-        acc_catalog = (kb.list_all_vanilla_accessories(tier=tier) or kb.list_all_vanilla_accessories()) if (kb and hasattr(kb, "list_all_vanilla_accessories")) else {}
+        # Imported behavior/attack payloads can be megabytes. They describe the
+        # shared moveset, so include them once instead of copying them per roll.
+        shared_keys = {"custom_skills", "custom_behaviors", "custom_attacks"}
+        variant_base = {key: value for key, value in base_spec.items() if key not in shared_keys}
 
         for v_idx in range(variants_per_item):
-            spec_copy = copy.deepcopy(base_spec)
-            spec_copy["set_id"] = f"{base_spec['set_id']}_v{v_idx + 1}"
+            spec_copy = base_spec if count_only else copy.deepcopy(variant_base)
+            if v_idx == 0 and not count_only:
+                spec_copy.update({key: base_spec[key] for key in shared_keys if key in base_spec})
+            if not count_only:
+                spec_copy["set_id"] = f"{base_spec['set_id']}_v{v_idx + 1}"
 
             # 1. Determine distribution destination across whole game with progression locking
             is_boss, boss_name, loot_spec = False, None, None
@@ -150,13 +142,20 @@ class DiabloVariantBuilder:
             is_chest_drop = loot_spec is not None and loot_spec.get("type") in ("map_pickup", "world_chest", "chest_drop")
             is_boss = is_boss or (loot_spec is not None and loot_spec.get("type") == "boss_remembrance")
 
+            if count_only:
+                equipment = base_spec.get("equip_params", [])
+                row_counts.update(ep["param_table"] for ep in equipment)
+                if (is_boss or is_chest_drop) and kb and equipment and acc_catalog:
+                    row_counts["EquipParamAccessory"] += 2 if is_chest_drop else 1
+                continue
+
             # 2. Modify Equip Params and FMG texts with rolled affixes
             variant_new_ids: List[int] = []
             variant_item_prices: Dict[str, int] = {}
 
             for ep in spec_copy.get("equip_params", []):
                 old_id = ep["new_param_id"]
-                new_id = old_id + ((v_idx + 1) * 100)
+                new_id = generator.allocate_variant_id()
                 ep["new_param_id"] = new_id
                 variant_new_ids.append(new_id)
 
@@ -222,7 +221,7 @@ class DiabloVariantBuilder:
                         comp_base_id = comp_info.get("baseParamId", 1000)
                         comp_name = comp_info.get("name", "Talisman")
 
-                        comp_param_id = variant_new_ids[0] + 50 + extra_idx
+                        comp_param_id = generator.allocate_variant_id()
                         if comp_param_id not in variant_new_ids:
                             comp_rarity = generator.roll_rarity(is_boss=is_boss, is_chest=is_chest_drop)
                             comp_affixes = generator.roll_affixes(comp_rarity, is_weapon=False, is_accessory=True, is_boss=is_boss or is_chest_drop)
@@ -282,4 +281,4 @@ class DiabloVariantBuilder:
 
             variant_specs.append(spec_copy)
 
-        return variant_specs
+        return dict(row_counts) if count_only else variant_specs

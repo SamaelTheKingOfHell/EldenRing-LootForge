@@ -22,6 +22,7 @@ namespace LootForge.RegTool
         {
             _enemyLotRowMap = null;
             _mapLotRowMap = null;
+            ShopLootInjector.ResetCache();
         }
 
         public static void InjectLootDistribution(
@@ -110,6 +111,7 @@ namespace LootForge.RegTool
                 if (fallbackChest != null)
                 {
                     candidateRows.Add(fallbackChest);
+                    itemLotParam = mapParam;
                     isMapTable = true;
                 }
                 else
@@ -162,28 +164,18 @@ namespace LootForge.RegTool
                 foreach (int itm in overflowItems)
                 {
                     bool placed = false;
-                    foreach (var mRow in mapParam.Rows)
+                    var freeSlot = LootSlotAllocator.Next(mapParam, mapLayout);
+                    if (freeSlot is { } free)
                     {
-                        if (ParamHelper.GetCellIntFast(mRow, mId0) > 0)
-                        {
-                            for (int s = 1; s < 8; s++)
-                            {
-                                if (ParamHelper.GetCellIntFast(mRow, mapLayout.ItemIdIndices[s]) == 0)
-                                {
-                                    bool isAccessory = itemIdToIsAccessory.TryGetValue(itm, out var ia) && ia;
-                                    bool isArmor = itemIdToIsProtector.TryGetValue(itm, out var ip) ? ip : (!isAccessory && !itemIdToIsWeapon.GetValueOrDefault(itm, false));
-                                    int lotCategory = isAccessory ? 4 : (isArmor ? 3 : 2);
-                                    ParamHelper.SetCellFast(mRow, mapLayout.ItemIdIndices[s], itm);
-                                    ParamHelper.SetCellFast(mRow, mapLayout.CategoryIndices[s], lotCategory);
-                                    ParamHelper.SetCellFast(mRow, mapLayout.BasePointIndices[s], (ushort)1000);
-                                    ParamHelper.SetCellFast(mRow, mapLayout.NumIndices[s], (byte)1);
-                                    ParamHelper.SetCellFast(mRow, mapLayout.FlagIdIndices[s], 0u);
-                                    placed = true;
-                                    break;
-                                }
-                            }
-                            if (placed) break;
-                        }
+                        bool isAccessory = itemIdToIsAccessory.GetValueOrDefault(itm);
+                        bool isArmor = itemIdToIsProtector.GetValueOrDefault(itm);
+                        int category = isAccessory ? 4 : (isArmor ? 3 : 2);
+                        ParamHelper.SetCellFast(free.Row, mapLayout.ItemIdIndices[free.Slot], itm);
+                        ParamHelper.SetCellFast(free.Row, mapLayout.CategoryIndices[free.Slot], category);
+                        ParamHelper.SetCellFast(free.Row, mapLayout.BasePointIndices[free.Slot], (ushort)1000);
+                        ParamHelper.SetCellFast(free.Row, mapLayout.NumIndices[free.Slot], (byte)1);
+                        ParamHelper.SetCellFast(free.Row, mapLayout.FlagIdIndices[free.Slot], 0u);
+                        placed = true;
                     }
                     if (!placed) remaining.Add(itm);
                 }

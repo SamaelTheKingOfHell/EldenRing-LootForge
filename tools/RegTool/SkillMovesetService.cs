@@ -15,6 +15,8 @@ namespace LootForge.RegTool
     /// </summary>
     public static class SkillMovesetService
     {
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<PARAM, HashSet<int>> RowIds = new();
+        private static HashSet<int> GetRowIds(PARAM param) => RowIds.GetValue(param, p => p.Rows.Select(r => r.ID).ToHashSet());
         public class WeaponSkillInfo
         {
             public int WeaponId { get; set; }
@@ -268,8 +270,7 @@ namespace LootForge.RegTool
                 {
                     int skillId = sEl.GetProperty("skill_id").GetInt32();
                     string skillName = sEl.TryGetProperty("name", out var sn) ? sn.GetString() ?? "" : "";
-                    var existing = saParam.Rows.FirstOrDefault(r => r.ID == skillId);
-                    if (existing == null)
+                    if (GetRowIds(saParam).Add(skillId))
                     {
                         var baseRow = saParam.Rows.FirstOrDefault(r => r.ID > 0) ?? saParam.Rows.First();
                         var newRow = new PARAM.Row(baseRow) { ID = skillId, Name = $"[LootForge] {skillName}" };
@@ -290,7 +291,7 @@ namespace LootForge.RegTool
                 foreach (var bEl in customBehaviorsEl.EnumerateArray())
                 {
                     int behId = bEl.GetProperty("id").GetInt32();
-                    if (!bParam.Rows.Any(r => r.ID == behId))
+                    if (GetRowIds(bParam).Add(behId))
                     {
                         var baseRow = bParam.Rows.FirstOrDefault(r => r.ID > 0) ?? bParam.Rows.First();
                         var newRow = new PARAM.Row(baseRow) { ID = behId, Name = "[LootForge] Custom Behavior" };
@@ -311,7 +312,7 @@ namespace LootForge.RegTool
                 foreach (var aEl in customAttacksEl.EnumerateArray())
                 {
                     int atkId = aEl.GetProperty("id").GetInt32();
-                    if (!atkParam.Rows.Any(r => r.ID == atkId))
+                    if (GetRowIds(atkParam).Add(atkId))
                     {
                         var baseRow = atkParam.Rows.FirstOrDefault(r => r.ID > 0) ?? atkParam.Rows.First();
                         var newRow = new PARAM.Row(baseRow) { ID = atkId, Name = "[LootForge] Custom Attack" };
@@ -330,7 +331,7 @@ namespace LootForge.RegTool
             foreach (var prop in fields.EnumerateObject())
             {
                 if (prop.Name.StartsWith("_")) continue;
-                var cell = row.Cells.FirstOrDefault(c => string.Equals(c.Def.InternalName, prop.Name, StringComparison.OrdinalIgnoreCase));
+                var cell = ParamHelper.FindCell(row, prop.Name);
                 if (cell != null)
                 {
                     ParamHelper.SetCellValue(cell, prop.Value);
@@ -341,8 +342,16 @@ namespace LootForge.RegTool
         /// <summary>
         /// Purges previous LootForge custom skills and behaviors to guarantee a pristine baseline.
         /// </summary>
-        public static void PurgePreviousInjections(Func<string, string, (PARAM Param, BinderFile File)> getOrLoadParam)
+        public static void PurgePreviousInjections(Func<string, string, (PARAM Param, BinderFile File)> getOrLoadParam,
+            Action<string, string>? purgeNamedRows = null)
         {
+            if (purgeNamedRows != null)
+            {
+                purgeNamedRows("SwordArtsParam", "SwordArtsParam");
+                purgeNamedRows("BehaviorParam_PC", "BehaviorParam");
+                purgeNamedRows("AtkParam_Pc", "AtkParam");
+                return;
+            }
             try
             {
                 var (saParam, _) = getOrLoadParam("SwordArtsParam", "SwordArtsParam");

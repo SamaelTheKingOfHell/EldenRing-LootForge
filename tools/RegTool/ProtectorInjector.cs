@@ -50,7 +50,7 @@ namespace LootForge.RegTool
                 if (r.ID >= 10000 && r.ID <= 10300) continue;
                 if (r.ID >= 900000 && r.ID < 902000) continue;
                 if (r.ID >= 1960000 && r.ID <= 1980000) continue;
-                if (string.IsNullOrWhiteSpace(r.Name) || r.Name.Contains("[ERROR]") || r.Name.Contains("Dummy") || r.Name.StartsWith("?")) continue;
+                if (!string.IsNullOrWhiteSpace(r.Name) && (r.Name.Contains("[ERROR]", StringComparison.OrdinalIgnoreCase) || r.Name.Contains("Dummy", StringComparison.OrdinalIgnoreCase) || r.Name.StartsWith("?"))) continue;
 
                 int iM = iconMIdx >= 0 ? ParamHelper.GetCellIntFast(r, iconMIdx) : 0;
                 int iF = iconFIdx >= 0 ? ParamHelper.GetCellIntFast(r, iconFIdx) : 0;
@@ -77,11 +77,11 @@ namespace LootForge.RegTool
             if (r.ID >= 900000 && r.ID < 902000) return false; // DS3 test rows
             if (r.ID >= 1960000 && r.ID <= 1980000) return false;
 
-            if (string.IsNullOrWhiteSpace(r.Name)) return false;
-            if (r.Name.Contains("[ERROR]", StringComparison.OrdinalIgnoreCase)) return false;
-            if (r.Name.Contains("Dummy", StringComparison.OrdinalIgnoreCase)) return false;
-            if (r.Name.StartsWith("?")) return false;
-            if (r.Name.StartsWith("dummy", StringComparison.OrdinalIgnoreCase)) return false;
+            string sourceName = r.Name ?? "";
+            if (sourceName.Contains("[ERROR]", StringComparison.OrdinalIgnoreCase)) return false;
+            if (sourceName.Contains("Dummy", StringComparison.OrdinalIgnoreCase)) return false;
+            if (sourceName.StartsWith("?")) return false;
+            if (sourceName.StartsWith("dummy", StringComparison.OrdinalIgnoreCase)) return false;
 
             int iconM = ParamHelper.GetCellInt(r, "iconIdM");
             int iconF = ParamHelper.GetCellInt(r, "iconIdF");
@@ -177,6 +177,8 @@ namespace LootForge.RegTool
             if (rowMap.TryGetValue(newParamId, out var existingRow))
             {
                 bool updateExisting = ep.TryGetProperty("update_existing", out var ue) && ue.GetBoolean();
+                if (!updateExisting)
+                    throw new InvalidOperationException($"Equipment ID {newParamId} already exists. Refusing to discard or overwrite an item.");
                 if (updateExisting && ep.TryGetProperty("field_updates", out var fieldsElUpdate) && fieldsElUpdate.ValueKind == JsonValueKind.Object)
                 {
                     ApplyFieldUpdates(existingRow, fieldsElUpdate);
@@ -277,7 +279,7 @@ namespace LootForge.RegTool
                     fieldName = "equipModelId";
                 }
 
-                var cell = row.Cells.FirstOrDefault(c => string.Equals(c.Def.InternalName, fieldName, StringComparison.OrdinalIgnoreCase));
+                var cell = ParamHelper.FindCell(row, fieldName);
                 if (cell != null)
                 {
                     ParamHelper.SetCellValue(cell, prop.Value);
