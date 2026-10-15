@@ -165,16 +165,16 @@ This roadmap defines the implementation phases for the cross-platform Standalone
   - 1-click comprehensive rollback unlinks deployed moveset files across `chr/`, `sfx/`, and `action/`, and prunes empty folders.
 
 ## Phase 13: Dark Souls 1/2/3 Legacy Armor Porting Subsystem
-- [ ] **Client-Side Game Installation Discovery**:
-  - Automated detection of Steam/local installations of DS1 (PTDE/DSR), DS2 (SOTFS), and DS3 via registry and `libraryfolders.vdf`.
-- [ ] **Selective In-Memory Archive Extraction**:
-  - High-performance random-access BHD5/BDT extraction of armor `parts/` archives, FMG lore texts, and `EquipParamProtector` stats without requiring 50 GB full game unpacking.
-- [ ] **FLVER2 & MATBIN Conversion Engine**:
-  - Upgrading legacy FLVER headers, re-packing vertex buffer layouts to Elden Ring 32-byte layout, re-targeting `.mtd` shaders to `.matbin` PBR shaders, and compressing with Oodle (`DCX_KRAKEN`).
-- [ ] **Skeletal Bone Remapping & Unisex Mirroring**:
-  - Translating legacy Havok skeleton nodes to Elden Ring's `c0000` player skeleton, with automated cross-gender mesh mirroring.
-- [ ] **Pre-Diablo Integration & Drop Distribution**:
-  - Ingesting ported sets as authentic `DetectedModSet` objects into LootForge's standalone ID allocator, boss remembrance exchanges, post-boss chests, and optional Diablo procedural ARPG stat infusion.
+- [x] **Client-Side Game Installation Discovery**:
+  - Automated detection of Steam/local installations of DS1 (PTDE/DSR), DS2 (SOTFS), and DS3 via registry and `libraryfolders.vdf` (`src/souls_port_adapter.py` & `SoulsGameDiscovery`).
+- [x] **Selective In-Memory Archive Extraction**:
+  - High-performance random-access BHD5/BDT extraction of armor `parts/` archives, FMG lore texts, and `EquipParamProtector` stats without requiring 50 GB full game unpacking (`tools/RegTool/SoulsPort/Ds1ArchiveReader.cs`).
+- [x] **FLVER2 & MATBIN Conversion Engine**:
+  - Upgrading legacy FLVER headers (0x2000C -> 0x20014), re-packing vertex buffer layouts to Elden Ring 40-byte rigged armor layout, re-targeting `.mtd` shaders to `.matbin` PBR shaders, and compressing with Oodle (`DCX_KRAK`) (`tools/RegTool/SoulsPort/FlverModernizer.cs`).
+- [x] **Skeletal Bone Remapping & Unisex Mirroring**:
+  - Translating legacy Havok skeleton nodes to Elden Ring's `c0000` player skeleton, with automated cross-gender mesh mirroring (`_m_` and `_f_`) and unisex parameter enforcement (`equipModelGender = 0`).
+- [x] **Pre-Diablo Integration & Drop Distribution**:
+  - Ingesting ported sets as authentic `DetectedModSet` objects into LootForge's standalone ID allocator, boss remembrance exchanges, post-boss chests, and optional Diablo procedural ARPG stat infusion with authentic DS1 lore descriptions and converted absorption curves.
 
 ## Phase 14: Equipment Category Decoupling & Talisman System Parity
 - [x] **Modular Equipment Injector Decomposition (`[CS-MODULAR]`, `[CS-DECOUPLE]`, `[CS-GRANULARITY]`)**:

@@ -137,8 +137,12 @@ class ParamBuilder:
                     base_clone_id = 0
 
             # Item display name with marker tag
-            cleaned_title = _clean_mod_folder_name(mod_set.folder_or_archive_name)
-            item_display_name = f"{alloc.marker_tag} {cleaned_title} ({slot_name})".strip()
+            if mod_set.souls_port_meta:
+                from src.souls_port_adapter import SoulsPortAdapter
+                item_display_name = SoulsPortAdapter.resolve_piece_name(mod_set, slot, marker=alloc.marker_tag)
+            else:
+                cleaned_title = _clean_mod_folder_name(mod_set.folder_or_archive_name)
+                item_display_name = f"{alloc.marker_tag} {cleaned_title} ({slot_name})".strip()
 
             # Dynamic power-based buy and sell pricing
             pricing = self.pricing_engine.calculate_item_prices(
@@ -167,6 +171,9 @@ class ParamBuilder:
                 field_updates["_lf_hasMaleFiles"] = 1 if has_male_files else 0
                 field_updates["_lf_hasFemaleFiles"] = 1 if has_female_files else 0
                 field_updates["_lf_fallbackModelId"] = VANILLA_FALLBACK_MODEL_ID
+                if mod_set.souls_port_meta:
+                    from src.souls_port_adapter import SoulsPortAdapter
+                    field_updates.update(SoulsPortAdapter.get_er_field_updates(mod_set, slot))
             else:
                 # If weapon has custom skill or moveset metadata, apply it
                 if getattr(mod_set, "import_custom_moveset", True) and mod_set.skill_moveset:
@@ -209,6 +216,12 @@ class ParamBuilder:
 
             # FMG text specification — vanilla_source_id lets RegTool copy
             # authentic names/descriptions from the vanilla item being replaced
+            caption_text = (
+                SoulsPortAdapter.resolve_piece_caption(mod_set, slot)
+                if mod_set.souls_port_meta
+                else "Standalone relic forged by LootForge. Preserves authentic vanilla gear while offering unique drops."
+            )
+
             fmg_texts.append({
                 "item_id": item_id,
                 "vanilla_source_id": base_clone_id,
@@ -217,7 +230,7 @@ class ParamBuilder:
                 "slot_offset": vanilla_offset,
                 "is_weapon": mod_set.is_weapon,
                 "name": item_display_name,
-                "caption": "Standalone relic forged by LootForge. Preserves authentic vanilla gear while offering unique drops.",
+                "caption": caption_text,
                 "info": f"Origin: {mod_set.folder_or_archive_name}"
             })
 

@@ -44,80 +44,36 @@ namespace LootForge.RegTool
             bool randomizeSkills = !options.TryGetValue("randomize-skills", out string? rs) || !bool.TryParse(rs, out bool parsedRs) || parsedRs;
             int seed = options.TryGetValue("seed", out string? sdStr) && int.TryParse(sdStr, out int parsedSeed) ? parsedSeed : 42;
 
-            var rng = new Random(seed);
-
-            Console.WriteLine($"[UniversalSweeper] Loading and decrypting: {inputPath}...");
-            BND4 bnd = RegulationDecryptor.DecryptERRegulation(inputPath);
-
-            PARAM LoadParam(string tableName)
+            var bnd = RegulationDecryptor.DecryptERRegulation(inputPath);
+            var loaded = new Dictionary<string, (PARAM Param, BinderFile File)>();
+            (PARAM Param, BinderFile File) Load(string table, string defName)
             {
-                var file = bnd.Files.FirstOrDefault(f => f.Name.EndsWith($"{tableName}.param", StringComparison.OrdinalIgnoreCase));
-                if (file == null) throw new Exception($"Table {tableName} not found in regulation.");
+                if (loaded.TryGetValue(table, out var entry)) return entry;
+                var file = bnd.Files.First(f => f.Name.EndsWith($"{table}.param", StringComparison.OrdinalIgnoreCase));
                 var param = PARAM.Read(file.Bytes);
-                string defBaseName = tableName.StartsWith("ItemLotParam", StringComparison.OrdinalIgnoreCase) ? "ItemLotParam" : tableName;
-                string xmlFile = Path.Combine(defsDir, $"{defBaseName}.xml");
-                if (File.Exists(xmlFile))
-                {
-                    var def = PARAMDEF.XmlDeserialize(xmlFile, false, false);
-                    param.ApplyParamdefSomewhatCarefully(def);
-                }
-                return param;
+                param.ApplyParamdef(PARAMDEF.XmlDeserialize(Path.Combine(defsDir, $"{defName}.xml"), false, false));
+                return loaded[table] = (param, file);
             }
+            var effects = InfuseParams(Load, randomizeSkills, seed);
+            foreach (var entry in loaded.Values) entry.File.Bytes = entry.Param.Write();
+            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(outputPath))!);
+            RegulationDecryptor.EncryptERRegulation(outputPath, bnd);
+            if (!string.IsNullOrEmpty(msgDir))
+                FmgInjector.InjectFmgTexts(msgDir, outputPath, new List<FmgInjector.FmgTextSpec>(), archive => SweepFmgService.Apply(archive, effects));
+            return 0;
+        }
 
-            var wepParam = LoadParam("EquipParamWeapon");
-            var protParam = LoadParam("EquipParamProtector");
-            var accParam = LoadParam("EquipParamAccessory");
-
-            // FMG BND loading for live name and description mutation
-            BND4? itemMsgBnd = null;
-            BND4? dlcMsgBnd = null;
-            string? itemMsgPath = null;
-            string? dlcMsgPath = null;
-
-            if (!string.IsNullOrEmpty(msgDir) && Directory.Exists(msgDir))
-            {
-                itemMsgPath = Path.Combine(msgDir, "item.msgbnd.dcx");
-                dlcMsgPath = Path.Combine(msgDir, "item_dlc02.msgbnd.dcx");
-                if (File.Exists(itemMsgPath))
-                {
-                    try
-                    {
-                        itemMsgBnd = BND4.Read(itemMsgPath);
-                        if (File.Exists(dlcMsgPath))
-                            dlcMsgBnd = BND4.Read(dlcMsgPath);
-                        Console.WriteLine("[UniversalSweeper] Loaded FMG message packages for in-place text infusion.");
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"[UniversalSweeper WARN] Could not load FMG message packages: {ex.Message}");
-                    }
-                }
-            }
-
-            // Dictionaries for fast FMG lookups
-            var fmgCache = new Dictionary<string, FMG>(StringComparer.OrdinalIgnoreCase);
-            FMG? GetFmg(string category)
-            {
-                if (itemMsgBnd == null) return null;
-                if (fmgCache.TryGetValue(category, out var cached)) return cached;
-
-                var f = itemMsgBnd.Files.FirstOrDefault(bf => bf.Name.EndsWith($"{category}.fmg", StringComparison.OrdinalIgnoreCase));
-                if (f != null)
-                {
-                    var fmg = FMG.Read(f.Bytes);
-                    fmgCache[category] = fmg;
-                    return fmg;
-                }
-                return null;
-            }
-
-            var wepNameFmg = GetFmg("WeaponName");
-            var wepCaptionFmg = GetFmg("WeaponCaption");
-            var protNameFmg = GetFmg("ProtectorName");
-            var protCaptionFmg = GetFmg("ProtectorCaption");
-            var accNameFmg = GetFmg("AccessoryName");
-            var accCaptionFmg = GetFmg("AccessoryCaption");
-
+        /// <summary>Infuse loaded equipment once; return text effects for the shared FMG pass.</summary>
+        public static List<SweepFmgService.Effect> InfuseParams(
+            Func<string, string, (PARAM Param, BinderFile File)> getOrLoadParam,
+            bool randomizeSkills = true, int seed = 42)
+        {
+            var rng = new Random(seed);
+            var effects = new List<SweepFmgService.Effect>();
+            var wepParam = getOrLoadParam("EquipParamWeapon", "EquipParamWeapon").Param;
+            var protParam = getOrLoadParam("EquipParamProtector", "EquipParamProtector").Param;
+            var accParam = getOrLoadParam("EquipParamAccessory", "EquipParamAccessory").Param;
+            static bool IsGenerated(PARAM.Row row) => row.Name?.Contains("[LootForge]") == true || row.Name?.Contains("[LootForgeInfused]") == true;
             DiabloRarity RollRarity()
             {
                 int r = rng.Next(100);
@@ -139,7 +95,7 @@ namespace LootForge.RegTool
                 int modelId = ParamHelper.GetCellInt(r, "equipModelId");
                 int originId = ParamHelper.GetCellInt(r, "originEquipWep");
 
-                if (wepType > 0 && isDeposit == 1 && sortId > 0 && modelId > 0 && r.ID != 110000 && r.ID >= 1000000)
+                if (!IsGenerated(r) && wepType > 0 && isDeposit == 1 && sortId > 0 && modelId > 0 && r.ID != 110000 && r.ID >= 1000000)
                 {
                     totalEligibleWeapons++;
                     int familyId = originId > 0 ? originId : (r.ID - (r.ID % 100));
@@ -198,25 +154,10 @@ namespace LootForge.RegTool
                         }
                     }
 
-                    // FMG mutation
-                    if (wepNameFmg != null)
-                    {
-                        var entry = wepNameFmg.Entries.FirstOrDefault(e => e.ID == row.ID);
-                        if (entry != null && !string.IsNullOrWhiteSpace(entry.Text) && !entry.Text.StartsWith("["))
-                        {
-                            entry.Text = $"[{rarity.ToString().ToUpper()}] {entry.Text.Trim()}";
-                        }
-                    }
+                    effects.Add(new SweepFmgService.Effect(row.ID, "Weapon", rarity.ToString(),
+                        $"+{(int)((dmgMult - 1f) * 100)}% Attack Power, +{(int)scalingAdd} Scaling"));
 
-                    if (wepCaptionFmg != null)
-                    {
-                        var entry = wepCaptionFmg.Entries.FirstOrDefault(e => e.ID == row.ID);
-                        if (entry != null && !string.IsNullOrWhiteSpace(entry.Text) && !entry.Text.Contains("[Diablo"))
-                        {
-                            entry.Text = $"[Diablo {rarity}] +{(int)((dmgMult - 1f) * 100)}% Attack Power, +{(int)scalingAdd} Scaling\n{entry.Text.Trim()}";
-                        }
-                    }
-
+                    row.Name = (row.Name ?? "") + " [LootForgeInfused]";
                     infusedWeapons++;
                 }
             }
@@ -229,7 +170,7 @@ namespace LootForge.RegTool
                 int sortId = ParamHelper.GetCellInt(r, "sortId");
                 int modelId = ParamHelper.GetCellInt(r, "equipModelId");
 
-                if (isDeposit == 1 && sortId > 0 && modelId > 0)
+                if (!IsGenerated(r) && isDeposit == 1 && sortId > 0 && modelId > 0)
                 {
                     var rarity = RollRarity();
                     float defMult = 1.0f + ((int)rarity * 0.08f); // +8%, +16%, +24%, +32%
@@ -251,25 +192,10 @@ namespace LootForge.RegTool
                         ParamHelper.SetCellIfExists(r, "saDurability", (short)(poise + poiseAdd));
                     }
 
-                    // FMG mutation
-                    if (protNameFmg != null)
-                    {
-                        var entry = protNameFmg.Entries.FirstOrDefault(e => e.ID == r.ID);
-                        if (entry != null && !string.IsNullOrWhiteSpace(entry.Text) && !entry.Text.StartsWith("["))
-                        {
-                            entry.Text = $"[{rarity.ToString().ToUpper()}] {entry.Text.Trim()}";
-                        }
-                    }
+                    effects.Add(new SweepFmgService.Effect(r.ID, "Protector", rarity.ToString(),
+                        $"+{(int)((defMult - 1f) * 100)}% Defenses, +{poiseAdd} Poise"));
 
-                    if (protCaptionFmg != null)
-                    {
-                        var entry = protCaptionFmg.Entries.FirstOrDefault(e => e.ID == r.ID);
-                        if (entry != null && !string.IsNullOrWhiteSpace(entry.Text) && !entry.Text.Contains("[Diablo"))
-                        {
-                            entry.Text = $"[Diablo {rarity}] +{(int)((defMult - 1f) * 100)}% Defenses, +{poiseAdd} Poise\n{entry.Text.Trim()}";
-                        }
-                    }
-
+                    r.Name = (r.Name ?? "") + " [LootForgeInfused]";
                     infusedProtectors++;
                 }
             }
@@ -281,74 +207,18 @@ namespace LootForge.RegTool
                 int isDeposit = ParamHelper.GetCellInt(r, "isDeposit");
                 int sortId = ParamHelper.GetCellInt(r, "sortId");
 
-                if (isDeposit == 1 && sortId > 0)
+                if (!IsGenerated(r) && isDeposit == 1 && sortId > 0)
                 {
                     var rarity = RollRarity();
-                    if (accNameFmg != null)
-                    {
-                        var entry = accNameFmg.Entries.FirstOrDefault(e => e.ID == r.ID);
-                        if (entry != null && !string.IsNullOrWhiteSpace(entry.Text) && !entry.Text.StartsWith("["))
-                        {
-                            entry.Text = $"[{rarity.ToString().ToUpper()}] {entry.Text.Trim()}";
-                        }
-                    }
-                    if (accCaptionFmg != null)
-                    {
-                        var entry = accCaptionFmg.Entries.FirstOrDefault(e => e.ID == r.ID);
-                        if (entry != null && !string.IsNullOrWhiteSpace(entry.Text) && !entry.Text.Contains("[Diablo"))
-                        {
-                            entry.Text = $"[Diablo {rarity}] Sacred Relic\n{entry.Text.Trim()}";
-                        }
-                    }
+                    effects.Add(new SweepFmgService.Effect(r.ID, "Accessory", rarity.ToString(), "Sacred Relic"));
+                    r.Name = (r.Name ?? "") + " [LootForgeInfused]";
                     infusedAccessories++;
                 }
             }
 
             Console.WriteLine($"[UniversalSweeper SUCCESS] Infused {infusedWeapons} weapons, {infusedProtectors} protectors, {infusedAccessories} accessories.");
 
-            // Repack params into regulation BND4
-            void SaveParamBytes(string tableName, PARAM param)
-            {
-                var file = bnd.Files.FirstOrDefault(f => f.Name.EndsWith($"{tableName}.param", StringComparison.OrdinalIgnoreCase));
-                if (file != null) file.Bytes = param.Write();
-            }
-
-            SaveParamBytes("EquipParamWeapon", wepParam);
-            SaveParamBytes("EquipParamProtector", protParam);
-            SaveParamBytes("EquipParamAccessory", accParam);
-
-            // Re-encrypt regulation
-            string? outDir = Path.GetDirectoryName(outputPath);
-            if (!string.IsNullOrEmpty(outDir) && !Directory.Exists(outDir)) Directory.CreateDirectory(outDir);
-            RegulationDecryptor.EncryptERRegulation(outputPath, bnd);
-            Console.WriteLine($"[UniversalSweeper] Encrypted updated regulation.bin to: {outputPath}");
-
-            // Save repacked FMGs if modified
-            if (itemMsgBnd != null && !string.IsNullOrEmpty(itemMsgPath))
-            {
-                foreach (var kvp in fmgCache)
-                {
-                    string cat = kvp.Key;
-                    var fmg = kvp.Value;
-                    var bf = itemMsgBnd.Files.FirstOrDefault(f => f.Name.EndsWith($"{cat}.fmg", StringComparison.OrdinalIgnoreCase));
-                    if (bf != null) bf.Bytes = fmg.Write();
-
-                    if (dlcMsgBnd != null)
-                    {
-                        var dlcBf = dlcMsgBnd.Files.FirstOrDefault(f => f.Name.EndsWith($"{cat}.fmg", StringComparison.OrdinalIgnoreCase));
-                        if (dlcBf != null) dlcBf.Bytes = fmg.Write();
-                    }
-                }
-                itemMsgBnd.Write(itemMsgPath);
-                Console.WriteLine($"[UniversalSweeper] Saved updated item messages to: {itemMsgPath}");
-                if (dlcMsgBnd != null && !string.IsNullOrEmpty(dlcMsgPath))
-                {
-                    dlcMsgBnd.Write(dlcMsgPath);
-                    Console.WriteLine($"[UniversalSweeper] Mirrored updated messages to DLC: {dlcMsgPath}");
-                }
-            }
-
-            return 0;
+            return effects;
         }
     }
 }

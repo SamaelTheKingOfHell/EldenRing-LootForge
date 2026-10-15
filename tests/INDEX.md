@@ -21,6 +21,7 @@ Automated verification suites adhering to `[CS-NO-MOCK]`. Tests exercise concret
 | `test_pricing_engine.py` | Validates power-scaled rune pricing, regional progression tiers, rarity multipliers, affixes, boss prestige, and sell ratios (`[CS-NO-MOCK]`). |
 | `test_skill_moveset_importer.py` | Validates custom weapon skills extraction, moveset asset deployment (chr, sfx, action), parameter spec generation, and PartsDeployer integration. |
 | `test_accessory_modular_injection.py` | Validates authentic talisman iconId extraction (>= 18000), absence of transparent/placeholder icons, and accessory FMG text specs. |
+| `test_souls_armor_port.py` | Validates DS1 game discovery, flat-to-curve defense translation, FMG lore generation, and ParamBuilder integration (`[CS-NO-MOCK]`). |
 | `verify_server.py` | End-to-end integration test validating HTTP API endpoints and UI asset serving (`[CS-NO-MOCK]`). |
 
 

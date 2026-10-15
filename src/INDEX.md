@@ -32,6 +32,7 @@ This directory contains the core Python engine implementation for LootForge, org
 | `game_assets_service.py` | `GameAssetsService` | Manages regulation resolution, backups, and message file extraction. |
 | `parts_deployer.py` | `PartsDeployer` | Standalone .partsbnd.dcx model deployment and cross-gender mesh mirroring service. |
 | `skill_moveset_importer.py` | `SkillMovesetImporter` | Mod regulation introspection, custom weapon skill & moveset extraction, and chr/sfx/action asset deployment. |
+| `souls_port_adapter.py` | `SoulsPortAdapter` | Legacy Souls armor metadata translation, defense curve scaling, FMG captions, and game discovery. |
 | `ui/` | UI Components | Themed styles (`theme.py`), modular parameter schema, widget factory, builder, orchestrator, and modals. |
 | `qt_app.py` | `LootForgeMainWindow` | Full Qt desktop GUI coordinating layout, settings, and modal inspection. |
 | `server.py` | `LootForgeServer` | Lightweight cross-platform local HTTP server serving UI and REST APIs. |
