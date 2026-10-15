@@ -7,7 +7,7 @@ public static class MessageArchiveService
 {
     /// <summary>Read a language directory or message root and retain every source language in the output.</summary>
     public static int Inject(string source, string regulationOutput, List<FmgInjector.FmgTextSpec> specs, Action<BND4>? transform,
-        Action<BND4>? prepare = null)
+        Action<BND4>? prepare = null, Action<BND4, string>? beforeArchive = null, Action<BND4, string>? afterArchive = null)
     {
         string full = Path.GetFullPath(source);
         string parent = Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(full))!;
@@ -22,9 +22,12 @@ public static class MessageArchiveService
         foreach (string path in archives)
         {
             var binder = BND4.Read(path);
+            string identity = Path.GetFileName(Path.GetDirectoryName(path)) + "/" + Path.GetFileName(path);
+            beforeArchive?.Invoke(binder, identity);
             prepare?.Invoke(binder);
             int injected = FmgArchiveService.InjectFmgEntriesIntoBnd(binder, specs);
             transform?.Invoke(binder);
+            afterArchive?.Invoke(binder, identity);
             string language = Path.GetFileName(Path.GetDirectoryName(path))!;
             string destination = Path.Combine(Path.GetDirectoryName(regulationOutput)!, "msg", language, Path.GetFileName(path));
             Directory.CreateDirectory(Path.GetDirectoryName(destination)!);

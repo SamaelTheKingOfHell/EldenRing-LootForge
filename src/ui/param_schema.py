@@ -58,11 +58,15 @@ class ParamDescriptor:
     file_filter: Optional[str] = None
 
 
-def get_generator_param_descriptors() -> List[ParamDescriptor]:
+def get_generator_param_descriptors(locale: str = "en") -> List[ParamDescriptor]:
     """
     Returns the comprehensive list of input parameters for the generator,
     categorized by purpose and typed for automatic UI generation.
     """
+    import json
+    from pathlib import Path
+    locale = locale if locale in ("en", "pt_br") else "en"
+    strings = json.loads((Path(__file__).resolve().parents[2] / "data/localization" / f"{locale}.json").read_text(encoding="utf-8"))
     return [
         # --- Group 1: Drop Style & Rules (Enums, Multipliers) ---
         ParamDescriptor(
@@ -178,6 +182,20 @@ def get_generator_param_descriptors() -> List[ParamDescriptor]:
             description="Restricts randomized weapon skills (Ashes of War) to match the progression tier of the region/drop source, preventing end-game boss skills from appearing early.",
             default=True
         ),
+
+        ParamDescriptor(key="diablo_progression_scaling", label=strings["diablo_progression_scaling_label"],
+                        param_type=ParamType.BOOL, purpose=ParamPurpose.DIABLO_ARPG,
+                        description=strings["diablo_progression_scaling_description"], default=True),
+        ParamDescriptor(key="diablo_extra_passives", label=strings["diablo_extra_passives_label"],
+                        param_type=ParamType.BOOL, purpose=ParamPurpose.DIABLO_ARPG,
+                        description=strings["diablo_extra_passives_description"], default=False),
+        ParamDescriptor(key="diablo_triggered_effects", label=strings["diablo_triggered_effects_label"],
+                        param_type=ParamType.BOOL, purpose=ParamPurpose.DIABLO_ARPG,
+                        description=strings["diablo_triggered_effects_description"], default=False),
+
+        ParamDescriptor(key="diablo_auras_enabled", label=strings["diablo_auras_enabled_label"],
+                        param_type=ParamType.BOOL, purpose=ParamPurpose.DIABLO_ARPG,
+                        description=strings["diablo_auras_enabled_description"], default=False),
 
         # --- Group 3: Item Power & Price Multipliers ---
         ParamDescriptor(

@@ -52,6 +52,15 @@ This roadmap defines the implementation phases for the cross-platform Standalone
 - [x] End-to-end automated tests with synthetic replacer assets and verification test harness.
 
 ## Phase 6: Diablo-Style Procedural ARPG Loot System
+### Progression power, optional combat enchantments and auras (2026-10-15)
+- [x] Separate persisted Diablo settings for regional power, additional passives, rare Legendary/Mythic combat magic and cosmetic auras.
+- [x] Nine deterministic visual themes using neutral effect attachments and low-priority VFX; preserve buff eligibility.
+- [x] Enforce affix rarity floors, preserve early rare Legendary rolls, scale stats and passive chains by regional tier, and prevent empty regional pools from falling back across progression.
+- [x] Additional native HP/FP/stamina/recovery/ward passives, including weapon rolls; bounded script triggers for attacking, guarding and armor retaliation/healing.
+- [x] Reversible in-place infusion, external-edit preservation, family-consistent weapon bonuses and existing common-script merging.
+- [x] Build and deploy the local Release patcher; exercise the full copied-profile forge pipeline, binary round-trips and Qt controls.
+- [ ] In-game acceptance of casts, healing, retaliation, cooldowns, aura/buff overlap and unequip/disable behavior on freshly forged gear. Armor retaliation is a magic burst, not a percentage reflection of incoming damage.
+
 - [x] **Rarity Tiers & Weight Engine** (`src/diablo_affixes.py`):
   - Common, Magic, Rare, Legendary, and Mythic tiers with star ratings and authentic ARPG roll distributions.
 - [x] **Extensive Elden Ring Affix Library** (`src/diablo_affixes.py`):

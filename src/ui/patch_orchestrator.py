@@ -42,11 +42,7 @@ class PatchOrchestrator:
             try:
                 window.backup_manager.restore_latest_backup(reg_path)
                 target_p = Path(reg_path)
-                languages = {"engUS", "engus"}
-        message_root = target_reg.parent / "msg"
-        if message_root.exists():
-            languages.update(path.name for path in message_root.iterdir() if path.is_dir())
-        for lang in sorted(languages):
+                for lang in ["engUS", "engus"]:
                     for fname in ["item.msgbnd.dcx", "item_dlc02.msgbnd.dcx", "item_dlc01.msgbnd.dcx"]:
                         mf = target_p.parent / "msg" / lang / fname
                         if window.backup_manager.list_backups_for_file(fname):
@@ -185,7 +181,11 @@ class PatchOrchestrator:
         created_msg_files = []
         backed_up_files = {}
         seen_msg_paths = set()
-        for lang in ["engUS", "engus"]:
+        languages = {"engUS", "engus"}
+        message_root = target_reg.parent / "msg"
+        if message_root.exists():
+            languages.update(path.name for path in message_root.iterdir() if path.is_dir())
+        for lang in sorted(languages):
             lang_dir = target_reg.parent / "msg" / lang
             for fname in ["item.msgbnd.dcx", "item_dlc02.msgbnd.dcx", "item_dlc01.msgbnd.dcx"]:
                 mf = lang_dir / fname
@@ -199,18 +199,43 @@ class PatchOrchestrator:
                 else:
                     created_msg_files.append(str(mf))
 
+        infusion_state = target_reg.parent / "lootforge_diablo_fields.json"
+        if infusion_state.exists():
+            state_backup = backup_manager.create_file_backup(str(infusion_state), category="diablo")
+            backed_up_files[str(infusion_state)] = state_backup.backup_file_name
+        elif config.diablo_loot_enabled and config.diablo_inject_vanilla_stats:
+            created_msg_files.append(str(infusion_state))
+
+        text_state = target_reg.parent / "lootforge_diablo_texts.json"
+        if text_state.exists():
+            text_backup = backup_manager.create_file_backup(str(text_state), category="diablo")
+            backed_up_files[str(text_state)] = text_backup.backup_file_name
+        elif config.diablo_loot_enabled and config.diablo_inject_vanilla_stats:
+            created_msg_files.append(str(text_state))
+
+        event_file = target_reg.parent / "event" / "common.emevd.dcx"
+        if event_file.exists():
+            event_backup = backup_manager.create_file_backup(str(event_file), category="event")
+            backed_up_files[str(event_file)] = event_backup.backup_file_name
+        elif config.diablo_loot_enabled and config.diablo_triggered_effects:
+            created_msg_files.append(str(event_file))
+
         patch_specs = []
         injected_count = 0
         diablo_total_variants = 0
 
         diablo_gen = None
-        if config.diablo_loot_enabled or config.diablo_use_vanilla_base_items:
+        if config.diablo_loot_enabled:
             from src.diablo_generator import DiabloLootGenerator
             diablo_gen = DiabloLootGenerator(
                 seed=config.diablo_seed, knowledge_base=knowledge_base,
                 randomize_weapon_skills=config.diablo_randomize_weapon_skills,
                 balance_weapon_skills_by_progression=config.diablo_balance_weapon_skills_by_progression,
-                stats_multiplier=config.stats_multiplier, price_multiplier=config.price_multiplier
+                stats_multiplier=config.stats_multiplier, price_multiplier=config.price_multiplier,
+                progression_scaling=config.diablo_progression_scaling,
+                extra_passives=config.diablo_extra_passives,
+                triggered_effects=config.diablo_triggered_effects,
+                auras_enabled=config.diablo_auras_enabled
             )
 
         # Generate and validate the patch before staging any assets.
@@ -227,7 +252,7 @@ class PatchOrchestrator:
                 s.loot_target.chance_or_cost = distributor.calculate_final_rate(cfg.user_rate, global_multiplier_percent)
 
             base_spec = param_builder.build_patch_spec(s)
-            if diablo_gen and config.diablo_loot_enabled and config.diablo_variants_per_item > 1:
+            if diablo_gen and config.diablo_loot_enabled and config.diablo_variants_per_item >= 1:
                 variants = diablo_gen.generate_variants_for_spec(base_spec, variants_per_item=config.diablo_variants_per_item)
                 patch_specs.extend(variants)
                 diablo_total_variants += len(variants)
@@ -246,6 +271,9 @@ class PatchOrchestrator:
             diablo_total_variants += len(vanilla_dist_specs)
             injected_count += len(vanilla_dist_specs)
             system_logger.info(f"Generated {len(vanilla_dist_specs)} procedural relics from vanilla base items.", source="PatchOrchestrator")
+
+        if diablo_gen and config.diablo_inject_vanilla_stats:
+            patch_specs.extend(diablo_gen.generate_vanilla_stat_injections(knowledge_base))
 
         patch_specs = regulation_manager.prepare_patch_specs(patch_specs, source_reg)
         if target_reg.exists():
@@ -273,7 +301,7 @@ class PatchOrchestrator:
             chest_loot_pools_enabled=getattr(config, "chest_loot_pools_enabled", True),
             chest_min_items=getattr(config, "chest_min_items", 1),
             chest_max_items=getattr(config, "chest_max_items", 4),
-            sweep_vanilla_items=getattr(config, "diablo_loot_enabled", False) and getattr(config, "diablo_inject_vanilla_stats", False),
+            sweep_vanilla_items=False,
             randomize_skills=config.diablo_randomize_weapon_skills,
             seed=config.diablo_seed
         )

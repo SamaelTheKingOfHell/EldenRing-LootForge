@@ -24,7 +24,7 @@ class DiabloVariantBuilder:
         knowledge_base: Optional[Any] = None,
         count_only: bool = False
     ) -> Union[List[Dict[str, Any]], Dict[str, int]]:
-        if variants_per_item <= 1:
+        if variants_per_item < 1:
             if count_only:
                 from collections import Counter
                 return dict(Counter(ep["param_table"] for ep in base_spec.get("equip_params", [])))
@@ -58,18 +58,20 @@ class DiabloVariantBuilder:
 
             # 1. Determine distribution destination across whole game with progression locking
             is_boss, boss_name, loot_spec = False, None, None
+            destination = None
 
             if pools:
                 mod_bucket = v_idx % 3
                 if mod_bucket == 0 and boss_pool:
                     boss = generator.get_next_boss(boss_pool, excluded_ids=item_assigned_bosses) if hasattr(generator, "get_next_boss") else None
-                    if not boss and raw_bosses and hasattr(generator, "get_next_boss"):
+                    if not boss and raw_bosses and not generator.progression_scaling and hasattr(generator, "get_next_boss"):
                         boss = generator.get_next_boss(raw_bosses, excluded_ids=item_assigned_bosses)
                     if boss:
                         generator.record_boss_assignment(boss["id"])
                         generator.record_shop_allocation(boss["id"], is_enia=True)
                         item_assigned_bosses.add(boss["id"])
                         is_boss, boss_name = True, boss.get("name", "Great Enemy")
+                        destination = boss
                         loot_spec = {
                             "type": "shop_lineup",
                             "shop_type": "finger_reader_enia",
@@ -82,11 +84,12 @@ class DiabloVariantBuilder:
 
                 if mod_bucket == 1 and chest_pool:
                     chest = generator.get_next_chest(chest_pool, excluded_ids=item_assigned_chests) if hasattr(generator, "get_next_chest") else (chest_pool[0] if chest_pool else None)
-                    if not chest and raw_chests and hasattr(generator, "get_next_chest"):
+                    if not chest and raw_chests and not generator.progression_scaling and hasattr(generator, "get_next_chest"):
                         chest = generator.get_next_chest(raw_chests, excluded_ids=item_assigned_chests)
                     if chest:
                         generator.record_chest_assignment(chest.get("lotParamId", 0))
                         item_assigned_chests.add(chest.get("lotParamId", 0))
+                        destination = chest
                         loot_spec = {
                             "type": "map_pickup",
                             "lot_id": chest["lotParamId"],
@@ -102,6 +105,7 @@ class DiabloVariantBuilder:
                         shop_id = merch["id"]
                         if not generator.is_shop_capacity_exceeded(shop_id, is_enia=False):
                             generator.record_shop_allocation(shop_id, is_enia=False)
+                            destination = merch
                             loot_spec = {
                                 "type": "merchant_shop",
                                 "shop_id": merch["id"],
@@ -116,6 +120,7 @@ class DiabloVariantBuilder:
                         if elites:
                             elite = elites[(v_idx // 2) % len(elites)]
                             lot_id = elite.get("lotParamId", 380000000)
+                            destination = elite
                             loot_spec = {
                                 "type": "enemy_drop",
                                 "lot_id": lot_id,
@@ -126,6 +131,7 @@ class DiabloVariantBuilder:
                             }
                         elif enemy_pool:
                             enemy = enemy_pool[v_idx % len(enemy_pool)]
+                            destination = enemy
                             lot_id = enemy.get("lotParamId", 431100000)
                             loot_spec = {
                                 "type": "enemy_drop",
@@ -149,6 +155,9 @@ class DiabloVariantBuilder:
                     row_counts["EquipParamAccessory"] += 2 if is_chest_drop else 1
                 continue
 
+            effective_tier = kb.get_progression_tier(destination) if destination and kb else tier
+            spec_copy["tier"] = getattr(effective_tier, "value", effective_tier) or 1
+
             # 2. Modify Equip Params and FMG texts with rolled affixes
             variant_new_ids: List[int] = []
             variant_item_prices: Dict[str, int] = {}
@@ -161,14 +170,22 @@ class DiabloVariantBuilder:
 
                 is_weapon = ep.get("param_table") == "EquipParamWeapon"
                 is_accessory = ep.get("param_table") == "EquipParamAccessory"
-                rarity = generator.roll_rarity(is_boss=is_boss, is_chest=is_chest_drop)
-                affixes = generator.roll_affixes(rarity, is_weapon=is_weapon, is_accessory=is_accessory, is_boss=is_boss or is_chest_drop)
+                rarity = generator.roll_rarity(is_boss=is_boss, is_chest=is_chest_drop, tier=effective_tier)
+                weapon_info = kb.lookup_weapon(str(ep.get("base_clone_id", ""))) if is_weapon and hasattr(kb, "lookup_weapon") else {}
+                is_shield = ep.get("is_shield", False) or (weapon_info or {}).get("wepType") in (65, 67, 69)
+                is_shield = is_shield or any("shield" in f.get("name", "").lower()
+                    for f in spec_copy.get("fmg_texts", []) if f.get("item_id") == old_id)
+                affixes = generator.roll_affixes(rarity, is_weapon=is_weapon,
+                    is_accessory=is_accessory, is_boss=is_boss or is_chest_drop,
+                    tier=effective_tier, is_shield=is_shield)
 
                 field_updates = ep.setdefault("field_updates", {})
                 field_updates["sortId"] = new_id
+                if generator.progression_scaling:
+                    from src.diablo_power import REGION_POWER, RARITY_POWER, RARITIES, tier_value
+                    field_updates["_lf_diablo_power"] = round(REGION_POWER[tier_value(effective_tier)-1] * RARITY_POWER[RARITIES.index(rarity)] * generator.stats_multiplier, 4)
 
                 rolled_skill: Optional[WeaponSkill] = None
-                effective_tier = tier
                 if is_weapon and generator.randomize_weapon_skills:
                     if not effective_tier and loot_spec and kb and hasattr(kb, "get_progression_tier"):
                         target_id = loot_spec.get("target_id") or loot_spec.get("shop_id") or loot_spec.get("lot_id")
@@ -223,8 +240,8 @@ class DiabloVariantBuilder:
 
                         comp_param_id = generator.allocate_variant_id()
                         if comp_param_id not in variant_new_ids:
-                            comp_rarity = generator.roll_rarity(is_boss=is_boss, is_chest=is_chest_drop)
-                            comp_affixes = generator.roll_affixes(comp_rarity, is_weapon=False, is_accessory=True, is_boss=is_boss or is_chest_drop)
+                            comp_rarity = generator.roll_rarity(is_boss=is_boss, is_chest=is_chest_drop, tier=effective_tier)
+                            comp_affixes = generator.roll_affixes(comp_rarity, is_weapon=False, is_accessory=True, is_boss=is_boss or is_chest_drop, tier=effective_tier)
                             comp_field_updates = {
                                 "sortId": comp_param_id,
                                 "isDeposit": 1,

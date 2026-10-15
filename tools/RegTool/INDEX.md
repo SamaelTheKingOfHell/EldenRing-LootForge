@@ -26,6 +26,12 @@ Adheres to `[CS-MODULAR]`, `[CS-GRANULARITY]`, and `[CS-DECOUPLE]` by decomposin
 | `UniversalSweeperService.cs` | `UniversalSweeperService` | 100% full-regulation vanilla item infusion across EquipParamWeapon, EquipParamProtector, and FMGs. |
 | `SkillMovesetService.cs` | `SkillMovesetService` | Mod regulation introspection, extracting custom weapon skills (`SwordArtsParam`), moveset behaviors (`BehaviorParam_PC`, `AtkParam_Pc`), and injection. |
 | `ParamHelper.cs` | `ParamHelper` | Utility methods for safely reading, writing, and type-converting PARAM cell values. |
+| `DiabloEffectService.cs` | Diablo native effects | Additive stats, scaled passive chains, bundled extra passives, shield/weapon/armor enchantments and weapon-family infusion. |
+| `DiabloAuraService.cs` | Cosmetic item visuals | Copy native persistent VFX with lower visual priority, preserving buff mechanics and shared templates. |
+| `DiabloCombatEvents.cs` | Diablo combat scripts | Merge owned EMEVD triggers, generated projectiles and cooldowns into the existing common script; remove them on a disabled reforge. |
+| `DiabloInfusionState.cs` | Reversible vanilla fields | Restore previous Diablo mutations before rerolling; preserve intervening external field edits. |
+| `DiabloTextState.cs` | Reversible infusion text | Restore original names/descriptions per language/archive when infusion is disabled. |
+| `ParamdefBitPadding.cs` | Effect bit preservation | Retain undocumented SpEffect bits instead of losing them during binary serialization. |
 | `RegTool.csproj` | - | .NET 9.0 project definition linking `SoulsFormatsNEXT`. |
 
 

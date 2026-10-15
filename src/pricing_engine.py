@@ -148,6 +148,10 @@ class PricingEngine:
                     affix_power += aff.field_modifiers.get(k, 0) * 30
                 if aff.field_modifiers.get("toughnessCorrectRate", 0) > 0:
                     affix_power += aff.field_modifiers["toughnessCorrectRate"] * 50
+                if aff.native_fields:
+                    affix_power += 2500
+                if aff.proc_kind:
+                    affix_power += 7500 * aff.power_scale
                 if getattr(aff, "sp_effect_id", None):
                     affix_power += 2500
                 if getattr(aff, "sp_effect_msg_id", None):

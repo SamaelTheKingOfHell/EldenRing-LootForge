@@ -1,0 +1,81 @@
+{
+  "recorded_utc": "2026-10-15T22:06:50.725311+00:00",
+  "scope": "Diablo-only progression, additional passives, rare combat magic and optional cosmetic auras",
+  "git_base": "50eaddc7585bc6a329dbcf78ae3c56f361d43d21",
+  "release": {
+    "deployment": "Workspace-local Release native patcher and updated Python/Qt source; restart the desktop app to load new controls",
+    "dll": "tools/RegTool/bin/Release/net9.0/RegTool.dll",
+    "sha256": "c067bf4cc39167eb214fe324c453699399ff66d6572c8ceed8de529fac65cfd0",
+    "build": "PASS; 0 warnings, 0 errors",
+    "active_game_profile_forged": false
+  },
+  "python": {
+    "command": "python -m unittest discover -s tests -p 'test_*.py'",
+    "passed": 144,
+    "failed": 0,
+    "log": "scratch/diablo-power/python-tests-final.log"
+  },
+  "native": {
+    "fixture_builder": "tests/DiabloChecks/build_specs.py",
+    "seed": 94715,
+    "input_sha256": "e0330914eb6bb9dbc178226ab4033b3eb2f3bf80f0f1695294a0fe4e15ebff71",
+    "equipment": 2355,
+    "checks": 11142,
+    "combat_events": 28,
+    "aura_visuals": 18,
+    "log": "scratch/diablo-power/repro-native/checks.json",
+    "coverage": "Real installed PARAM templates, controlled high-rarity rolls, forced coverage of every aura, binary round-trips, unknown bits, reference integrity, instruction layouts and initializer counts. Fixtures do not estimate drop frequency."
+  },
+  "copied_profile": {
+    "specifications": 1555,
+    "tracked_rows": {
+      "EquipParamWeapon": 3508,
+      "EquipParamProtector": 793,
+      "EquipParamAccessory": 156
+    },
+    "input_sha256": "4b1b4950a676a0199f9463765a9b48b64c6c35d05c566fabd3f4f10ec28c9961",
+    "first_forge": true,
+    "repeat_forge": true,
+    "same_seed_hashes_equal": {
+      "regulation.bin": true,
+      "lootforge_diablo_fields.json": true,
+      "lootforge_diablo_texts.json": true,
+      "event/common.emevd.dcx": true
+    },
+    "common_event_comparison": {
+      "uncompressedEqual": true,
+      "logicalEqual": true
+    },
+    "disabled": true,
+    "restored_fields": 60572,
+    "restored_text_entries": 13371,
+    "owned_effect_visual_projectile_behavior_attack_event_rows_after_disable": 0,
+    "log": "scratch/diablo-power/pipeline-auras-result.json"
+  },
+  "qt": {
+    "width": 680,
+    "height": 363,
+    "signal_wiring": "PASS all four new settings",
+    "master_toggle": "PASS all subordinate Diablo controls disabled/enabled",
+    "render": "scratch/diablo-power/controls-auras.png"
+  },
+  "runtime_acceptance": {
+    "game_executed": false,
+    "pending": [
+      "Attack/guard signal behavior",
+      "Incoming-damage sentinel and retaliation",
+      "Player projectile ownership, targeting and damage",
+      "Healing and cooldowns",
+      "Aura rendering, left/right weapons and stacked armor",
+      "Temporary grease, spell and Ash of War visual precedence, expiration and unchanged gameplay buffs",
+      "Equip/unequip, rest, death and reload"
+    ],
+    "assignment": "docs/DIABLO_MAGIC_QA.json"
+  },
+  "native_regression": {
+    "command": "dotnet run --project tests/RegToolChecks -c Release -- .",
+    "passed": 46,
+    "failed": 0,
+    "log": "scratch/diablo-power/native-regressions.log"
+  }
+}

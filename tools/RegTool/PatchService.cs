@@ -92,6 +92,7 @@ namespace LootForge.RegTool
                         }
                     }
                     def = PARAMDEF.XmlDeserialize(xmlFile, false, false);
+                    if (defName == "SpEffect") ParamdefBitPadding.Preserve(def);
                     paramdefCache[defName] = def;
                 }
                 return def;
@@ -163,12 +164,15 @@ namespace LootForge.RegTool
             LootInjector.ResetCache();
             PatchPreflight.Validate(specs, GetOrLoadParam);
             Stage("load and purge");
+            var diabloEffects = new DiabloEffectService(GetOrLoadParam);
+            diabloEffects.InfusionState = new DiabloInfusionState(outputPath, GetOrLoadParam);
 
             foreach (var setSpec in specs)
             {
                 // 1. Equip Params (EquipParamProtector / EquipParamWeapon / EquipParamAccessory)
                 if (setSpec.TryGetProperty("equip_params", out var equipParamsEl) && equipParamsEl.ValueKind == JsonValueKind.Array)
                 {
+                    diabloEffects.Prepare(equipParamsEl);
                     ParamInjector.InjectEquipParams(
                         equipParamsEl,
                         GetOrLoadParam,
@@ -178,6 +182,7 @@ namespace LootForge.RegTool
                         itemIdToVanillaSourceId,
                         ref injectedEquipCount
                     );
+                    diabloEffects.Apply(equipParamsEl);
                 }
 
                 // 2. Loot Distribution (NON-DESTRUCTIVE: Never clears vanilla loot)
@@ -229,6 +234,9 @@ namespace LootForge.RegTool
                         string ftCaption = ft.TryGetProperty("caption", out var c) ? c.GetString() ?? "" : "";
                         string ftInfo = ft.TryGetProperty("info", out var inf) ? inf.GetString() ?? "" : "";
                         allFmgTexts.Add(new FmgInjector.FmgTextSpec(ftItemId, ftVanillaId, ftIsWeapon, ftName, ftCaption, ftInfo, ftIsAccessory));
+                        if (diabloEffects.ExpandedItems.TryGetValue(ftItemId, out var family))
+                            foreach (int member in family.Where(id => id != ftItemId))
+                                allFmgTexts.Add(new FmgInjector.FmgTextSpec(member, member, true, ftName, ftCaption, ftInfo, false));
                     }
                 }
             }
@@ -290,19 +298,24 @@ namespace LootForge.RegTool
             Stage("encrypt and save");
 
             // Phase 2: FMG Text Injection
+            var diabloTexts = new DiabloTextState(outputPath, allFmgTexts, diabloEffects.InfusedItemIds);
             foreach (var text in allFmgTexts)
                 previousTextIds[text.IsAccessory ? "Accessory" : (text.IsWeapon ? "Weapon" : "Protector")].Remove(text.ItemId);
-            if (options.TryGetValue("msg", out string? msgDir) && !string.IsNullOrEmpty(msgDir) && (allFmgTexts.Count > 0 || sweepEffects.Count > 0))
+            if (options.TryGetValue("msg", out string? msgDir) && !string.IsNullOrEmpty(msgDir) && (allFmgTexts.Count > 0 || sweepEffects.Count > 0 || diabloTexts.HasHistory))
             {
                 injectedFmgCount = FmgInjector.InjectFmgTexts(msgDir, output.RegulationPath, allFmgTexts,
                     sweepEffects.Count > 0 ? archive => SweepFmgService.Apply(archive, sweepEffects) : null,
-                    archive => FmgCleanupService.Prune(archive, previousTextIds));
+                    archive => FmgCleanupService.Prune(archive, previousTextIds),
+                    beforeArchive: diabloTexts.Prepare, afterArchive: diabloTexts.Observe);
             }
-            else if (allFmgTexts.Count > 0)
+            else if (allFmgTexts.Count > 0 || diabloTexts.HasHistory)
             {
                 throw new InvalidDataException($"No message archives were provided for {allFmgTexts.Count} generated item names. Refusing to publish unnamed items.");
             }
 
+            diabloEffects.Combat.Stage(output.RegulationPath, outputPath, options.GetValueOrDefault("game-dir"));
+            diabloEffects.InfusionState.Stage(output.RegulationPath);
+            diabloTexts.Stage(output.RegulationPath);
             output.Commit();
             Stage("messages and total");
             Console.WriteLine($"[RegTool SUCCESS] Successfully patched regulation.bin!");

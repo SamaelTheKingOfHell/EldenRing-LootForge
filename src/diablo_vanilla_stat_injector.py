@@ -22,18 +22,19 @@ class VanillaStatInjector:
         specs: List[Dict[str, Any]] = []
 
         # 1. Vanilla weapons
-        weapons = kb.list_all_vanilla_weapons() if hasattr(kb, "list_all_vanilla_weapons") else getattr(kb, "_weapons", {})
+        weapons = VanillaStatInjector.catalog(kb, "weapons")
         for model_id, w_info in weapons.items():
             base_param_id = w_info.get("baseParamId")
             if not base_param_id:
                 continue
 
-            rarity = generator.roll_rarity(is_boss=False)
-            affixes = generator.roll_affixes(rarity, is_weapon=True, is_boss=False)
+            w_tier = kb.get_progression_tier(w_info) if hasattr(kb, "get_progression_tier") else None
+            rarity = generator.roll_rarity(is_boss=False, tier=w_tier)
+            affixes = generator.roll_affixes(rarity, is_weapon=True, is_boss=False, tier=w_tier,
+                is_shield=w_info.get("wepType") in (65, 67, 69) or "shield" in w_info.get("name", "").lower())
 
             field_updates: Dict[str, Any] = {}
             rolled_skill: Optional[WeaponSkill] = None
-            w_tier = kb.get_progression_tier(w_info) if (kb and hasattr(kb, "get_progression_tier")) else None
             if generator.randomize_weapon_skills:
                 gem_mount = w_info.get("gemMountType", 1)
                 is_unarmed = base_param_id == 110000 or base_param_id < 1000000
@@ -42,6 +43,7 @@ class VanillaStatInjector:
                     field_updates["swordArtsParamId"] = rolled_skill.id
 
             generator.apply_affixes_to_equipment(field_updates, affixes, is_weapon=True)
+            VanillaStatInjector.power(generator, field_updates, rarity, w_tier)
 
             pricing = generator.pricing_engine.calculate_item_prices(
                 slot="weapon",
@@ -66,6 +68,7 @@ class VanillaStatInjector:
                     "param_table": "EquipParamWeapon",
                     "new_param_id": base_param_id,
                     "update_existing": True,
+                    "diablo_infusion_family": True,
                     "field_updates": field_updates,
                     "row_name": f"[Vanilla Infused] {clean_name}"
                 }],
@@ -80,7 +83,7 @@ class VanillaStatInjector:
             })
 
         # 2. Vanilla protectors (armor sets: head, body, arms, legs)
-        protectors = kb.list_all_vanilla_protectors() if hasattr(kb, "list_all_vanilla_protectors") else getattr(kb, "_protectors", {})
+        protectors = VanillaStatInjector.catalog(kb, "protectors")
         for model_id, p_info in protectors.items():
             base_param_id = p_info.get("baseParamId")
             if not base_param_id:
@@ -90,14 +93,17 @@ class VanillaStatInjector:
             clean_desc = p_info.get("description", "")
             p_tier = kb.get_progression_tier(p_info) if (kb and hasattr(kb, "get_progression_tier")) else None
 
-            rarity = generator.roll_rarity(is_boss=False)
-            affixes = generator.roll_affixes(rarity, is_weapon=False, is_boss=False)
+            rarity = generator.roll_rarity(is_boss=False, tier=p_tier)
+            affixes = generator.roll_affixes(rarity, is_weapon=False, is_boss=False, tier=p_tier)
 
             field_updates: Dict[str, Any] = {}
             generator.apply_affixes_to_equipment(field_updates, affixes, is_weapon=False)
+            VanillaStatInjector.power(generator, field_updates, rarity, p_tier)
 
             explicit_pieces = p_info.get("pieces")
-            if explicit_pieces and isinstance(explicit_pieces, dict):
+            if p_info.get("_individual_piece"):
+                pieces_to_process = [(base_param_id, "Armor")]
+            elif explicit_pieces and isinstance(explicit_pieces, dict):
                 pieces_to_process = [(pid, sname) for sname, pid in explicit_pieces.items()]
             elif base_param_id % 10000 == 0:
                 pieces_to_process = [
@@ -151,7 +157,7 @@ class VanillaStatInjector:
                 })
 
         # 3. Vanilla accessories (talismans)
-        accessories = kb.list_all_vanilla_accessories() if hasattr(kb, "list_all_vanilla_accessories") else getattr(kb, "_accessories", {})
+        accessories = VanillaStatInjector.catalog(kb, "accessories")
         for model_id, a_info in accessories.items():
             base_param_id = a_info.get("baseParamId")
             if not base_param_id:
@@ -161,8 +167,8 @@ class VanillaStatInjector:
             clean_desc = a_info.get("description", "")
             a_tier = kb.get_progression_tier(a_info) if (kb and hasattr(kb, "get_progression_tier")) else None
 
-            rarity = generator.roll_rarity(is_boss=False)
-            affixes = generator.roll_affixes(rarity, is_weapon=False, is_accessory=True, is_boss=False)
+            rarity = generator.roll_rarity(is_boss=False, tier=a_tier)
+            affixes = generator.roll_affixes(rarity, is_weapon=False, is_accessory=True, is_boss=False, tier=a_tier)
 
             field_updates: Dict[str, Any] = {}
             generator.apply_affixes_to_equipment(field_updates, affixes, is_weapon=False, is_accessory=True)
@@ -203,3 +209,29 @@ class VanillaStatInjector:
             })
 
         return specs
+
+    @staticmethod
+    def catalog(kb, kind):
+        discovery = getattr(kb, "list_all_discovered_" + kind, None)
+        discovered = discovery() if discovery else {}
+        if hasattr(kb, "_discovered_" + kind) and not getattr(kb, "_discovered_" + kind):
+            discovered = {}
+        if not discovered:
+            getter = getattr(kb, "list_all_vanilla_" + kind, None)
+            return getter() if getter else getattr(kb, "_" + kind, {})
+        result = {}
+        for info in discovered.values():
+            item_id = info.get("baseParamId", 0)
+            if not item_id or item_id >= 90000000 or (kind == "weapons" and item_id < 1000000):
+                continue
+            key = info.get("familyId", item_id) if kind == "weapons" else item_id
+            if key not in result or item_id == key:
+                result[key] = dict(info, _individual_piece=(kind == "protectors"))
+        return result
+
+    @staticmethod
+    def power(generator, fields, rarity, tier):
+        if generator.progression_scaling:
+            from src.diablo_power import REGION_POWER, RARITY_POWER, RARITIES, tier_value
+            fields["_lf_diablo_power"] = round(REGION_POWER[tier_value(tier)-1] *
+                RARITY_POWER[RARITIES.index(rarity)] * generator.stats_multiplier, 4)

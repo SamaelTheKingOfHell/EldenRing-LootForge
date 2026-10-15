@@ -64,9 +64,11 @@ namespace LootForge.RegTool
             string regulationOutputPath,
             List<FmgTextSpec> fmgTexts,
             Action<BND4>? transform = null,
-            Action<BND4>? prepare = null)
+            Action<BND4>? prepare = null,
+            Action<BND4, string>? beforeArchive = null,
+            Action<BND4, string>? afterArchive = null)
         {
-            return MessageArchiveService.Inject(msgDir, regulationOutputPath, fmgTexts, transform, prepare);
+            return MessageArchiveService.Inject(msgDir, regulationOutputPath, fmgTexts, transform, prepare, beforeArchive, afterArchive);
         }
 
         public static int ExecuteSyncDlcMsg(Dictionary<string, string> options)

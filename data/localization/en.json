@@ -56,5 +56,13 @@
   "msg_uninstall_success": "Injected mods cleanly removed. Manifest cleared.",
   "err_no_game_dir": "Please specify a valid Elden Ring game or mod directory.",
   "err_no_mods_found": "No replacement mod files detected in the input directory.",
-  "err_forge_failed": "Failed to process mods: {error}"
+  "err_forge_failed": "Failed to process mods: {error}",
+  "diablo_progression_scaling_label": "Progression-scaled Diablo power",
+  "diablo_progression_scaling_description": "Scale item bonuses, affixes and passive strength by rarity and drop region. Early legendaries remain possible with weaker rolls.",
+  "diablo_extra_passives_label": "Additional Diablo passives",
+  "diablo_extra_passives_description": "Roll extra HP, FP, stamina, regeneration and protection passives. Higher rarities roll more passives.",
+  "diablo_triggered_effects_label": "Rare legendary combat magic",
+  "diablo_triggered_effects_description": "Rare Legendary/Mythic enchantments: attack casts, guarding casts/heals, and armor retaliation/healing. Requires game event scripts; cooldowns limit repeats.",
+  "diablo_auras_enabled_label": "Optional Diablo item auras",
+  "diablo_auras_enabled_description": "Persistent cosmetic flames, glintstone glows and other auras matching rolled effects. Does not add stats or change buff eligibility. Reforge to apply."
 }

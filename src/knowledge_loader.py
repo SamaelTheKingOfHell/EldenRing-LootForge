@@ -69,6 +69,7 @@ class KnowledgeLoader:
                 entry = {
                     "name": w.get("Name", f"Weapon {wid}"),
                     "baseParamId": w.get("Id"),
+                    "familyId": w.get("BaseId", w.get("Id")),
                     "defaultRoute": "merchant_shop",
                     "progressionTier": w.get("Tier", 1),
                     "modelId": w.get("ModelId"),

@@ -21,17 +21,19 @@ def distribution_context(generator, kb, tier):
         raw_roaming = pools.get("roaming", [])
 
         if tier and kb and hasattr(kb, "get_progression_tier"):
-            boss_pool = [b for b in raw_bosses if kb.get_progression_tier(b) == tier] or raw_bosses
-            chest_pool = [c for c in raw_chests if kb.get_progression_tier(c) == tier] or raw_chests
-            merchant_pool = [m for m in raw_merchants if kb.get_progression_tier(m) == tier] or raw_merchants
-            elites = [e for e in raw_elites if kb.get_progression_tier(e) == tier] or raw_elites
-            roaming = [r for r in raw_roaming if kb.get_progression_tier(r) == tier] or raw_roaming
+            boss_pool = [b for b in raw_bosses if kb.get_progression_tier(b) == tier] or ([] if generator.progression_scaling else raw_bosses)
+            chest_pool = [c for c in raw_chests if kb.get_progression_tier(c) == tier] or ([] if generator.progression_scaling else raw_chests)
+            merchant_pool = [m for m in raw_merchants if kb.get_progression_tier(m) == tier] or ([] if generator.progression_scaling else raw_merchants)
+            elites = [e for e in raw_elites if kb.get_progression_tier(e) == tier] or ([] if generator.progression_scaling else raw_elites)
+            roaming = [r for r in raw_roaming if kb.get_progression_tier(r) == tier] or ([] if generator.progression_scaling else raw_roaming)
         else:
             boss_pool, chest_pool, merchant_pool = raw_bosses, raw_chests, raw_merchants
             elites, roaming = raw_elites, raw_roaming
         enemy_pool = (elites + roaming) if (elites or roaming) else []
 
-    acc_catalog = (kb.list_all_vanilla_accessories(tier=tier) or kb.list_all_vanilla_accessories()) if (kb and hasattr(kb, "list_all_vanilla_accessories")) else {}
+    acc_catalog = kb.list_all_vanilla_accessories(tier=tier) if (kb and hasattr(kb, "list_all_vanilla_accessories")) else {}
+    if not acc_catalog and kb and hasattr(kb, "list_all_vanilla_accessories") and not generator.progression_scaling:
+        acc_catalog = kb.list_all_vanilla_accessories()
     result = (pools, raw_bosses, raw_chests, boss_pool, chest_pool, merchant_pool, enemy_pool, elites, acc_catalog)
     cache[key] = result
     return result

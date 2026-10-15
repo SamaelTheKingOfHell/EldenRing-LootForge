@@ -81,6 +81,9 @@ class DiabloAffixRoller:
             ]
 
         rolled: List[AffixDefinition] = []
+        ranks = list(RarityTier)
+        available_prefixes = [a for a in available_prefixes if ranks.index(a.tier_min) <= ranks.index(rarity)]
+        available_suffixes = [a for a in available_suffixes if ranks.index(a.tier_min) <= ranks.index(rarity)]
 
         if rarity == RarityTier.MAGIC:
             pool = available_prefixes + available_suffixes

@@ -43,12 +43,14 @@ class VanillaBaseDistributor:
 
             base_spec = {
                 "set_id": set_id,
+                "tier": getattr(kb.get_progression_tier(w_info), "value", 1) if hasattr(kb, "get_progression_tier") else 1,
                 "equip_params": [{
                     "param_table": "EquipParamWeapon",
                     "new_param_id": alloc.new_equip_param_id,
                     "base_clone_id": base_clone_id,
                     "target_model_id": int(model_id) if model_id.isdigit() else 0,
                     "slot": "weapon",
+                    "is_shield": w_info.get("wepType") in (65, 67, 69) or "shield" in clean_name.lower(),
                     "slot_offset": 0,
                     "row_name": f"[LootForge] {clean_name}",
                     "field_updates": {
@@ -62,6 +64,7 @@ class VanillaBaseDistributor:
                     "vanilla_source_id": base_clone_id,
                     "target_model_id": int(model_id) if model_id.isdigit() else 0,
                     "slot": "weapon",
+                    "is_shield": w_info.get("wepType") in (65, 67, 69) or "shield" in clean_name.lower(),
                     "slot_offset": 0,
                     "is_weapon": True,
                     "name": f"[LootForge] {clean_name}",
@@ -77,7 +80,7 @@ class VanillaBaseDistributor:
                 }
             }
 
-            if variants_per_item > 1:
+            if variants_per_item >= 1:
                 variants = variant_generator_fn(base_spec, variants_per_item, kb)
                 all_specs.extend(variants)
             else:
@@ -149,6 +152,7 @@ class VanillaBaseDistributor:
 
             base_spec = {
                 "set_id": set_id,
+                "tier": getattr(kb.get_progression_tier(p_info), "value", 1) if hasattr(kb, "get_progression_tier") else 1,
                 "equip_params": equip_params,
                 "fmg_texts": fmg_texts,
                 "loot_distribution": {
@@ -160,7 +164,7 @@ class VanillaBaseDistributor:
                 }
             }
 
-            if variants_per_item > 1:
+            if variants_per_item >= 1:
                 variants = variant_generator_fn(base_spec, variants_per_item, kb)
                 all_specs.extend(variants)
             else:
@@ -180,6 +184,7 @@ class VanillaBaseDistributor:
 
             base_spec = {
                 "set_id": set_id,
+                "tier": getattr(kb.get_progression_tier(a_info), "value", 1) if hasattr(kb, "get_progression_tier") else 1,
                 "equip_params": [{
                     "param_table": "EquipParamAccessory",
                     "new_param_id": alloc.new_equip_param_id,
@@ -214,7 +219,7 @@ class VanillaBaseDistributor:
                 }
             }
 
-            if variants_per_item > 1:
+            if variants_per_item >= 1:
                 variants = variant_generator_fn(base_spec, variants_per_item, kb)
                 all_specs.extend(variants)
             else:

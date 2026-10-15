@@ -96,7 +96,7 @@ class MainWindowBuilder:
             window.banner_toggle_btn.setText("▼ Expand Notice")
 
         # Schema-driven auto-generated parameter cards
-        descriptors = get_generator_param_descriptors()
+        descriptors = get_generator_param_descriptors(window.config.default_locale)
 
         # Paths Card
         paths_card, path_ctrls = ParamWidgetFactory.build_paths_card(

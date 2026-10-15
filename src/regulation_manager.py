@@ -141,6 +141,8 @@ class RegulationManager:
                 tf.write("]")
             msg_dir = self._resolve_msg_dir(game_dir, target_reg)
             base_args = ["--input", str(source_reg), "--output", str(target_reg), "--defs", str(self.defs_dir), "--spec", temp_spec_path]
+            if game_dir:
+                base_args.extend(["--game-dir", game_dir])
             base_args.extend(["--loot-backups", str(self.base_dir / "backups")])
             if msg_dir:
                 base_args.extend(["--msg", str(msg_dir)])

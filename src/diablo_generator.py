@@ -59,9 +59,17 @@ class DiabloLootGenerator:
         weapon_skills_pool: Optional[List[WeaponSkill]] = None,
         pricing_engine: Optional[Any] = None,
         stats_multiplier: float = 1.0,
-        price_multiplier: float = 1.0
+        price_multiplier: float = 1.0,
+        progression_scaling: bool = True,
+        extra_passives: bool = False,
+        triggered_effects: bool = False,
+        auras_enabled: bool = False
     ):
         self._rng = random.Random(seed)
+        self.progression_scaling = progression_scaling
+        self.extra_passives = extra_passives
+        self.triggered_effects = triggered_effects
+        self.auras_enabled = auras_enabled
         self._knowledge_base = knowledge_base
         self.max_shop_per_merchant = max_shop_per_merchant
         self.max_enia_rows = max_enia_rows
@@ -124,12 +132,19 @@ class DiabloLootGenerator:
             acc = args[3] if len(args) > 3 else kwargs.get("is_accessory", is_accessory)
             mult = 1.0 if stats_multiplier is None else stats_multiplier
 
+        if len(args) and isinstance(args[0], DiabloLootGenerator) and gen.auras_enabled:
+            from src.diablo_auras import aura_theme
+            theme = aura_theme(affixes)
+            if theme and not acc:
+                field_updates["_lf_diablo_aura"] = theme
+
         DiabloEquipmentModifier.apply_affixes_to_equipment(
             field_updates=field_updates,
             affixes=affixes,
             is_weapon=bool(wep),
             is_accessory=bool(acc),
-            stats_multiplier=mult
+            stats_multiplier=mult,
+            native_stat_deltas=gen.progression_scaling if len(args) and isinstance(args[0], DiabloLootGenerator) else False
         )
 
     def is_shop_capacity_exceeded(self, shop_id: str, is_enia: bool = False) -> bool:
@@ -233,8 +248,11 @@ class DiabloLootGenerator:
         self._shop_allocations.clear()
         self._total_shop_allocations = 0
 
-    def roll_rarity(self, is_boss: bool = False, is_chest: bool = False) -> RarityTier:
-        """Selects a rarity tier using drop weights. Bosses and Chests are guaranteed high tier (Legendary or Mythic)."""
+    def roll_rarity(self, is_boss: bool = False, is_chest: bool = False, tier=None) -> RarityTier:
+        """Region-aware rarity, including richer boss and chest reward weights."""
+        if self.progression_scaling:
+            from src.diablo_power import roll_progression_rarity
+            return roll_progression_rarity(self._rng, tier, is_boss, is_chest)
         return DiabloAffixRoller.roll_rarity(self._rng, is_boss=is_boss, is_chest=is_chest)
 
     def roll_affixes(
@@ -242,16 +260,32 @@ class DiabloLootGenerator:
         rarity: RarityTier,
         is_weapon: bool,
         is_accessory: bool = False,
-        is_boss: bool = False
+        is_boss: bool = False,
+        tier=None,
+        is_shield: bool = False
     ) -> List[AffixDefinition]:
         """Rolls a balanced combination of prefixes and suffixes for the rarity tier."""
-        return DiabloAffixRoller.roll_affixes(
+        affixes = DiabloAffixRoller.roll_affixes(
             rng=self._rng,
             rarity=rarity,
             is_weapon=is_weapon,
             is_accessory=is_accessory,
             is_boss=is_boss
         )
+        from src.diablo_power import scale_affixes, extra_passives, roll_enchantment
+        power = 1.0
+        if self.progression_scaling:
+            affixes, power = scale_affixes(self._rng, affixes, rarity, tier)
+        # Reserve resident capacity for the extra-passive bundle and enchantment.
+        if self.extra_passives or self.triggered_effects:
+            resident = [a for a in affixes if a.sp_effect_id and not a.is_on_hit_effect]
+            for aff in resident[1:]:
+                affixes.remove(aff)
+        if self.extra_passives:
+            affixes += extra_passives(self._rng, rarity, power)
+        if self.triggered_effects:
+            affixes += roll_enchantment(self._rng, rarity, tier, power, is_weapon, is_shield, is_accessory)
+        return affixes
 
     def build_item_name(
         self,
@@ -274,10 +308,16 @@ class DiabloLootGenerator:
         pricing: Optional[Dict[str, Any]] = None
     ) -> str:
         """Appends formatted rarity, skill, and affix breakdown to item description."""
-        return DiabloTextFormatter.build_caption_with_affixes(
+        caption = DiabloTextFormatter.build_caption_with_affixes(
             base_caption, rarity, affixes, boss_name=boss_name, skill=skill, pricing=pricing,
             stats_multiplier=self.stats_multiplier
         )
+        if self.auras_enabled:
+            from src.diablo_auras import aura_theme
+            theme = aura_theme(affixes)
+            if theme:
+                caption += f"\nCOSMETIC AURA: {theme.title()}"
+        return caption
 
     def generate_variants_for_spec(
         self,

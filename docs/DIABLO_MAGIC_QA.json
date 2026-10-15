@@ -1,0 +1,26 @@
+{
+  "state": "unsubmitted-portable-return",
+  "tracker_error": "QA Tracker is unavailable or the bounded request expired",
+  "project": "EldenRing-LootForge",
+  "owner": "Game tester",
+  "target": "Freshly forged Diablo equipment in the Ordo Perfectus Elden Ring profile",
+  "environment": "Actual installed Elden Ring game, fully restarted after forging",
+  "build": "Record the feature commit and deployed regulation/common/message hashes before execution",
+  "steps": [
+    "Compare early and endgame rolls of the same base item, rarity and upgrade level.",
+    "Verify HP, FP, stamina, regeneration and protection passives while equipping and unequipping.",
+    "Exercise weapon attack casts, shield guard casts/healing, armor retaliation and incoming-damage healing.",
+    "Observe each cooldown; check no idle attack casts and no damage proc merely from equipping armor.",
+    "Check dead-player, rest, reload, unequip and equipment-swap transitions.",
+    "Disable additional passives/combat magic, reforge and restart; confirm prior effects disappear.",
+    "Reforge the same seed twice; verify stats do not accumulate and external field edits remain intact.",
+    "Equip fire/lightning/glintstone/holy/frost/blood/poison/rot/renewal gear and confirm matching visuals in both hands and each armor slot.",
+    "Apply grease, spell and Ash of War buffs over cosmetic auras; confirm buff eligibility, damage and timers are unchanged, the temporary visual takes precedence and the aura returns after expiration.",
+    "Disable auras alone, reforge and restart; compare identical-seed stats/passives and confirm only the cosmetic visuals disappear."
+  ],
+  "expected": "Regional power scales; magic is limited to rare Legendary/Mythic rolls and the right equipment category; disabling options removes previous effects on reforge.",
+  "limits": "Armor retaliation is a magic burst, not attacker-specific percentage reflection. Native data and Qt checks do not prove combat behavior.",
+  "evidence_required": "Retained game video/screenshots, seed, item IDs, game build, source revision, output hashes and timestamps",
+  "executed_game_coverage": "none",
+  "next_action": "Submit this assignment to the QA tracker when reachable, then execute the game checks."
+}

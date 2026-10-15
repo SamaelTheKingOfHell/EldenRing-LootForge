@@ -273,6 +273,8 @@ namespace LootForge.RegTool
                 string fieldName = prop.Name;
                 if (fieldName.StartsWith("_lf_", StringComparison.OrdinalIgnoreCase))
                     continue;
+                if (fieldsEl.TryGetProperty("_lf_diablo_stat_deltas", out var deltas) && deltas.TryGetProperty(fieldName, out _))
+                    continue;
 
                 if (fieldName.EndsWith("ModelId", StringComparison.OrdinalIgnoreCase))
                 {

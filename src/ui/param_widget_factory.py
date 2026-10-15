@@ -12,14 +12,14 @@ try:
     from PySide6.QtWidgets import (
         QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
         QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox, QSlider,
-        QCheckBox, QFrame, QFileDialog, QSizePolicy
+        QCheckBox, QFrame, QFileDialog, QSizePolicy, QGridLayout
     )
     from PySide6.QtCore import Qt
 except (ImportError, Exception):
     from PyQt6.QtWidgets import (
         QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
         QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox, QSlider,
-        QCheckBox, QFrame, QFileDialog, QSizePolicy
+        QCheckBox, QFrame, QFileDialog, QSizePolicy, QGridLayout
     )
     from PyQt6.QtCore import Qt
 
@@ -267,8 +267,9 @@ class ParamWidgetFactory:
         layout.addWidget(card_title)
 
         controls: Dict[str, Any] = {}
-        row = QHBoxLayout()
-        row.setSpacing(14)
+        row = QGridLayout()
+        row.setSpacing(10)
+        position = 0
 
         for d in descriptors:
             if d.purpose != ParamPurpose.DIABLO_ARPG:
@@ -279,11 +280,23 @@ class ParamWidgetFactory:
                 vbox.addWidget(QLabel(f"<b>{d.label}</b>:"))
             initial_val = getattr(config, d.key, d.default)
             _, ctrl = cls.create_control(d, initial_val, on_change, parent=card)
+            if d.param_type == ParamType.BOOL:
+                import textwrap
+                ctrl.setText(textwrap.fill(d.label, width=32))
             vbox.addWidget(ctrl)
-            row.addLayout(vbox, stretch=1 if d.param_type == ParamType.BOOL else 0)
+            row.addLayout(vbox, position // 2, position % 2)
+            position += 1
             controls[d.key] = ctrl
 
         layout.addLayout(row)
+        master = controls.get("diablo_loot_enabled")
+        if master:
+            def sync_enabled(enabled):
+                for key, control in controls.items():
+                    if key != "diablo_loot_enabled":
+                        control.setEnabled(enabled)
+            master.toggled.connect(sync_enabled)
+            sync_enabled(master.isChecked())
 
         desc_label = QLabel(
             "✦ Rolls random rarity tiers (Common to Mythic), prefix/suffix stat infusions, and authentic "

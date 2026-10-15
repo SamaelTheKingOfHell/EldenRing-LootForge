@@ -141,8 +141,9 @@ class TestDiabloLoot(unittest.TestCase):
             self.assertEqual(ep["param_table"], "EquipParamWeapon")
             self.assertIn("sortId", ep["field_updates"])
 
-    def test_boss_always_giga_legendary(self):
+    def test_legacy_boss_always_giga_legendary(self):
         """Verifies that boss rolls are strictly guaranteed to be Legendary or Mythic."""
+        self.generator.progression_scaling = False
         for _ in range(50):
             tier = self.generator.roll_rarity(is_boss=True)
             self.assertIn(tier, (RarityTier.LEGENDARY, RarityTier.MYTHIC))

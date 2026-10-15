@@ -75,11 +75,19 @@ class DiabloTextFormatter:
             for aff in affixes:
                 aff_type_str = "Prefix" if aff.affix_type == AffixType.PREFIX else "Suffix"
                 desc = aff.description
+                if aff.sp_effect_id and aff.power_scale != 1.0:
+                    potency = max(0.0, round(aff.power_scale * stats_multiplier * 4) / 4)
+                    desc += f" [Base passive; rolled potency x{potency:g}]"
                 if stats_multiplier != 1.0 and aff.field_modifiers:
                     for delta in aff.field_modifiers.values():
                         if isinstance(delta, (int, float)) and delta != 0:
                             scaled = int(round(delta * stats_multiplier)) if isinstance(delta, int) else round(delta * stats_multiplier, 1)
                             desc = desc.replace(f"+{delta}", f"+{scaled}").replace(f"{delta}%", f"{scaled}%")
+                if aff.native_fields and stats_multiplier != 1.0:
+                    for key, value in aff.native_fields.items():
+                        old = round(abs((value - 1) * 100 if key.endswith("Rate") else value), 2)
+                        new = round(old * stats_multiplier, 2) if key.endswith("Rate") else abs(int(round(value * stats_multiplier)))
+                        desc = desc.replace(f"{old:g}", f"{new:g}")
                 lines.append(f"- [{aff_type_str}] {aff.name}: {desc}")
         else:
             lines.append("----------------------------------------")

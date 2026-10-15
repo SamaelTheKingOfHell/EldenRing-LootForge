@@ -69,7 +69,11 @@ class LootForgeConfig:
         price_multiplier: float = 1.0, stats_multiplier: float = 1.0,
         master_multiplier: float = 1.0, sell_price_ratio: float = 0.30,
         item_custom_art_toggles: Optional[Dict[str, bool]] = None,
-        import_custom_skills_movesets: bool = True
+        import_custom_skills_movesets: bool = True,
+        diablo_progression_scaling: bool = True,
+        diablo_extra_passives: bool = False,
+        diablo_triggered_effects: bool = False,
+        diablo_auras_enabled: bool = False,
     ):
         self.game_directory = game_directory
         self.input_directory = input_directory
@@ -95,6 +99,10 @@ class LootForgeConfig:
         self.item_spoiled_states = item_spoiled_states if item_spoiled_states is not None else {}
         self.item_custom_art_toggles = item_custom_art_toggles if item_custom_art_toggles is not None else {}
         self.import_custom_skills_movesets = import_custom_skills_movesets
+        self.diablo_progression_scaling = diablo_progression_scaling
+        self.diablo_extra_passives = diablo_extra_passives
+        self.diablo_triggered_effects = diablo_triggered_effects
+        self.diablo_auras_enabled = diablo_auras_enabled
         self.diablo_loot_enabled = diablo_loot_enabled
         self.diablo_variants_per_item = diablo_variants_per_item
         self.diablo_seed = diablo_seed
@@ -216,6 +224,10 @@ class LootForgeConfig:
             "item_spoiled_states": self.item_spoiled_states,
             "item_custom_art_toggles": self.item_custom_art_toggles,
             "import_custom_skills_movesets": self.import_custom_skills_movesets,
+            "diablo_progression_scaling": self.diablo_progression_scaling,
+            "diablo_extra_passives": self.diablo_extra_passives,
+            "diablo_triggered_effects": self.diablo_triggered_effects,
+            "diablo_auras_enabled": self.diablo_auras_enabled,
             "diablo_loot_enabled": self.diablo_loot_enabled,
             "diablo_variants_per_item": self.diablo_variants_per_item,
             "diablo_seed": self.diablo_seed,
@@ -273,6 +285,10 @@ class LootForgeConfig:
                 item_spoiled_states=data.get("item_spoiled_states", {}),
                 item_custom_art_toggles=data.get("item_custom_art_toggles", {}),
                 import_custom_skills_movesets=bool(data.get("import_custom_skills_movesets", True)),
+                diablo_progression_scaling=bool(data.get("diablo_progression_scaling", True)),
+                diablo_extra_passives=bool(data.get("diablo_extra_passives", False)),
+                diablo_triggered_effects=bool(data.get("diablo_triggered_effects", False)),
+                diablo_auras_enabled=bool(data.get("diablo_auras_enabled", False)),
                 diablo_loot_enabled=bool(data.get("diablo_loot_enabled", False)),
                 diablo_variants_per_item=int(data.get("diablo_variants_per_item", 3)),
                 diablo_seed=data.get("diablo_seed", None),

@@ -14,6 +14,8 @@ Automated verification suites adhering to `[CS-NO-MOCK]`. Tests exercise concret
 | `test_loot_distributor.py` | Validates AdditionType & AntiDup Enums, set invariance, and rate color coding. |
 | `test_qt_app.py` | Validates Qt GUI headless launch, manual folder pickers, path bindings, and presets. |
 | `test_diablo_loot.py` | Validates Diablo-style ARPG affix rolling, weapon skills randomization, rarity tiers, and distribution pools. |
+| `test_diablo_power.py` | Region/rarity potency, rarity floors, rare proc frequency and equipment categories, settings persistence, zero multipliers and strict region fallback. |
+| `DiabloChecks/` | Installed PARAM template and common event serialization checks, field restoration, external-edit preservation and controlled family scaling. |
 | `test_ui_modular_schema.py` | Validates modular parameter descriptors, widget factory generation, and interactive Loot Review Modal dialog. |
 | `test_injection_harness.py` | Synthetic injection harness testing all loot pools and distribution modes. |
 | `test_regulation_manager.py` | Validates non-destructive regulation decryption, parameter injection, and encryption. |

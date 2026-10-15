@@ -19,7 +19,8 @@ class DiabloEquipmentModifier:
         affixes: List[AffixDefinition],
         is_weapon: bool,
         is_accessory: bool = False,
-        stats_multiplier: float = 1.0
+        stats_multiplier: float = 1.0,
+        native_stat_deltas: bool = False
     ) -> None:
         """Applies stat deltas and routes SpEffect passive buffs to appropriate slots."""
         wep_behavior_slot = 0
@@ -29,7 +30,18 @@ class DiabloEquipmentModifier:
         acc_resident_slot = 1
 
         mult = max(0.0, float(stats_multiplier))
+        native = {}
+        passive_scales = {}
+        stat_deltas = {}
         for aff in affixes:
+            for key, value in aff.native_fields.items():
+                if key.endswith("Rate"):
+                    native[key] = round(1 + (value - 1) * mult, 5)
+                else:
+                    native[key] = int(round(value * mult))
+            if aff.proc_kind and mult > 0:
+                field_updates["_lf_diablo_proc"] = {
+                    "kind": aff.proc_kind, "power": round(aff.power_scale * mult, 3)}
             for field_name, delta in aff.field_modifiers.items():
                 if isinstance(delta, (int, float)):
                     scaled_delta = delta * mult
@@ -38,8 +50,11 @@ class DiabloEquipmentModifier:
                 else:
                     scaled_delta = delta
                 field_updates[field_name] = field_updates.get(field_name, 0) + scaled_delta
+                stat_deltas[field_name] = stat_deltas.get(field_name, 0) + scaled_delta
 
             if aff.sp_effect_id:
+                if aff.power_scale != 1.0:
+                    passive_scales[str(aff.sp_effect_id)] = max(0.0, round(aff.power_scale * mult * 4) / 4)
                 if is_accessory:
                     if acc_resident_slot <= 4:
                         field_updates[f"residentSpEffectId{acc_resident_slot}"] = aff.sp_effect_id
@@ -65,3 +80,9 @@ class DiabloEquipmentModifier:
             if is_weapon and getattr(aff, "sp_effect_msg_id", None) and wep_msg_slot < 3:
                 field_updates[f"spEffectMsgId{wep_msg_slot}"] = aff.sp_effect_msg_id
                 wep_msg_slot += 1
+        if native:
+            field_updates["_lf_diablo_passives"] = native
+        if passive_scales:
+            field_updates["_lf_diablo_passive_scales"] = passive_scales
+        if native_stat_deltas and stat_deltas:
+            field_updates["_lf_diablo_stat_deltas"] = stat_deltas

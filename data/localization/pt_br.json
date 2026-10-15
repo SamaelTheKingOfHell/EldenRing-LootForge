@@ -56,5 +56,13 @@
   "msg_uninstall_success": "Mods injetados removidos com limpeza. Manifesto resetado.",
   "err_no_game_dir": "Por favor, especifique um diretório válido do Elden Ring ou mod.",
   "err_no_mods_found": "Nenhum arquivo de mod substituto detectado no diretório de entrada.",
-  "err_forge_failed": "Falha ao processar mods: {error}"
+  "err_forge_failed": "Falha ao processar mods: {error}",
+  "diablo_progression_scaling_label": "Poder Diablo por progressão",
+  "diablo_progression_scaling_description": "Ajusta os bônus, afixos e passivas pela raridade e região. Lendários podem aparecer no início com atributos menores.",
+  "diablo_extra_passives_label": "Passivas Diablo adicionais",
+  "diablo_extra_passives_description": "Sorteia passivas extras de PV, PF, vigor, regeneração e proteção. Raridades maiores recebem mais passivas.",
+  "diablo_triggered_effects_label": "Magia de combate lendária rara",
+  "diablo_triggered_effects_description": "Encantamentos raros em Lendários/Míticos: magia ao atacar ou defender, cura e retaliação. Exige scripts de eventos; intervalos limitam as ativações.",
+  "diablo_auras_enabled_label": "Auras opcionais dos itens Diablo",
+  "diablo_auras_enabled_description": "Chamas, brilhos de magia e outras auras cosmeticas que combinam com os efeitos sorteados. Nao alteram atributos nem permitem ou impedem buffs. Reforje para aplicar."
 }

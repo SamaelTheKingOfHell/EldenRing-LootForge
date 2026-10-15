@@ -48,6 +48,9 @@ class AffixDefinition:
     sp_effect_msg_id: Optional[int] = None
     is_on_hit_effect: bool = False
     description: str = ""
+    native_fields: Dict[str, Any] = field(default_factory=dict)
+    proc_kind: str = ""
+    power_scale: float = 1.0
 
 
 # Comprehensive pool of authentic Elden Ring Diablo affixes
@@ -129,7 +132,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         applies_to_weapon=True,
         applies_to_armor=False,
         field_modifiers={"attackBasePhysics": 15},
-        sp_effect_id=6401,
+        sp_effect_id=6500,
         sp_effect_msg_id=6401,
         is_on_hit_effect=True,
         description="+15 Physical Attack & Causes Poison Buildup (50)"
@@ -141,7 +144,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         applies_to_weapon=True,
         applies_to_armor=False,
         field_modifiers={"attackBasePhysics": 15},
-        sp_effect_id=6451,
+        sp_effect_id=6600,
         sp_effect_msg_id=6451,
         is_on_hit_effect=True,
         description="+15 Physical Attack & Causes Scarlet Rot Buildup (50)"
@@ -184,7 +187,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         applies_to_armor=True,
         applies_to_accessory=True,
         field_modifiers={"defensePhysics": 25, "poise": 10},
-        sp_effect_id=311000,
+        sp_effect_id=312100,
         description="+25 Physical Defense & Bull-Goat Poise (+33%)"
     ),
     AffixDefinition(
@@ -195,7 +198,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         applies_to_armor=True,
         applies_to_accessory=True,
         field_modifiers={"defenseFire": 20},
-        sp_effect_id=314200,
+        sp_effect_id=340220,
         description="+20 Fire Defense & Flamedrake Ward (+20% Negation)"
     ),
     AffixDefinition(
@@ -206,7 +209,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         applies_to_armor=True,
         applies_to_accessory=True,
         field_modifiers={"defenseMagic": 20},
-        sp_effect_id=314100,
+        sp_effect_id=340120,
         description="+20 Magic Defense & Spelldrake Ward (+20% Negation)"
     ),
     AffixDefinition(
@@ -217,7 +220,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         applies_to_armor=True,
         applies_to_accessory=True,
         field_modifiers={"resistBlood": 40},
-        sp_effect_id=310400,
+        sp_effect_id=310000,
         description="+40 Robustness & Boosts Maximum HP (+6%)"
     ),
     AffixDefinition(
@@ -228,7 +231,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         applies_to_armor=True,
         applies_to_accessory=True,
         field_modifiers={"resistCurse": 40},
-        sp_effect_id=310500,
+        sp_effect_id=310100,
         description="+40 Focus & Boosts Maximum FP (+7%)"
     ),
     AffixDefinition(
@@ -239,7 +242,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         applies_to_armor=True,
         applies_to_accessory=True,
         field_modifiers={"resistBlood": 60, "resistFreeze": 60},
-        sp_effect_id=315100,
+        sp_effect_id=311600,
         description="+60 Robustness & Stalwart Charm (Frost/Bleed Resist)"
     ),
     AffixDefinition(
@@ -249,7 +252,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         applies_to_weapon=False,
         applies_to_armor=True,
         applies_to_accessory=True,
-        sp_effect_id=310300,
+        sp_effect_id=310400,
         description="Erdtree's Favor: Raises maximum HP, Stamina, and Equip Load"
     ),
     AffixDefinition(
@@ -259,7 +262,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         applies_to_weapon=False,
         applies_to_armor=False,
         applies_to_accessory=True,
-        sp_effect_id=313000,
+        sp_effect_id=310510,
         description="Radagon's Soreseal: Greatly raises physical attributes"
     ),
     AffixDefinition(
@@ -269,7 +272,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         applies_to_weapon=True,
         applies_to_armor=False,
         applies_to_accessory=True,
-        sp_effect_id=312000,
+        sp_effect_id=330900,
         description="Godfrey Icon: Enhances charged attack and spell power (+15%)"
     ),
 
@@ -281,7 +284,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         applies_to_weapon=True,
         applies_to_armor=True,
         applies_to_accessory=True,
-        sp_effect_id=316000,
+        sp_effect_id=350300,
         sp_effect_msg_id=1001,
         description="Taker's Cameo: Restores 3% HP + 30 HP upon slaying foes"
     ),
@@ -292,7 +295,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         applies_to_weapon=True,
         applies_to_armor=True,
         applies_to_accessory=True,
-        sp_effect_id=310000,
+        sp_effect_id=350200,
         sp_effect_msg_id=1005,
         description="Blessed Dew: Continuously regenerates HP (+2 HP/sec)"
     ),
@@ -303,7 +306,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         applies_to_weapon=True,
         applies_to_armor=True,
         applies_to_accessory=True,
-        sp_effect_id=310100,
+        sp_effect_id=361100,
         sp_effect_msg_id=1002,
         description="Ancestral Spirit: Restores 3 FP upon defeating enemies"
     ),
@@ -314,7 +317,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         applies_to_weapon=True,
         applies_to_armor=True,
         applies_to_accessory=True,
-        sp_effect_id=310200,
+        sp_effect_id=311500,
         description="Green Turtle: Greatly accelerates Stamina recovery speed"
     ),
     AffixDefinition(
@@ -324,7 +327,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         applies_to_weapon=True,
         applies_to_armor=False,
         applies_to_accessory=True,
-        sp_effect_id=316200,
+        sp_effect_id=320810,
         description="Rotten Winged Insignia: Successive attacks boost power up to 13%"
     ),
     AffixDefinition(
@@ -334,7 +337,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         applies_to_weapon=True,
         applies_to_armor=True,
         applies_to_accessory=True,
-        sp_effect_id=316500,
+        sp_effect_id=320400,
         description="Branchsword: Grants +20% attack power when HP is critically low"
     ),
     AffixDefinition(
@@ -344,7 +347,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         applies_to_weapon=True,
         applies_to_armor=True,
         applies_to_accessory=True,
-        sp_effect_id=311100,
+        sp_effect_id=321800,
         description="Claw Talisman: Jump attacks deal +15% damage"
     ),
     AffixDefinition(
@@ -354,7 +357,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         applies_to_weapon=True,
         applies_to_armor=False,
         applies_to_accessory=True,
-        sp_effect_id=312500,
+        sp_effect_id=312310,
         description="Shard of Alexander: Weapon skills deal +15% damage"
     ),
     AffixDefinition(
@@ -364,7 +367,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         applies_to_weapon=True,
         applies_to_armor=True,
         applies_to_accessory=True,
-        sp_effect_id=317200,
+        sp_effect_id=311000,
         description="Silver Scarab: Boosts item discovery by +75"
     ),
     AffixDefinition(
@@ -374,7 +377,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         applies_to_weapon=True,
         applies_to_armor=True,
         applies_to_accessory=True,
-        sp_effect_id=317100,
+        sp_effect_id=311100,
         description="Gold Scarab: Increases runes gained from enemies by +20%"
     ),
     AffixDefinition(
@@ -384,7 +387,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         applies_to_weapon=False,
         applies_to_armor=False,
         applies_to_accessory=True,
-        sp_effect_id=318000,
+        sp_effect_id=330000,
         description="Graven-School: Raises potency of sorceries (+4%)"
     ),
     AffixDefinition(
@@ -394,7 +397,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         applies_to_weapon=False,
         applies_to_armor=False,
         applies_to_accessory=True,
-        sp_effect_id=318100,
+        sp_effect_id=330500,
         description="Flock's Canvas: Greatly raises potency of incantations (+8%)"
     ),
     AffixDefinition(
@@ -404,7 +407,7 @@ AFFIX_POOL: List[AffixDefinition] = [
         applies_to_weapon=False,
         applies_to_armor=False,
         applies_to_accessory=True,
-        sp_effect_id=318200,
+        sp_effect_id=330700,
         description="Radagon Icon: Shortens spell casting time"
     )
 ]

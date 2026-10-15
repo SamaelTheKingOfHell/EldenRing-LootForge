@@ -26,6 +26,8 @@ This directory contains the core Python engine implementation for LootForge, org
 | `diablo_vanilla_stat_injector.py` | `VanillaStatInjector` | In-place procedural stat and affix infusion for vanilla items. |
 | `diablo_variant_builder.py` | `DiabloVariantBuilder` | Multi-tier variant generation, rotation, and companion accessory distribution. |
 | `diablo_generator.py` | `DiabloLootGenerator` | Unified coordinator for procedural Diablo-style ARPG variants and item infusion. |
+| `diablo_auras.py` | Cosmetic theme selection | Deterministic themes from rolled elemental, status and enchanted-passive effects. |
+| `diablo_power.py` | Diablo power rolls | Regional and rarity potency, additional native passives and rare category-specific combat enchantments. |
 | `pricing_engine.py` | `PricingEngine` | Dynamic power-based buy and sell price valuation engine for runes, equipment params, and shop lineups. |
 | `regulation_manager.py` | `RegulationManager` | Non-destructive regulation.bin decryptor, param patcher, and AES-256 encryptor. |
 | `rollback_manager.py` | `RollbackManager` | Comprehensively reverts all injected mod assets, parameters, and message files. |

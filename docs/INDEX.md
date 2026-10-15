@@ -4,6 +4,7 @@
 This folder contains system specifications, guides, and architectural design references for the LootForge engine.
 
 ## Documents
+* [`DIABLO_POWER_AND_MAGIC.md`](DIABLO_POWER_AND_MAGIC.md): Progression scaling, optional passives, combat magic toggles, reversible infusion and local validation boundaries.
 * [`DIABLO_LOOT_SYSTEM.md`](DIABLO_LOOT_SYSTEM.md): Architectural design, rarity tiers, affix pools, FromSoftware engine mappings, and configuration for the Diablo-style procedural ARPG loot engine.
 * [`ITEM_DISTRIBUTION_PLAN.md`](ITEM_DISTRIBUTION_PLAN.md): Architectural plan for eliminating shop monoculture, expanding merchant roster from 3 to 22+, regional progression tiering, and item category balance.
 * [`CHEST_UPGRADE_SYSTEM.md`](CHEST_UPGRADE_SYSTEM.md): Architectural specification for post-boss high-value treasure chests, AntiDup.CHEST_AFTER_BOSS routing, non-destructive multi-lot injection chaining, and progression tier gating.
@@ -14,3 +15,6 @@ This folder contains system specifications, guides, and architectural design ref
 ## Patcher performance and capacity
 
 - `PATCHER_PERFORMANCE.md`: Measured performance, dynamic caps, imported attack and additive-loot corrections, accessory inventory investigation, local release evidence and unresolved audit findings.
+
+- `DIABLO_POWER_VALIDATION.json`: Retained local build, Python/native, reroll, disable and Qt evidence; separates game acceptance.
+- `DIABLO_MAGIC_QA.json`: Portable, unexecuted in-game acceptance assignment.
