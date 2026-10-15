@@ -202,3 +202,10 @@ This roadmap defines the implementation phases for the cross-platform Standalone
 - [ ] Independent copied-profile/gameplay acceptance of acquisition, save/reload, visuals and new item IDs.
 - [x] Correct reported attack ID 11 false conflicts: compare writable fields, select only the weapon's actual attack dependencies, preserve host-owned rows and invalidate aliased/stale extraction caches (2026-10-15).
 - [ ] Follow-up audits: finite loot destination overflow, strict progression fallbacks, asynchronous forging and full asset/manifest transactionality.
+
+## Additive loot and accessory inventory follow-up (2026-10-15)
+- [x] Replace mixed original/custom lotteries with independent chained rolls across direct drops, shops, boss and chest enrichment.
+- [x] Recover legacy mixed slots only from a clean backup whose unrelated data matches; preserve item categories during cleanup.
+- [x] Include independent loot-row space in variant capacity and serialize explicit PARAM IDs in sorted order.
+- [x] Patch installed message languages/DLC archives, fail on missing name tables and prune only obsolete generated text IDs.
+- [ ] Confirm the reported English inventory accessory name/icon failure in Elden Ring. Current selected-profile rows have valid English name entries and nonzero icons; source-file validation does not establish runtime acceptance.

@@ -63,73 +63,10 @@ namespace LootForge.RegTool
             string msgDir,
             string regulationOutputPath,
             List<FmgTextSpec> fmgTexts,
-            Action<BND4>? transform = null)
+            Action<BND4>? transform = null,
+            Action<BND4>? prepare = null)
         {
-            string itemMsgBndPath = Path.Combine(msgDir, "item.msgbnd.dcx");
-            if (!File.Exists(itemMsgBndPath))
-            {
-                string altMsgDir = msgDir.EndsWith("engUS", StringComparison.OrdinalIgnoreCase)
-                    ? msgDir.Substring(0, msgDir.Length - 5) + "engus"
-                    : msgDir.Substring(0, msgDir.Length - 5) + "engUS";
-                string altPath = Path.Combine(altMsgDir, "item.msgbnd.dcx");
-                if (File.Exists(altPath))
-                {
-                    msgDir = altMsgDir;
-                    itemMsgBndPath = altPath;
-                }
-            }
-
-            if (!File.Exists(itemMsgBndPath))
-            {
-                Console.WriteLine($"[RegTool WARN] item.msgbnd.dcx not found at: {itemMsgBndPath}. Skipping FMG injection.");
-                return 0;
-            }
-
-            Console.WriteLine($"[RegTool] Loading item.msgbnd.dcx from: {itemMsgBndPath}...");
-            BND4 msgBnd = BND4.Read(itemMsgBndPath);
-
-            int count = InjectFmgEntriesIntoBnd(msgBnd, fmgTexts);
-            transform?.Invoke(msgBnd);
-
-            // Determine output directory alongside regulation.bin
-            string baseOutDir = Path.GetDirectoryName(regulationOutputPath)!;
-            string sourceLanguage = Path.GetFileName(Path.TrimEndingDirectorySeparator(msgDir));
-            string outputMsgDir = Path.Combine(baseOutDir, "msg", sourceLanguage == "engus" ? "engus" : "engUS");
-            if (!Directory.Exists(outputMsgDir))
-            {
-                string outputMsgDirLower = Path.Combine(baseOutDir, "msg", "engus");
-                if (Directory.Exists(outputMsgDirLower)) outputMsgDir = outputMsgDirLower;
-            }
-            Directory.CreateDirectory(outputMsgDir);
-            string outputMsgBndPath = Path.Combine(outputMsgDir, "item.msgbnd.dcx");
-            msgBnd.Write(outputMsgBndPath);
-
-            Console.WriteLine($"[RegTool] Injected {count} FMG text entries. Saved to: {outputMsgBndPath}");
-
-            // Also mirror to DLC msg archives if available
-            foreach (string dlcFile in new[] { "item_dlc02.msgbnd.dcx", "item_dlc01.msgbnd.dcx" })
-            {
-                string srcDlc = Path.Combine(msgDir, dlcFile);
-                if (File.Exists(srcDlc))
-                {
-                    try
-                    {
-                        Console.WriteLine($"[RegTool] Mirroring {count} FMG entries to DLC archive: {dlcFile}...");
-                        BND4 dlcBnd = BND4.Read(srcDlc);
-                        InjectFmgEntriesIntoBnd(dlcBnd, fmgTexts);
-                        transform?.Invoke(dlcBnd);
-                        string outDlc = Path.Combine(outputMsgDir, dlcFile);
-                        dlcBnd.Write(outDlc);
-                        Console.WriteLine($"[RegTool] Successfully mirrored into DLC archive: {outDlc}");
-                    }
-                    catch (Exception ex)
-                    {
-                        throw new IOException($"Could not patch DLC message archive {dlcFile}.", ex);
-                    }
-                }
-            }
-
-            return count;
+            return MessageArchiveService.Inject(msgDir, regulationOutputPath, fmgTexts, transform, prepare);
         }
 
         public static int ExecuteSyncDlcMsg(Dictionary<string, string> options)

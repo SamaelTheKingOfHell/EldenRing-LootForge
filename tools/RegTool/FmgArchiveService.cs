@@ -84,6 +84,8 @@ namespace LootForge.RegTool
                 string nameCat = spec.IsAccessory ? "AccessoryName" : (spec.IsWeapon ? "WeaponName" : "ProtectorName");
                 string infoCat = spec.IsAccessory ? "AccessoryInfo" : (spec.IsWeapon ? "WeaponInfo" : "ProtectorInfo");
                 string captionCat = spec.IsAccessory ? "AccessoryCaption" : (spec.IsWeapon ? "WeaponCaption" : "ProtectorCaption");
+                if (GetOrLoadFmgs(nameCat).Count == 0)
+                    throw new InvalidDataException($"Message archive has no {nameCat} table for item {spec.ItemId}. Refusing to publish missing item names.");
 
                 string nameText = spec.Name;
                 string infoText = spec.Info;

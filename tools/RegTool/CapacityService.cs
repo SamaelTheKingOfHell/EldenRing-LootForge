@@ -34,6 +34,17 @@ public static class CapacityService
             var param = PARAM.Read(file.Bytes);
             counts[table] = param.Rows.Count(r => r.Name?.Contains("[LootForge]") != true);
         }
+        string defs = options.GetValueOrDefault("defs", "tools/vendor/Paramdex/ER/Defs");
+        var lotDef = PARAMDEF.XmlDeserialize(Path.Combine(defs, "ItemLotParam.xml"), false, false);
+        int lootCapacity = 0;
+        foreach (string table in new[] { "ItemLotParam_enemy", "ItemLotParam_map" })
+        {
+            var file = binder.Files.First(f => f.Name.EndsWith(table + ".param", StringComparison.OrdinalIgnoreCase));
+            var param = PARAM.Read(file.Bytes);
+            param.ApplyParamdefSomewhatCarefully(lotDef);
+            lootCapacity += AdditiveLootService.Capacity(param);
+        }
+        counts["IndependentLootRows"] = lootCapacity;
         Console.WriteLine(JsonSerializer.Serialize(counts));
         return 0;
     }

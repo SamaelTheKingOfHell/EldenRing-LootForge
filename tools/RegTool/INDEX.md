@@ -35,5 +35,9 @@ Adheres to `[CS-MODULAR]`, `[CS-GRANULARITY]`, and `[CS-DECOUPLE]` by decomposin
 - `SkillExtractionIndex.cs`: Single-pass skill, behavior variation and attack lookup indices for dependency extraction.
 - `PatchPreflight.cs`: Native collision and row-limit validation before large batch cloning.
 - `PatchOutputTransaction.cs`: Staged regulation/FMG publication with rollback on commit failure.
-- `LootSlotAllocator.cs`: Amortized-linear free overflow slot allocation.
+- `AdditiveLootService.cs`: Independent chained rolls and capacity planning that preserve original lotteries and separation gaps.
+- `LegacyLootRecovery.cs`: Verified-backup recovery of slots altered by earlier mixed-row injection.
+- `MessageArchiveService.cs`: Item text publication across installed languages and DLC archives.
+- `FmgCleanupService.cs`: Prunes only obsolete text IDs owned by previously generated equipment.
+- `ParamSerialization.cs`: Writes explicit PARAM rows in sorted runtime lookup order.
 - `SweepFmgService.cs`: Indexed infusion text updates preserving base and DLC-exclusive entries.

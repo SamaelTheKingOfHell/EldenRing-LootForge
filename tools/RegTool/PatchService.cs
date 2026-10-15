@@ -152,6 +152,12 @@ namespace LootForge.RegTool
             }
 
             // 0. Purge any stale or previous LootForge injections to ensure a pristine baseline
+            var previousTextIds = new Dictionary<string, HashSet<int>>();
+            foreach (var (table, category) in new[] { ("EquipParamWeapon", "Weapon"), ("EquipParamProtector", "Protector"), ("EquipParamAccessory", "Accessory") })
+                previousTextIds[category] = GetOrLoadParam(table, table).Param.Rows
+                    .Where(row => row.Name?.Contains("[LootForge]") == true).Select(row => row.ID).ToHashSet();
+            LegacyLootRecovery.Restore(bnd, GetOrLoadParam,
+                options.GetValueOrDefault("loot-backups", "backups"), defsDir);
             ParamInjector.PurgePreviousInjections(GetOrLoadParam, PurgeNamedRows);
             EquipInjector.ResetCache();
             LootInjector.ResetCache();
@@ -268,7 +274,7 @@ namespace LootForge.RegTool
             {
                 var (param, file) = kvp.Value;
                 Console.WriteLine($"[RegTool] Serializing modified table: {kvp.Key} ({param.Rows.Count} rows)...");
-                file.Bytes = param.Write();
+                file.Bytes = ParamSerialization.Write(param);
             });
             Stage("serialize tables");
 
@@ -284,15 +290,17 @@ namespace LootForge.RegTool
             Stage("encrypt and save");
 
             // Phase 2: FMG Text Injection
+            foreach (var text in allFmgTexts)
+                previousTextIds[text.IsAccessory ? "Accessory" : (text.IsWeapon ? "Weapon" : "Protector")].Remove(text.ItemId);
             if (options.TryGetValue("msg", out string? msgDir) && !string.IsNullOrEmpty(msgDir) && (allFmgTexts.Count > 0 || sweepEffects.Count > 0))
             {
                 injectedFmgCount = FmgInjector.InjectFmgTexts(msgDir, output.RegulationPath, allFmgTexts,
-                    sweepEffects.Count > 0 ? archive => SweepFmgService.Apply(archive, sweepEffects) : null);
+                    sweepEffects.Count > 0 ? archive => SweepFmgService.Apply(archive, sweepEffects) : null,
+                    archive => FmgCleanupService.Prune(archive, previousTextIds));
             }
             else if (allFmgTexts.Count > 0)
             {
-                Console.WriteLine($"[RegTool WARN] No --msg directory provided. Skipping FMG text injection for {allFmgTexts.Count} item(s).");
-                Console.WriteLine("     Items will display as ?ProtectorName? / ?WeaponName? in-game.");
+                throw new InvalidDataException($"No message archives were provided for {allFmgTexts.Count} generated item names. Refusing to publish unnamed items.");
             }
 
             output.Commit();

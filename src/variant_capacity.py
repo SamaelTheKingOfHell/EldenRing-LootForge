@@ -22,7 +22,7 @@ def calculate_capacity(existing, mod_specs, knowledge_base, include_vanilla=Fals
     """Find the largest roll count that fits every equipment table, including all companion talismans."""
     specs = list(mod_specs)
     if include_vanilla:
-        specs.extend(VanillaBaseDistributor.generate_distribution_specs(knowledge_base, IdAllocator(), 1, None))
+        specs.extend(VanillaBaseDistributor.generate_distribution_specs(knowledge_base, IdAllocator(), 0, None))
 
     contexts = {}
 
@@ -35,7 +35,8 @@ def calculate_capacity(existing, mod_specs, knowledge_base, include_vanilla=Fals
         return dict(totals)
 
     def fits(totals):
-        return all(existing.get(table, 0) + count <= 65535 for table, count in totals.items())
+        return (all(existing.get(table, 0) + count <= 65535 for table, count in totals.items())
+                and sum(totals.values()) <= existing.get("IndependentLootRows", float("inf")))
 
     # Primary equipment imposes a cheap upper bound before destination simulation.
     primary = Counter(ep["param_table"] for spec in specs for ep in spec.get("equip_params", []))
@@ -50,6 +51,8 @@ def calculate_capacity(existing, mod_specs, knowledge_base, include_vanilla=Fals
     totals = projected(low) if low else {}
     next_totals = projected(low + 1) if low < ceiling else totals
     limiting = tuple(table for table, count in next_totals.items() if existing.get(table, 0) + count > 65535)
+    if sum(next_totals.values()) > existing.get("IndependentLootRows", float("inf")):
+        limiting += ("IndependentLootRows",)
     return VariantCapacity(low, dict(existing), totals, limiting)
 
 

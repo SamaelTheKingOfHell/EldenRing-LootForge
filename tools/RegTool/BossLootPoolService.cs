@@ -55,10 +55,10 @@ namespace LootForge.RegTool
 
             // Write back both tables
             var enemyFile = bnd.Files.First(f => f.Name.EndsWith("ItemLotParam_enemy.param", StringComparison.OrdinalIgnoreCase));
-            enemyFile.Bytes = enemyParam.Write();
+            enemyFile.Bytes = ParamSerialization.Write(enemyParam);
 
             var mapFile = bnd.Files.First(f => f.Name.EndsWith("ItemLotParam_map.param", StringComparison.OrdinalIgnoreCase));
-            mapFile.Bytes = mapParam.Write();
+            mapFile.Bytes = ParamSerialization.Write(mapParam);
 
             string? outDir = Path.GetDirectoryName(outputPath);
             if (!string.IsNullOrEmpty(outDir) && !Directory.Exists(outDir))
@@ -204,66 +204,14 @@ namespace LootForge.RegTool
                 if (chosenItems.Count == 0) continue;
                 foreach (var itm in chosenItems) usedItemIds.Add(itm.Id);
 
-                if (isMap && mapRowMap.TryGetValue(baseLotId, out var baseRow))
+                var destination = isMap ? mapParam : enemyParam;
+                foreach (var itm in chosenItems)
                 {
-                    for (int i = 0; i < chosenItems.Count; i++)
-                    {
-                        int offset = 1;
-                        while (offset <= 9 && mapRowMap.ContainsKey(baseLotId + offset)) offset++;
-                        if (offset > 9) continue;
-                        int chainedId = baseLotId + offset;
-                        var itm = chosenItems[i];
-                        PARAM.Row? chainedRow = mapRowMap.TryGetValue(chainedId, out var existing) ? existing : null;
-                        if (chainedRow == null)
-                        {
-                            chainedRow = new PARAM.Row(baseRow)
-                            {
-                                ID = chainedId,
-                                Name = $"[LootForge] [Boss Pool T{(int)tier}] {itm.Name} (for {bossName})"
-                            };
-                            for (int s = 0; s < 8; s++)
-                            {
-                                ParamHelper.SetCellFast(chainedRow, mapLayout.ItemIdIndices[s], 0);
-                                ParamHelper.SetCellFast(chainedRow, mapLayout.CategoryIndices[s], 0);
-                                ParamHelper.SetCellFast(chainedRow, mapLayout.BasePointIndices[s], (ushort)0);
-                                ParamHelper.SetCellFast(chainedRow, mapLayout.NumIndices[s], (byte)0);
-                                ParamHelper.SetCellFast(chainedRow, mapLayout.FlagIdIndices[s], 0u);
-                            }
-                            mapParam.Rows.Add(chainedRow);
-                            mapRowMap[chainedId] = chainedRow;
-                        }
-
-                        ParamHelper.SetCellFast(chainedRow, mapLayout.ItemIdIndices[0], itm.Id);
-                        ParamHelper.SetCellFast(chainedRow, mapLayout.CategoryIndices[0], itm.Category);
-                        ParamHelper.SetCellFast(chainedRow, mapLayout.BasePointIndices[0], (ushort)1000);
-                        ParamHelper.SetCellFast(chainedRow, mapLayout.NumIndices[0], (byte)1);
-                        ParamHelper.SetCellFast(chainedRow, mapLayout.FlagIdIndices[0], 0u);
+                    if (AdditiveLootService.TryAppend(destination, baseLotId, itm.Id, itm.Category, 1000,
+                            $"Boss Pool T{(int)tier}: {itm.Name} (for {bossName})"))
                         totalItemsInjected++;
-                    }
-                    bossesEnriched++;
                 }
-                else if (!isMap && enemyRowMap.TryGetValue(baseLotId, out var targetRow))
-                {
-                    int slotIdx = 1;
-                    for (int i = 0; i < chosenItems.Count; i++)
-                    {
-                        var itm = chosenItems[i];
-                        while (slotIdx < 8 && ParamHelper.GetCellIntFast(targetRow, enemyLayout.ItemIdIndices[slotIdx]) > 0)
-                            slotIdx++;
-
-                        if (slotIdx < 8)
-                        {
-                            ParamHelper.SetCellFast(targetRow, enemyLayout.ItemIdIndices[slotIdx], itm.Id);
-                            ParamHelper.SetCellFast(targetRow, enemyLayout.CategoryIndices[slotIdx], itm.Category);
-                            ParamHelper.SetCellFast(targetRow, enemyLayout.BasePointIndices[slotIdx], (ushort)1000);
-                            ParamHelper.SetCellFast(targetRow, enemyLayout.NumIndices[slotIdx], (byte)1);
-                            ParamHelper.SetCellFast(targetRow, enemyLayout.FlagIdIndices[slotIdx], 0u);
-                            totalItemsInjected++;
-                            slotIdx++;
-                        }
-                    }
-                    bossesEnriched++;
-                }
+                bossesEnriched++;
             }
 
             Console.WriteLine($"[BossLootPool] Successfully enriched {bossesEnriched} bosses (including tutorial encounters) with {totalItemsInjected} non-repeating weapons!");

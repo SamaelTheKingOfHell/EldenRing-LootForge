@@ -53,7 +53,7 @@ namespace LootForge.RegTool
             Func<string, string, (PARAM Param, BinderFile File)> getOrLoadParam,
             Action<string, string>? purgeNamedRows = null)
         {
-            var allLfItemIds = new HashSet<int>();
+            var allLfItemIds = new HashSet<(int Category, int Id)>();
 
             // 1. Identify and purge LootForge rows in EquipParamWeapon
             try
@@ -63,7 +63,7 @@ namespace LootForge.RegTool
                 {
                     if (r.Name != null && r.Name.Contains("[LootForge]"))
                     {
-                        allLfItemIds.Add(r.ID);
+                        allLfItemIds.Add((2, r.ID));
                     }
                 }
                 weaponParam.Rows.RemoveAll(r => r.Name != null && r.Name.Contains("[LootForge]"));
@@ -81,7 +81,7 @@ namespace LootForge.RegTool
                 {
                     if (r.Name != null && r.Name.Contains("[LootForge]"))
                     {
-                        allLfItemIds.Add(r.ID);
+                        allLfItemIds.Add((3, r.ID));
                     }
                 }
                 protectorParam.Rows.RemoveAll(r => r.Name != null && r.Name.Contains("[LootForge]"));
@@ -99,7 +99,7 @@ namespace LootForge.RegTool
                 {
                     if (r.Name != null && r.Name.Contains("[LootForge]"))
                     {
-                        allLfItemIds.Add(r.ID);
+                        allLfItemIds.Add((4, r.ID));
                     }
                 }
                 accessoryParam.Rows.RemoveAll(r => r.Name != null && r.Name.Contains("[LootForge]"));
@@ -132,7 +132,7 @@ namespace LootForge.RegTool
                     for (int s = 1; s <= 8; s++)
                     {
                         int itemId = ParamHelper.GetCellInt(row, $"lotItemId0{s}");
-                        if (allLfItemIds.Contains(itemId))
+                        if (allLfItemIds.Contains((ParamHelper.GetCellInt(row, $"lotItemCategory0{s}"), itemId)))
                         {
                             ParamHelper.SetCellIfExists(row, $"lotItemId0{s}", 0);
                             ParamHelper.SetCellIfExists(row, $"lotItemCategory0{s}", 0);
@@ -159,7 +159,7 @@ namespace LootForge.RegTool
                     for (int s = 1; s <= 8; s++)
                     {
                         int itemId = ParamHelper.GetCellInt(row, $"lotItemId0{s}");
-                        if (allLfItemIds.Contains(itemId))
+                        if (allLfItemIds.Contains((ParamHelper.GetCellInt(row, $"lotItemCategory0{s}"), itemId)))
                         {
                             ParamHelper.SetCellIfExists(row, $"lotItemId0{s}", 0);
                             ParamHelper.SetCellIfExists(row, $"lotItemCategory0{s}", 0);
@@ -181,7 +181,7 @@ namespace LootForge.RegTool
                 var (shopParam, _) = getOrLoadParam("ShopLineupParam", "ShopLineupParam");
                 shopParam.Rows.RemoveAll(r =>
                     (r.Name != null && r.Name.Contains("[LootForge]")) ||
-                    allLfItemIds.Contains(ParamHelper.GetCellInt(r, "equipId")));
+                    allLfItemIds.Contains((ParamHelper.GetCellInt(r, "equipType") + 2, ParamHelper.GetCellInt(r, "equipId"))));
             }
             catch (Exception ex)
             {

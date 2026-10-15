@@ -13,4 +13,4 @@ This folder contains system specifications, guides, and architectural design ref
 
 ## Patcher performance and capacity
 
-- `PATCHER_PERFORMANCE.md`: Measured performance, dynamic caps, imported attack conflict correction, local release evidence and unresolved audit findings.
+- `PATCHER_PERFORMANCE.md`: Measured performance, dynamic caps, imported attack and additive-loot corrections, accessory inventory investigation, local release evidence and unresolved audit findings.

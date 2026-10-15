@@ -3,6 +3,11 @@ using LootForge.RegTool;
 using SoulsFormats;
 
 string root = args.Length > 0 ? args[0] : Directory.GetCurrentDirectory();
+if (args.Length == 5 && args[1] == "audit")
+{
+    ProfileAudit.Run(root, args[2], args[3], args[4]);
+    return;
+}
 string defs = Path.Combine(root, "tools/vendor/Paramdex/ER/Defs");
 int checks = 0;
 void Check(bool condition, string name)
@@ -33,10 +38,7 @@ var layout = ItemLotLayout.Extract(lots);
 Check(ParamHelper.GetCellInt(lot, "LOTITEMID01") == 700, "case-insensitive indexed fields");
 Check(ParamHelper.FindCell(lot, "absent") == null, "missing fields remain optional");
 Check(ReferenceEquals(layout, ItemLotLayout.Extract(lots)), "loot layouts are reused");
-var slot = LootSlotAllocator.Next(lots, layout)!.Value;
-Check(slot.Slot == 2 && slot.Row == lot, "overflow preserves occupied slots and slot one");
-ParamHelper.SetCellFast(lot, layout.ItemIdIndices[slot.Slot], 900);
-Check(LootSlotAllocator.Next(lots, layout)!.Value.Slot == 3, "overflow cursor advances");
+AdditiveLootChecks.Run(defs, Check);
 
 var chain = Row(lots, 10031, "Existing vanilla reward");
 ParamHelper.SetCellIfExists(chain, "lotItemId01", 12345);

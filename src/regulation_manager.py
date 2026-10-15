@@ -93,7 +93,7 @@ class RegulationManager:
         identity = (str(source_reg.resolve()), stat.st_size, stat.st_mtime_ns, tool.stat().st_mtime_ns)
         if getattr(self, "_capacity_identity", None) == identity:
             return dict(self._capacity_counts)
-        response = subprocess.run(self._get_regtool_cmd("capacity") + ["--input", str(source_reg)],
+        response = subprocess.run(self._get_regtool_cmd("capacity") + ["--input", str(source_reg), "--defs", str(self.defs_dir)],
                                   capture_output=True, text=True, cwd=self.base_dir, check=False)
         if response.returncode:
             raise RuntimeError(f"Could not calculate regulation capacity: {response.stderr or response.stdout}")
@@ -141,6 +141,7 @@ class RegulationManager:
                 tf.write("]")
             msg_dir = self._resolve_msg_dir(game_dir, target_reg)
             base_args = ["--input", str(source_reg), "--output", str(target_reg), "--defs", str(self.defs_dir), "--spec", temp_spec_path]
+            base_args.extend(["--loot-backups", str(self.base_dir / "backups")])
             if msg_dir:
                 base_args.extend(["--msg", str(msg_dir)])
                 system_logger.info(f"FMG source directory: {msg_dir}", source="RegulationManager")

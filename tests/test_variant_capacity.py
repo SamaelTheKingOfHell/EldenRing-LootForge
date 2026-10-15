@@ -20,6 +20,11 @@ def weapon_spec():
 
 class TestVariantCapacity(unittest.TestCase):
     """Prove the displayed bound with actual generator row totals."""
+    def test_independent_loot_rows_cap_variants_before_equipment_overflow(self):
+        capacity = calculate_capacity({"EquipParamWeapon": 10, "IndependentLootRows": 7}, [weapon_spec()], None)
+        self.assertEqual(capacity.maximum, 7)
+        self.assertIn("IndependentLootRows", capacity.limiting_tables)
+
     def test_existing_source_rows_reduce_maximum(self):
         capacity = calculate_capacity({"EquipParamWeapon": 65530}, [weapon_spec()], None)
         self.assertEqual(capacity.maximum, 5)

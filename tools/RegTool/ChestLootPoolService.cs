@@ -54,10 +54,10 @@ namespace LootForge.RegTool
 
             // Write back tables and encrypt
             var mapFile = bnd.Files.First(f => f.Name.EndsWith("ItemLotParam_map.param", StringComparison.OrdinalIgnoreCase));
-            mapFile.Bytes = mapParam.Write();
+            mapFile.Bytes = ParamSerialization.Write(mapParam);
 
             var enemyFile = bnd.Files.First(f => f.Name.EndsWith("ItemLotParam_enemy.param", StringComparison.OrdinalIgnoreCase));
-            enemyFile.Bytes = enemyParam.Write();
+            enemyFile.Bytes = ParamSerialization.Write(enemyParam);
 
             string? outDir = Path.GetDirectoryName(outputPath);
             if (!string.IsNullOrEmpty(outDir) && !Directory.Exists(outDir))
@@ -208,39 +208,13 @@ namespace LootForge.RegTool
                 // Inject via contiguous sequential chained rows (baseLotId + offset)
                 for (int i = 0; i < chosenForChest.Count; i++)
                 {
-                    int offset = 1;
-                    while (offset <= 9 && mapRowMap.ContainsKey(baseLotId + offset)) offset++;
-                    if (offset > 9) continue;
-                    int chainedId = baseLotId + offset;
                     var itm = chosenForChest[i];
-
-                    PARAM.Row? chainedRow = mapRowMap.TryGetValue(chainedId, out var existing) ? existing : null;
-                    if (chainedRow == null)
+                    if (AdditiveLootService.TryAppend(mapParam, baseLotId, itm.Id, itm.Category, 1000,
+                            $"Chest Drop T{(int)tier}: {itm.Name} (in {chestName})"))
                     {
-                        chainedRow = new PARAM.Row(baseRow)
-                        {
-                            ID = chainedId,
-                            Name = $"[LootForge] [Chest Drop T{(int)tier}] {itm.Name} (in {chestName})"
-                        };
-                        for (int s = 0; s < 8; s++)
-                        {
-                            ParamHelper.SetCellFast(chainedRow, mapLayout.ItemIdIndices[s], 0);
-                            ParamHelper.SetCellFast(chainedRow, mapLayout.CategoryIndices[s], 0);
-                            ParamHelper.SetCellFast(chainedRow, mapLayout.BasePointIndices[s], (ushort)0);
-                            ParamHelper.SetCellFast(chainedRow, mapLayout.NumIndices[s], (byte)0);
-                            ParamHelper.SetCellFast(chainedRow, mapLayout.FlagIdIndices[s], 0u);
-                        }
-                        mapParam.Rows.Add(chainedRow);
-                        mapRowMap[chainedId] = chainedRow;
+                        placedItemIds.Add(itm.Id);
+                        totalItemsInChests++;
                     }
-
-                    ParamHelper.SetCellFast(chainedRow, mapLayout.ItemIdIndices[0], itm.Id);
-                    ParamHelper.SetCellFast(chainedRow, mapLayout.CategoryIndices[0], itm.Category);
-                    ParamHelper.SetCellFast(chainedRow, mapLayout.BasePointIndices[0], (ushort)1000);
-                    ParamHelper.SetCellFast(chainedRow, mapLayout.NumIndices[0], (byte)1);
-                    ParamHelper.SetCellFast(chainedRow, mapLayout.FlagIdIndices[0], 0u);
-                    placedItemIds.Add(itm.Id);
-                    totalItemsInChests++;
                 }
 
                 chestsEnriched++;
@@ -254,41 +228,14 @@ namespace LootForge.RegTool
             if (remainingCustom.Count > 0)
             {
                 Console.WriteLine($"[ChestLootPool] Randomly routing {remainingCustom.Count} remaining custom items across random enemy pools...");
-                int eId0 = enemyLayout.ItemIdIndices[0];
-                int eBp0 = enemyLayout.BasePointIndices[0];
-                var candidateEnemyRows = enemyParam.Rows.Where(r => {
-                    int itm1 = ParamHelper.GetCellIntFast(r, eId0);
-                    int p1 = ParamHelper.GetCellIntFast(r, eBp0);
-                    return itm1 > 0 && p1 < 1000;
-                }).OrderBy(_ => rng.Next()).ToList();
-
-                if (candidateEnemyRows.Count == 0)
-                    candidateEnemyRows = enemyParam.Rows.Where(r => ParamHelper.GetCellIntFast(r, eId0) > 0).OrderBy(_ => rng.Next()).ToList();
-
-                int enemyRowIdx = 0;
                 foreach (var itm in remainingCustom)
                 {
-                    bool placed = false;
-                    for (int attempts = 0; attempts < candidateEnemyRows.Count && !placed; attempts++)
-                    {
-                        var eRow = candidateEnemyRows[(enemyRowIdx + attempts) % candidateEnemyRows.Count];
-                        for (int s = 1; s < 8; s++) // slots 2..8
-                        {
-                            int cellIdx = enemyLayout.ItemIdIndices[s];
-                            if (ParamHelper.GetCellIntFast(eRow, cellIdx) == 0)
-                            {
-                                ParamHelper.SetCellFast(eRow, cellIdx, itm.Id);
-                                ParamHelper.SetCellFast(eRow, enemyLayout.CategoryIndices[s], itm.Category);
-                                ParamHelper.SetCellFast(eRow, enemyLayout.BasePointIndices[s], (ushort)250);
-                                ParamHelper.SetCellFast(eRow, enemyLayout.NumIndices[s], (byte)1);
-                                ParamHelper.SetCellFast(eRow, enemyLayout.FlagIdIndices[s], 0u);
-                                placed = true;
-                                        routedToEnemies++;
-                                enemyRowIdx = (enemyRowIdx + attempts + 1) % candidateEnemyRows.Count;
-                                break;
-                            }
-                        }
-                    }
+                    if (AdditiveLootService.TryAppendAny(enemyParam, itm.Id, itm.Category, 250, "Additional chest overflow drop"))
+                        routedToEnemies++;
+                    else if (AdditiveLootService.TryAppendAny(mapParam, itm.Id, itm.Category, 250, "Additional chest overflow drop"))
+                        routedToEnemies++;
+                    // Primary distribution already placed each generated item.
+                    // Optional enrichment must not displace its original reward.
                 }
                 Console.WriteLine($"[ChestLootPool] Successfully routed {routedToEnemies} overflow custom items randomly across normal enemy drop tables.");
             }

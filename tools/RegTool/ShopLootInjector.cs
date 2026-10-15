@@ -170,19 +170,18 @@ namespace LootForge.RegTool
             bool isArmor = itemIdToIsProtector.TryGetValue(itemId, out var ip) ? ip : (!isAccessory && !itemIdToIsWeapon.GetValueOrDefault(itemId, false));
             int lotCategory = isAccessory ? 4 : (isArmor ? 3 : 2);
 
-            var layout = ItemLotLayout.Extract(itemLotParam);
-            var freeSlot = LootSlotAllocator.Next(itemLotParam, layout);
-            if (freeSlot is { } free)
+            if (AdditiveLootService.TryAppendAny(itemLotParam, itemId, lotCategory, 250, "Shop overflow drop"))
             {
-                ParamHelper.SetCellFast(free.Row, layout.ItemIdIndices[free.Slot], itemId);
-                ParamHelper.SetCellFast(free.Row, layout.CategoryIndices[free.Slot], lotCategory);
-                ParamHelper.SetCellFast(free.Row, layout.BasePointIndices[free.Slot], (ushort)250);
-                ParamHelper.SetCellFast(free.Row, layout.NumIndices[free.Slot], (byte)1);
-                ParamHelper.SetCellFast(free.Row, layout.FlagIdIndices[free.Slot], 0u);
                 injectedLootCount++;
                 return;
             }
-            Console.WriteLine($"[RegTool WARN] Could not find open enemy lot slot for item {itemId}.");
+            var mapParam = getOrLoadParam("ItemLotParam_map", "ItemLotParam").Param;
+            if (AdditiveLootService.TryAppendAny(mapParam, itemId, lotCategory, 250, "Shop overflow drop"))
+            {
+                injectedLootCount++;
+                return;
+            }
+            throw new InvalidOperationException($"No independent loot row remains for item {itemId}. Reduce variants per item.");
         }
     }
 }

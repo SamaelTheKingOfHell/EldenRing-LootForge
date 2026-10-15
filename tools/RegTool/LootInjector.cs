@@ -9,7 +9,7 @@ namespace LootForge.RegTool
     /// <summary>
     /// Service responsible for injecting custom mod equipment drops into Elden Ring
     /// ItemLotParam_enemy and ItemLotParam_map tables (chests, world pickups, boss lots).
-    /// Preserves original vanilla loot (slot 1) while injecting 1-4 mod items into available slots.
+    /// Preserves every existing loot row and adds independent chained rolls.
     /// Delegates shop lineup and overflow handling to ShopLootInjector.
     /// Adheres to [CS-MODULAR] and [CS-GRANULARITY] (<= 300 lines).
     /// </summary>
@@ -75,7 +75,7 @@ namespace LootForge.RegTool
             else
                 targetLotId = ResolveEnemyLotId(rawTid);
 
-            double dropRatePercent = lootEl.TryGetProperty("drop_rate_percent", out var dr) ? dr.GetDouble() : 20.0;
+            double dropRatePercent = lootEl.TryGetProperty("drop_rate_percent", out var dr) ? dr.GetDouble() : (tableName == "ItemLotParam_map" ? 100.0 : 20.0);
             var (itemLotParam, _) = getOrLoadParam(tableName, "ItemLotParam");
 
             if (rowMap == null)
@@ -88,105 +88,26 @@ namespace LootForge.RegTool
             }
 
             bool isMapTable = tableName.Equals("ItemLotParam_map", StringComparison.OrdinalIgnoreCase);
-            var candidateRows = new List<PARAM.Row>(2);
-            if (rowMap.TryGetValue(targetLotId, out var pRow)) candidateRows.Add(pRow);
-            if (rowMap.TryGetValue(targetLotId + 10, out var cRow)) candidateRows.Add(cRow);
-
-            if (candidateRows.Count == 0)
-            {
-                // Cross-table fallback: check if targetLotId exists in the other table
-                string otherTable = isMapTable ? "ItemLotParam_enemy" : "ItemLotParam_map";
-                var (otherParam, _) = getOrLoadParam(otherTable, "ItemLotParam");
-                var otherRow = otherParam.Rows.FirstOrDefault(r => r.ID == targetLotId);
-                if (otherRow != null)
-                {
-                    ref var otherRowMap = ref (isMapTable ? ref _enemyLotRowMap : ref _mapLotRowMap);
-                    InjectItemLotDrop(otherTable, ref otherRowMap, lootEl, getOrLoadParam, itemIdToIsProtector, itemIdToIsWeapon, itemIdToIsAccessory, awardedItems, ref injectedLootCount);
-                    return;
-                }
-
-                // Fallback to any map chest with available slots
-                var (mapParam, _) = getOrLoadParam("ItemLotParam_map", "ItemLotParam");
-                var fallbackChest = mapParam.Rows.FirstOrDefault(r => ParamHelper.GetCellInt(r, "lotItemId01") > 0 && ParamHelper.GetCellInt(r, "lotItemId02") == 0);
-                if (fallbackChest != null)
-                {
-                    candidateRows.Add(fallbackChest);
-                    itemLotParam = mapParam;
-                    isMapTable = true;
-                }
-                else
-                {
-                    ShopLootInjector.InjectShopLineup(lootEl, getOrLoadParam, itemIdToIsProtector, itemIdToIsWeapon, itemIdToIsAccessory, awardedItems, ref injectedLootCount);
-                    return;
-                }
-            }
-
-            var targetRow = candidateRows[0];
-            var layout = ItemLotLayout.Extract(itemLotParam);
-            ushort pts = (ushort)(isMapTable || dropRatePercent >= 100.0 ? 1000 : Math.Clamp((int)(dropRatePercent * 10), 1, 1000));
-            var overflowItems = new List<int>();
-
+            ushort points = (ushort)Math.Clamp((int)Math.Round(dropRatePercent * 10), 0, 1000);
             foreach (int itemId in awardedItems)
             {
-                bool isAccessory = itemIdToIsAccessory.TryGetValue(itemId, out var ia) && ia;
-                bool isArmor = itemIdToIsProtector.TryGetValue(itemId, out var ip) ? ip : (!isAccessory && !itemIdToIsWeapon.GetValueOrDefault(itemId, false));
-                int lotCategory = isAccessory ? 4 : (isArmor ? 3 : 2);
-
-                int slotToUse = -1;
-                // Never touch slot 1 (preserves original vanilla/mod loot). Scan slots 2 to 8 (indices 1..7)
-                for (int s = 1; s < 8; s++)
+                bool accessory = itemIdToIsAccessory.GetValueOrDefault(itemId);
+                bool armor = itemIdToIsProtector.GetValueOrDefault(itemId);
+                int category = accessory ? 4 : (armor ? 3 : 2);
+                bool placed = AdditiveLootService.TryAppend(itemLotParam, targetLotId, itemId, category,
+                    points, $"Additional drop for {targetLotId}");
+                if (!placed)
                 {
-                    int cur = ParamHelper.GetCellIntFast(targetRow, layout.ItemIdIndices[s]);
-                    if (cur == itemId) { slotToUse = s; break; }
-                    if (cur == 0 && slotToUse == -1) slotToUse = s;
+                    string other = isMapTable ? "ItemLotParam_enemy" : "ItemLotParam_map";
+                    var otherParam = getOrLoadParam(other, "ItemLotParam").Param;
+                    placed = AdditiveLootService.TryAppend(otherParam, targetLotId, itemId, category, points, "Additional cross-table drop")
+                        || AdditiveLootService.TryAppendAny(itemLotParam, itemId, category, points, "Additional overflow drop")
+                        || AdditiveLootService.TryAppendAny(otherParam, itemId, category, points, "Additional overflow drop");
                 }
-
-                if (slotToUse != -1)
-                {
-                    ParamHelper.SetCellFast(targetRow, layout.ItemIdIndices[slotToUse], itemId);
-                    ParamHelper.SetCellFast(targetRow, layout.CategoryIndices[slotToUse], lotCategory);
-                    ParamHelper.SetCellFast(targetRow, layout.BasePointIndices[slotToUse], pts);
-                    ParamHelper.SetCellFast(targetRow, layout.NumIndices[slotToUse], (byte)1);
-                    ParamHelper.SetCellFast(targetRow, layout.FlagIdIndices[slotToUse], 0u);
-                }
-                else
-                {
-                    overflowItems.Add(itemId);
-                }
+                if (!placed)
+                    throw new InvalidOperationException($"No independent loot row remains for item {itemId}. Existing rewards were preserved. Reduce variants per item.");
+                injectedLootCount++;
             }
-
-            if (overflowItems.Count > 0)
-            {
-                var (mapParam, _) = getOrLoadParam("ItemLotParam_map", "ItemLotParam");
-                var mapLayout = ItemLotLayout.Extract(mapParam);
-                int mId0 = mapLayout.ItemIdIndices[0];
-                var remaining = new List<int>();
-                foreach (int itm in overflowItems)
-                {
-                    bool placed = false;
-                    var freeSlot = LootSlotAllocator.Next(mapParam, mapLayout);
-                    if (freeSlot is { } free)
-                    {
-                        bool isAccessory = itemIdToIsAccessory.GetValueOrDefault(itm);
-                        bool isArmor = itemIdToIsProtector.GetValueOrDefault(itm);
-                        int category = isAccessory ? 4 : (isArmor ? 3 : 2);
-                        ParamHelper.SetCellFast(free.Row, mapLayout.ItemIdIndices[free.Slot], itm);
-                        ParamHelper.SetCellFast(free.Row, mapLayout.CategoryIndices[free.Slot], category);
-                        ParamHelper.SetCellFast(free.Row, mapLayout.BasePointIndices[free.Slot], (ushort)1000);
-                        ParamHelper.SetCellFast(free.Row, mapLayout.NumIndices[free.Slot], (byte)1);
-                        ParamHelper.SetCellFast(free.Row, mapLayout.FlagIdIndices[free.Slot], 0u);
-                        placed = true;
-                    }
-                    if (!placed) remaining.Add(itm);
-                }
-
-                if (remaining.Count > 0)
-                {
-                    ShopLootInjector.InjectShopLineup(lootEl, getOrLoadParam, itemIdToIsProtector, itemIdToIsWeapon, itemIdToIsAccessory, remaining, ref injectedLootCount);
-                }
-            }
-
-            injectedLootCount++;
         }
 
         private static int ResolveEnemyLotId(string? name)

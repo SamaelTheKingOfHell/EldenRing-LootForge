@@ -32,5 +32,5 @@ Automated verification suites adhering to `[CS-NO-MOCK]`. Tests exercise concret
 - `test_patch_performance.py`: Large multi-set variant, batch validation and incremental file safety regressions.
 - `test_import_conflicts.py`: Attack ID 11 padding regression, selected-weapon dependencies, host-row preservation and extraction cache invalidation.
 - `test_variant_capacity.py`: Exact maximum, source occupancy, vanilla inclusion and real companion-count parity.
-- `RegToolChecks/`: Dependency-free native PARAM/FMG, enrichment, infusion and transaction checks.
+- `RegToolChecks/`: Dependency-free native PARAM/FMG, additive lottery preservation, backup recovery, accessory text, enrichment, infusion and transaction checks.
 - `benchmark_patcher.py`: Reproducible pre-change versus current patch/generation benchmark.

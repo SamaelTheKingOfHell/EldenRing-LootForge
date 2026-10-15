@@ -42,7 +42,11 @@ class PatchOrchestrator:
             try:
                 window.backup_manager.restore_latest_backup(reg_path)
                 target_p = Path(reg_path)
-                for lang in ["engUS", "engus"]:
+                languages = {"engUS", "engus"}
+        message_root = target_reg.parent / "msg"
+        if message_root.exists():
+            languages.update(path.name for path in message_root.iterdir() if path.is_dir())
+        for lang in sorted(languages):
                     for fname in ["item.msgbnd.dcx", "item_dlc02.msgbnd.dcx", "item_dlc01.msgbnd.dcx"]:
                         mf = target_p.parent / "msg" / lang / fname
                         if window.backup_manager.list_backups_for_file(fname):
