@@ -19,4 +19,4 @@ Adheres to `[CS-MODULAR]` and `[CS-GRANULARITY]`.
 
 ## Patcher performance and capacity
 
-- `variant_capacity_controller.py`: Debounced background Qt capacity calculation and dynamic variants limit.
+- `variant_capacity_controller.py`: Paired background capacity calculation; vanilla toggles immediately clamp/persist the variants value, with source/tool invalidation and stale-worker protection.

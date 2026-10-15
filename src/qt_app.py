@@ -163,7 +163,7 @@ class LootForgeMainWindow(QMainWindow):
         elif key in ("diablo_loot_enabled", "import_custom_skills_movesets"):
             self._sync_modal_data()
         if key in ("active_regulation_path", "game_directory", "output_directory", "diablo_use_vanilla_base_items", "diablo_inject_vanilla_stats", "diablo_loot_enabled") and hasattr(self, "capacity_controller"):
-            self.capacity_controller.schedule()
+            self.capacity_controller.schedule(vanilla_only=key == "diablo_use_vanilla_base_items")
 
     def _on_page_size_changed_from_modal(self, val: int):
         self.items_per_page = val

@@ -13,7 +13,7 @@ from src.variant_capacity import calculate_capacity, clamp_variants
 class CapacityWorker(QThread):
     """Read regulation metadata and simulate row counts without blocking the Qt event loop."""
     ready = Signal(object)
-    failed = Signal(str)
+    failed = Signal(object)
 
     def __init__(self, revision, manager, source, specs, knowledge, vanilla, parent):
         super().__init__(parent)
@@ -24,9 +24,11 @@ class CapacityWorker(QThread):
         revision, manager, source, specs, knowledge, vanilla = self.inputs
         try:
             counts = manager.equipment_row_counts(source)
-            self.ready.emit((revision, calculate_capacity(counts, specs, knowledge, vanilla)))
+            capacities = {mode: calculate_capacity(counts, specs, knowledge, mode)
+                          for mode in (vanilla, not vanilla)}
+            self.ready.emit((revision, capacities))
         except Exception as error:
-            self.failed.emit(str(error))
+            self.failed.emit((revision, str(error)))
 
 
 class VariantCapacityController(QObject):
@@ -36,17 +38,36 @@ class VariantCapacityController(QObject):
         self.window = window
         self.revision = 0
         self.worker = None
+        self.capacities = None
+        self.source = None
+        self.source_identity = None
         self.timer = QTimer(self)
         self.timer.setSingleShot(True)
         self.timer.timeout.connect(self.refresh)
         QApplication.instance().aboutToQuit.connect(self.shutdown)
 
-    def schedule(self):
+    def schedule(self, vanilla_only=False):
         """Coalesce rapid settings edits and prevent forging against a stale pending limit."""
         self.revision += 1
+        if (vanilla_only and self.capacities is not None and self.source_identity is not None
+                and self.source_identity == self.current_source_identity()):
+            self.timer.stop()
+            self.apply((self.revision, self.capacities))
+            return
+        self.capacities = None
         self.window.diablo_variants_spin.setEnabled(False)
+        self.window.diablo_variants_spin.setToolTip("Calculating the maximum for the current selection…")
         self.window.forge_btn.setEnabled(False)
         self.timer.start(300)
+
+    def current_source_identity(self):
+        """Invalidate paired limits when the regulation or deployed native tool changes."""
+        try:
+            paths = (self.source, self.window.regulation_manager.regtool_dll)
+            return tuple((str(path), path.stat().st_size, path.stat().st_mtime_ns)
+                         for path in paths if path is not None)
+        except OSError:
+            return None
 
     @Slot()
     def refresh(self):
@@ -60,12 +81,14 @@ class VariantCapacityController(QObject):
         if source is None or not source.exists():
             self.failed("Select an existing source regulation to calculate the maximum.")
             return
+        self.source = source
+        self.source_identity = self.current_source_identity()
         specs = [window.param_builder.build_patch_spec(mod, include_custom_art=False)
                  for mod in window.scanned_sets if getattr(mod, "is_enabled", True)]
         self.worker = CapacityWorker(self.revision, window.regulation_manager, source, specs,
                                      window.knowledge_base, window.config.diablo_use_vanilla_base_items, self)
         self.worker.ready.connect(self.apply)
-        self.worker.failed.connect(self.failed)
+        self.worker.failed.connect(self.worker_failed)
         worker = self.worker
         worker.finished.connect(lambda: self.release_worker(worker))
         self.worker.start()
@@ -79,11 +102,16 @@ class VariantCapacityController(QObject):
     @Slot(object)
     def apply(self, result):
         """Apply only the latest selection's result and persist a clamped value once."""
-        revision, capacity = result
+        revision, capacities = result
         if revision != self.revision:
             self.timer.start(1)
             return
+        if self.source_identity != self.current_source_identity():
+            self.schedule()
+            return
+        self.capacities = capacities
         window = self.window
+        capacity = capacities[bool(window.config.diablo_use_vanilla_base_items)]
         spin = window.diablo_variants_spin
         spin.blockSignals(True)
         spin.setMaximum(max(1, capacity.maximum))
@@ -96,6 +124,15 @@ class VariantCapacityController(QObject):
         spin.setEnabled(capacity.maximum > 0)
         window.forge_btn.setEnabled(capacity.maximum > 0)
         self.capacity = capacity
+
+    @Slot(object)
+    def worker_failed(self, result):
+        """Ignore failures from a source or selection that has already changed."""
+        revision, error = result
+        if revision != self.revision:
+            self.timer.start(1)
+            return
+        self.failed(error)
 
     @Slot(str)
     def failed(self, error):

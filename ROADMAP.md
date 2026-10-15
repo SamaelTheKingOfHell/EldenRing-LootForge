@@ -207,5 +207,6 @@ This roadmap defines the implementation phases for the cross-platform Standalone
 - [x] Replace mixed original/custom lotteries with independent chained rolls across direct drops, shops, boss and chest enrichment.
 - [x] Recover legacy mixed slots only from a clean backup whose unrelated data matches; preserve item categories during cleanup.
 - [x] Include independent loot-row space in variant capacity and serialize explicit PARAM IDs in sorted order.
+- [x] Precompute both vanilla modes so toggling immediately clamps and saves the selected variants; reject stale worker results and invalidate changed source/tool limits.
 - [x] Patch installed message languages/DLC archives, fail on missing name tables and prune only obsolete generated text IDs.
 - [ ] Confirm the reported English inventory accessory name/icon failure in Elden Ring. Current selected-profile rows have valid English name entries and nonzero icons; source-file validation does not establish runtime acceptance.

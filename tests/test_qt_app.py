@@ -71,6 +71,59 @@ class TestLootForgeQtApp(unittest.TestCase):
         self.assertEqual(self.window.output_dir_input.text(), "mod")
         self.assertEqual(self.window.game_dir_input.text(), str(self.base_path / "Game"))
 
+    def _prepare_paired_capacity(self):
+        """Controlled capacity results exercise real checkbox/config/Qt signal wiring."""
+        from src.variant_capacity import VariantCapacity
+        from src.ui.param_widget_factory import QCheckBox
+        from src.ui.param_schema import get_generator_param_descriptors
+        controller = self.window.capacity_controller
+        controller.timer.stop()
+        controller.source = self.base_path / "capacity-source.bin"
+        controller.source.write_bytes(b"controlled-source")
+        tool = self.base_path / "capacity-tool.dll"
+        tool.write_bytes(b"controlled-tool")
+        self.window.regulation_manager.regtool_dll = tool
+        controller.source_identity = controller.current_source_identity()
+        self.window.config.diablo_variants_per_item = 39
+        self.window.config.diablo_use_vanilla_base_items = False
+        capacities = {False: VariantCapacity(39, {}, {}, ()), True: VariantCapacity(30, {}, {}, ())}
+        controller.apply((controller.revision, capacities))
+        label = next(d.label for d in get_generator_param_descriptors() if d.key == "diablo_use_vanilla_base_items")
+        toggle = next(w for w in self.window.findChildren(QCheckBox)
+                      if " ".join(w.text().split()) == label)
+        return controller, toggle, capacities
+
+    def test_vanilla_toggle_immediately_clamps_and_persists_without_event_loop(self):
+        controller, toggle, _ = self._prepare_paired_capacity()
+        for mode, maximum, value in [(True, 30, 30), (False, 39, 30), (True, 30, 30)]:
+            toggle.setChecked(mode)
+            self.assertEqual(self.window.diablo_variants_spin.maximum(), maximum)
+            self.assertEqual(self.window.diablo_variants_spin.value(), value)
+            self.assertEqual(LootForgeConfig.load(self.window.config_path).diablo_variants_per_item, value)
+            self.assertFalse(controller.timer.isActive())
+        self.window.diablo_variants_spin.setValue(5)
+        toggle.setChecked(False)
+        self.assertEqual(self.window.diablo_variants_spin.value(), 5)
+
+    def test_changed_source_invalidates_paired_limits(self):
+        controller, toggle, _ = self._prepare_paired_capacity()
+        controller.source.write_bytes(b"changed controlled source")
+        toggle.setChecked(True)
+        self.assertIsNone(controller.capacities)
+        self.assertFalse(self.window.diablo_variants_spin.isEnabled())
+        self.assertFalse(self.window.forge_btn.isEnabled())
+        self.assertTrue(controller.timer.isActive())
+
+    def test_stale_worker_result_and_failure_do_not_restore_old_limit(self):
+        controller, toggle, capacities = self._prepare_paired_capacity()
+        old_revision = controller.revision
+        toggle.setChecked(True)
+        controller.apply((old_revision, capacities))
+        controller.worker_failed((old_revision, "old source failure"))
+        self.assertEqual(self.window.diablo_variants_spin.maximum(), 30)
+        self.assertEqual(self.window.diablo_variants_spin.value(), 30)
+        self.assertNotIn("old source failure", self.window.diablo_variants_spin.toolTip())
+
     def test_input_dir_changed_updates_config(self):
         """Verify that modifying the input folder input field updates configuration."""
         custom_input = str(self.base_path / "custom_input")
