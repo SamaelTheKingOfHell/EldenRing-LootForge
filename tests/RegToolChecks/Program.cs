@@ -102,6 +102,44 @@ string temporary = Path.Combine(Path.GetTempPath(), "lootforge-check-" + Guid.Ne
 Directory.CreateDirectory(temporary);
 try
 {
+    // Actual extraction roundtrip: attack and bullet IDs may coincide but refer
+    // to different tables. Only refType 0 is an AtkParam_Pc dependency.
+    var importWeapon = Table("EquipParamWeapon");
+    var selected = Row(importWeapon, 100000000, "Selected custom weapon");
+    ParamHelper.SetCellIfExists(selected, "equipModelId", (ushort)556);
+    ParamHelper.SetCellIfExists(selected, "behaviorVariationId", 900);
+    var importBehavior = Table("BehaviorParam");
+    foreach (var (id, type, reference) in new[] { (100900001, 0, 77), (100900002, 1, 11), (100900003, 2, 88) })
+    {
+        var row = Row(importBehavior, id);
+        ParamHelper.SetCellIfExists(row, "variationId", 900);
+        ParamHelper.SetCellIfExists(row, "refType", (byte)type);
+        ParamHelper.SetCellIfExists(row, "refId", reference);
+    }
+    var importAttack = Table("AtkParam");
+    Row(importAttack, 77);
+    Row(importAttack, 11);
+    Row(importAttack, 88);
+    var importSkill = Table("SwordArtsParam");
+    Row(importSkill, 1);
+    var fixture = new BND4();
+    foreach (var (name, param) in new[] { ("EquipParamWeapon", importWeapon), ("BehaviorParam_PC", importBehavior),
+                 ("AtkParam_Pc", importAttack), ("SwordArtsParam", importSkill) })
+    {
+        param.ParamdefDataVersion = param.AppliedParamdef.DataVersion;
+        fixture.Files.Add(new BinderFile(Binder.FileFlags.Flag1, name + ".param", param.Write()));
+    }
+    string fixturePath = Path.Combine(temporary, "extract-fixture.bin");
+    SoulsFormats.Cryptography.RegulationDecryptor.EncryptERRegulation(fixturePath, fixture);
+    string extractionPath = Path.Combine(temporary, "extract-fixture.json");
+    int extractionCode = SkillMovesetService.ExecuteExtractSkillsMovesets(new()
+        { ["input"] = fixturePath, ["defs"] = defs, ["output"] = extractionPath });
+    using var extracted = JsonDocument.Parse(File.ReadAllText(extractionPath));
+    var extractedAttacks = extracted.RootElement.GetProperty("CustomAttacks");
+    Check(extractionCode == 0 && extractedAttacks.TryGetProperty("77", out _), "native extraction includes actual attack dependencies");
+    Check(!extractedAttacks.TryGetProperty("11", out _) && !extractedAttacks.TryGetProperty("88", out _), "native extraction does not confuse bullets/effects with attacks");
+    Check(extracted.RootElement.GetProperty("SchemaVersion").GetInt32() == 2, "corrected extraction is explicitly versioned");
+
     string target = Path.Combine(temporary, "regulation.bin");
     File.WriteAllText(target, "original");
     using (var transaction = new PatchOutputTransaction(target))

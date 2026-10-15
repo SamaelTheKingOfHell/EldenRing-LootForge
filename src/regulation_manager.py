@@ -122,8 +122,7 @@ class RegulationManager:
         if not self.defs_dir.exists():
             raise FileNotFoundError(f"Paramdex definitions directory not found: {self.defs_dir}")
 
-        from src.patch_validation import iter_compact_specs, validate_patch_specs
-        validate_patch_specs(specs)
+        specs = self.prepare_patch_specs(specs, source_reg)
 
         target_reg.parent.mkdir(parents=True, exist_ok=True)
         if game_dir:
@@ -135,7 +134,7 @@ class RegulationManager:
             with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as tf:
                 temp_spec_path = tf.name
                 tf.write("[")
-                for index, spec in enumerate(iter_compact_specs(specs)):
+                for index, spec in enumerate(specs):
                     if index:
                         tf.write(",")
                     json.dump(spec, tf, separators=(',', ':'))
@@ -183,6 +182,26 @@ class RegulationManager:
                     os.remove(temp_spec_path)
                 except Exception:
                     pass
+
+    def prepare_patch_specs(self, specs: List[Dict[str, Any]], source_reg: Path) -> List[Dict[str, Any]]:
+        """Validate imports against the host before staging assets or writing patch output."""
+        from src.patch_validation import iter_compact_specs, validate_patch_specs
+        validate_patch_specs(specs)
+        existing = {}
+        if any(spec.get(key) for spec in specs for key in ("custom_skills", "custom_behaviors", "custom_attacks")):
+            stat = source_reg.stat()
+            tool = self.regtool_dll if self.regtool_dll.exists() else self.regtool_proj
+            identity = (str(source_reg.resolve()), stat.st_size, stat.st_mtime_ns, tool.stat().st_mtime_ns)
+            if getattr(self, "_import_identity", None) != identity:
+                response = subprocess.run(self._get_regtool_cmd("imported-row-ids") + ["--input", str(source_reg)],
+                                          capture_output=True, text=True, cwd=self.base_dir, check=False)
+                if response.returncode:
+                    raise RuntimeError(f"Could not validate imported rows: {response.stderr or response.stdout}")
+                payload = json.loads(response.stdout[response.stdout.index("{"):])
+                self._host_import_ids = {key: frozenset(ids) for key, ids in payload.items()}
+                self._import_identity = identity
+            existing = self._host_import_ids
+        return list(iter_compact_specs(specs, existing))
 
     def deploy_parts(
         self,

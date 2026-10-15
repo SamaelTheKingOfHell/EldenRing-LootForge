@@ -43,4 +43,6 @@ This directory contains the core Python engine implementation for LootForge, org
 - `diablo_distribution_context.py`: Per-forge cached world/tier candidates shared by generation and capacity planning.
 - `variant_capacity.py`: Exact per-table variant maximum including vanilla bases and companion talismans.
 - `patch_validation.py`: Early collision/row-limit checks and imported row compaction.
+- `imported_param_fields.py`: Schema-based writable field comparison that excludes extraction metadata and unwritten padding.
+- `skill_regulation_extractor.py`: Versioned extraction caches tied to source, tool, schemas and message archive identities.
 - `file_deployment.py`: Independent, atomic incremental asset copies.

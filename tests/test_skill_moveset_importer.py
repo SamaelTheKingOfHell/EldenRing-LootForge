@@ -703,7 +703,7 @@ def test_in_memory_regulation_cache(temp_env):
     }
 
     # Seed cache
-    cache_key = str(fake_reg.resolve())
+    cache_key = importer.extractor.cache_key(fake_reg)
     importer._regulation_cache[cache_key] = fake_data
 
     # Reading should return cached dict directly
@@ -748,7 +748,7 @@ def test_ensure_deep_introspected_in_place(temp_env):
 
     importer = SkillMovesetImporter(temp_env)
     # Pre-seed cache with weapon specs
-    importer._regulation_cache[str(reg_file.resolve())] = {
+    importer._regulation_cache[importer.extractor.cache_key(reg_file)] = {
         "Weapons": [{
             "ModelId": 556,
             "SwordArtsParamId": 4110,

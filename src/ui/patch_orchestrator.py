@@ -243,8 +243,7 @@ class PatchOrchestrator:
             injected_count += len(vanilla_dist_specs)
             system_logger.info(f"Generated {len(vanilla_dist_specs)} procedural relics from vanilla base items.", source="PatchOrchestrator")
 
-        from src.patch_validation import validate_patch_specs
-        validate_patch_specs(patch_specs)
+        patch_specs = regulation_manager.prepare_patch_specs(patch_specs, source_reg)
         if target_reg.exists():
             backup_manager.create_backup(str(target_reg))
 

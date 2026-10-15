@@ -200,4 +200,5 @@ This roadmap defines the implementation phases for the cross-platform Standalone
 - [x] Stage native output transactionally and deploy independent assets beside the selected regulation.
 - [x] Retain real-regulation benchmark, Python/native tests and actual Qt capacity transitions. See `docs/PATCHER_PERFORMANCE.md`.
 - [ ] Independent copied-profile/gameplay acceptance of acquisition, save/reload, visuals and new item IDs.
-- [ ] Follow-up audits: finite loot destination overflow, strict progression fallbacks, imported-regulation cache identity, asynchronous forging and full asset/manifest transactionality.
+- [x] Correct reported attack ID 11 false conflicts: compare writable fields, select only the weapon's actual attack dependencies, preserve host-owned rows and invalidate aliased/stale extraction caches (2026-10-15).
+- [ ] Follow-up audits: finite loot destination overflow, strict progression fallbacks, asynchronous forging and full asset/manifest transactionality.

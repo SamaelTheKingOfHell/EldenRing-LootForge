@@ -17,9 +17,12 @@ def validate_variant_budget(mod_sets, variants_per_item):
                              "Reduce variants per item or select fewer sets.")
 
 
-def iter_compact_specs(specs):
+def iter_compact_specs(specs, existing_imported_ids=None):
     """Emit imported skill/behavior/attack rows once across all sets, rejecting conflicting IDs."""
     known = {"custom_skills": {}, "custom_behaviors": {}, "custom_attacks": {}}
+    from src.imported_param_fields import applied_fields, writable_import_fields
+    schemas = {key: writable_import_fields(key) for key in known}
+    existing = existing_imported_ids or {}
     for spec in specs:
         compact = spec.copy()
         for key, rows_by_id in known.items():
@@ -28,12 +31,23 @@ def iter_compact_specs(specs):
             unique = []
             for row in spec[key]:
                 row_id = row["skill_id" if key == "custom_skills" else "id"]
+                # Native injection deliberately preserves host/overhaul rows.
+                # Rows tagged as prior LootForge imports are purged and are not
+                # included in this set, so a reforge still reinstalls them.
+                if row_id in existing.get(key, ()):
+                    continue
                 previous = rows_by_id.get(row_id)
                 if previous is not None:
-                    if previous != row:
-                        raise ValueError(f"Conflicting imported {key} ID {row_id} from different mods.")
+                    prior_row, prior_fields, owner = previous
+                    if prior_row is not row:
+                        current_fields = applied_fields(row, schemas[key])
+                        if prior_fields != current_fields:
+                            changed = sorted(name for name in prior_fields.keys() | current_fields.keys()
+                                             if prior_fields.get(name) != current_fields.get(name))
+                            raise ValueError(f"Conflicting imported {key} ID {row_id}: {owner} versus "
+                                             f"{spec.get('set_id', 'unnamed set')} (fields: {', '.join(changed[:5])}).")
                     continue
-                rows_by_id[row_id] = row
+                rows_by_id[row_id] = (row, applied_fields(row, schemas[key]), spec.get("set_id", "unnamed set"))
                 unique.append(row)
             if unique:
                 compact[key] = unique

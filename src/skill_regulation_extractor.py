@@ -8,6 +8,8 @@ Adheres to [CS-MODULAR] and [CS-GRANULARITY].
 
 import sys
 import json
+import hashlib
+import os
 import subprocess
 from pathlib import Path
 from typing import Optional, Dict, Any
@@ -18,6 +20,7 @@ class SkillRegulationExtractor:
     """Extracts and caches custom weapon skills/movesets parameters from mod regulations."""
 
     _regulation_cache: Dict[str, Dict[str, Any]] = {}
+    CACHE_VERSION = 2
 
     @classmethod
     def clear_cache(cls):
@@ -32,6 +35,30 @@ class SkillRegulationExtractor:
         self.regtool_debug_dll = self.base_dir / "tools" / "RegTool" / "bin" / "Debug" / "net9.0" / "RegTool.dll"
         self.regtool_proj = self.base_dir / "tools" / "RegTool" / "RegTool.csproj"
 
+    def cache_key(self, reg_file: Path, msg_candidate: Optional[Path] = None) -> str:
+        """Bind cached extraction to source identity, message archives, schemas and native tool revision."""
+        def identity(path):
+            path = Path(path).resolve()
+            try:
+                stat = path.stat()
+                return (os.path.normcase(str(path)), stat.st_size, stat.st_mtime_ns)
+            except FileNotFoundError:
+                return (os.path.normcase(str(path)), None, None)
+
+        messages = []
+        if msg_candidate and Path(msg_candidate).exists():
+            messages = [identity(path) for path in sorted(Path(msg_candidate).rglob("*.msgbnd.dcx"))]
+        tool = next((path for path in (self.regtool_dll, self.regtool_debug_dll, self.regtool_proj) if path.exists()), self.regtool_proj)
+        schemas = [identity(self.defs_dir / (name + ".xml")) for name in
+                   ("EquipParamWeapon", "SwordArtsParam", "BehaviorParam", "AtkParam")]
+        signature = (self.CACHE_VERSION, identity(reg_file), identity(tool),
+                     str(Path(msg_candidate).resolve()) if msg_candidate else None, messages, schemas)
+        return hashlib.sha256(json.dumps(signature, separators=(",", ":")).encode("utf-8")).hexdigest()
+
+    def cache_path(self, reg_file: Path, msg_candidate: Optional[Path] = None) -> Path:
+        """Locate a versioned extraction without reusing legacy stem/size cache files."""
+        return self.base_dir / "scratch" / f"extracted_v{self.CACHE_VERSION}_{self.cache_key(reg_file, msg_candidate)}.json"
+
     def extract_regulation_data(
         self,
         reg_file: Path,
@@ -43,17 +70,16 @@ class SkillRegulationExtractor:
         are instantaneous.
         """
         reg_path = Path(reg_file).resolve()
-        cache_key = str(reg_path)
+        cache_key = self.cache_key(reg_path, msg_candidate)
         if cache_key in self._regulation_cache:
             return self._regulation_cache[cache_key]
 
         scratch_dir = self.base_dir / "scratch"
         scratch_dir.mkdir(parents=True, exist_ok=True)
-        file_hash = f"{reg_path.stem}_{reg_path.stat().st_size}"
-        out_json = scratch_dir / f"extracted_{file_hash}.json"
+        out_json = self.cache_path(reg_path, msg_candidate)
 
-        # If scratch json already exists and is newer than reg_file, reuse it directly
-        if out_json.exists() and out_json.stat().st_mtime >= reg_path.stat().st_mtime:
+        # The versioned key already captures source, schemas, tool and message identities.
+        if out_json.exists():
             try:
                 with open(out_json, "r", encoding="utf-8") as f:
                     data = json.load(f)

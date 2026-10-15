@@ -177,7 +177,7 @@ class SkillMovesetImporter:
                 except ValueError:
                     pass
 
-            if not matched_weapon and weapons:
+            if not matched_weapon and weapons and target_model_id is None:
                 matched_weapon = weapons[0]
 
             if not matched_weapon:
@@ -222,9 +222,17 @@ class SkillMovesetImporter:
                     })
 
             attacks_spec = []
-            for atk_id, a_row in custom_attacks.items():
+            # refType 0 addresses AtkParam_Pc; refType 1 addresses Bullet.
+            # A regulation-wide catalogue includes unrelated weapons and must
+            # never be attached wholesale to each selected model.
+            attack_ids = {int(b["fields"]["refId"]) for b in behaviors_spec
+                          if b["fields"].get("refType") == 0 and b["fields"].get("refId", -1) >= 0}
+            for atk_id in sorted(attack_ids):
+                a_row = custom_attacks.get(str(atk_id))
+                if a_row is None:
+                    continue
                 attacks_spec.append({
-                    "id": int(atk_id),
+                    "id": atk_id,
                     "fields": a_row
                 })
 

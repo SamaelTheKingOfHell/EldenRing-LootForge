@@ -56,7 +56,7 @@ Release state: **Ship with Known Issues** for the local patcher; game-runtime ac
 - Real Elden Ring runtime, save compatibility of the new procedural ID namespace, visible equipment, and observed acquisition/drop probabilities have not been exercised. Native roundtrips are separate evidence.
 - The existing loot overflow strategy has finite destination slots and can leave relics unplaced after exhausting them. Equipment capacity is not a guarantee that every generated item can be acquired. A full placement audit remains necessary for a large actual forge.
 - Existing progression fallbacks can broaden to other candidate tiers when a tier pool is empty; C# enrichment also uses name/ID heuristics. Strict progression compliance needs a dedicated gameplay/distribution audit.
-- The existing extracted-regulation disk cache uses stem/size rather than complete source identity, so different mod regulations can alias. This requires a separate cache invalidation repair and conflict retest.
+- Imported-regulation cache identity was corrected on 2026-10-15; the scoped conflict retest below passed. Independent gameplay acceptance remains open.
 - Qt forging itself remains synchronous; the capacity worker is asynchronous. Large real forges can still make the main window unresponsive while working, although the engine work has been reduced.
 - Native transaction staging covers regulation and FMGs. Asset staging/deployment and manifest writes are not one cross-file transaction; a disk/permission failure in those phases may require restoring the retained backup.
 
@@ -65,3 +65,23 @@ Release state: **Ship with Known Issues** for the local patcher; game-runtime ac
 The required QA Tracker `qa_guide` and `qa_create` calls both returned that the independent tracker was unavailable. No QA ID, accepted retest or closed bug is claimed. Retain this report with the logs/artifacts listed above; import them into the tracker when available. The next manual owner should review the current source revision and run a copied-profile forge plus Elden Ring acquisition/save tests before accepting game-runtime behavior. Do not treat the implementation author's checks as that independent retest.
 
 Publication boundary: `gh repo view` reports that the configured GitHub remote is public. Operations `agents/workflow.md` [WF-PRIVATE-REPO] requires explicit approval before using a public remote for local work. The change is committed and deployed locally; public push is held. After approval, the follow-up command is `git push origin HEAD:feature/souls-armor-port`.
+
+## Imported attack ID 11 correction (2026-10-15)
+
+The reported `Conflicting imported custom_attacks ID 11` was reproduced using the installed mod extractions. The Ab Aeterno and god_slaying_nagamaki rows differed only in `pad4`, a dummy8 field the native writer does not apply. The new comparison uses Paramdex writable field definitions, ignores extraction names and padding, and still rejects conflicting gameplay values for genuinely new row IDs with both set names and differing fields in the error.
+
+Extraction also included unrelated weapons' attack catalogues. Python now imports only attack IDs referenced by the selected weapon's behavior variation. Native extraction uses `refType = 0` for attacks, keeping Bullet (`1`) and SpEffect (`2`) references separate; this mapping is confirmed by [Smithbox's Elden Ring BehaviorParam metadata](https://github.com/vawser/Smithbox/blob/main/src/Smithbox.Data/Assets/PARAM/ER/Param%20Meta/BehaviorParam.xml). Dependency tables are indexed once. An explicitly unmatched model no longer inherits the first weapon's moveset.
+
+Import preflight reads host-owned row IDs and follows the existing native rule of preserving those rows. Previously generated `[LootForge]` rows are excluded because they are purged and must be reinstalled. No imported IDs are remapped. This preserves host/overhaul behavior; it does not establish compatibility for every mod skill or its external animation, Bullet and SpEffect dependencies.
+
+Extraction cache version 2 includes the resolved source path, size, nanosecond modification time, native tool identity, relevant schemas and message archive identities. Legacy stem/size caches are bypassed, and changed sources invalidate in-memory entries too. The fallback importer now resolves tooling from the application root.
+
+Retained implementation evidence:
+
+- `scratch/import-fix-tests.log`: 145 Python tests passed in 47.77 seconds, including eight focused import/cache regressions.
+- `scratch/import-fix-native.log`: 25 native checks passed, including an actual encrypted regulation extraction fixture distinguishing attack, Bullet and SpEffect references.
+- `scratch/import-fix-reproduction.json` and `scratch/import-fix-specs.json`: all 469 current sets validated against the actual Ordo Perfectus source, using two variants per set (938 specs). Host-aware compaction retained 29 new skills, 216 behaviors and 193 attacks.
+- `scratch/import-fix-roundtrip/patch-with-messages.log`: the native copied-output patch succeeded in 12.884 seconds, including base/DLC item text. It injected 2,864 equipment and text entries and 971 loot/shop entries. The output reopened successfully with 194 parameter files. This is a controlled two-variant regression, not the full configured 52-variant forge or an in-game test.
+- The active game profile was not rewritten. The local Release patcher and Python source are the deployment target; a running desktop app must be restarted to reload them.
+
+The independent QA Tracker was unavailable again when creating the reported bug record. This remains an unsubmitted portable return, without a QA ID or accepted retest. Next manual acceptance: restart the local app, rescan the same selection, forge a copied profile at the chosen capacity, then verify custom skills, acquisition and save/reload in Elden Ring. Record the deployed commit and target with the retained evidence before accepting runtime behavior.

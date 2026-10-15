@@ -181,7 +181,7 @@ class ParamBuilder:
                         try:
                             from src.skill_moveset_importer import SkillMovesetImporter
                             reg_p = Path(mod_set.skill_moveset.regulation_path)
-                            importer = SkillMovesetImporter(reg_p.parent.parent if reg_p.parent.name == "input_mods" else reg_p.parent)
+                            importer = SkillMovesetImporter(Path(__file__).resolve().parents[1])
                             importer.ensure_deep_introspected(mod_set)
                         except Exception:
                             pass

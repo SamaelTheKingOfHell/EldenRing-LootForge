@@ -32,6 +32,8 @@ namespace LootForge.RegTool
                         return PatchService.ExecutePatch(options);
                     case "capacity":
                         return CapacityService.Execute(options);
+                    case "imported-row-ids":
+                        return CapacityService.ImportedRowIds(options);
                     case "verify":
                         return DiagnosticService.ExecuteVerify(options);
                     case "extract-msg":

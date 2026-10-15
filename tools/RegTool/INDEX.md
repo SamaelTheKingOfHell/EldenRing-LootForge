@@ -32,6 +32,7 @@ Adheres to `[CS-MODULAR]`, `[CS-GRANULARITY]`, and `[CS-DECOUPLE]` by decomposin
 ## Patcher performance and capacity
 
 - `CapacityService.cs`: Fast surviving equipment row counts from source metadata.
+- `SkillExtractionIndex.cs`: Single-pass skill, behavior variation and attack lookup indices for dependency extraction.
 - `PatchPreflight.cs`: Native collision and row-limit validation before large batch cloning.
 - `PatchOutputTransaction.cs`: Staged regulation/FMG publication with rollback on commit failure.
 - `LootSlotAllocator.cs`: Amortized-linear free overflow slot allocation.

@@ -35,6 +35,7 @@ namespace LootForge.RegTool
 
         public class ExtractionResult
         {
+            public int SchemaVersion { get; set; } = 2;
             public List<WeaponSkillInfo> Weapons { get; set; } = new();
             public Dictionary<int, Dictionary<string, object>> CustomSkills { get; set; } = new();
             public Dictionary<int, List<Dictionary<string, object>>> CustomBehaviors { get; set; } = new();
@@ -103,6 +104,7 @@ namespace LootForge.RegTool
             var behaviorParam = GetOrLoadParam("BehaviorParam_PC");
             PARAM? attackParam = null;
             try { attackParam = GetOrLoadParam("AtkParam_Pc"); } catch { }
+            var dependencies = new SkillExtractionIndex(swordArtsParam, behaviorParam, attackParam);
 
             var result = new ExtractionResult();
 
@@ -125,7 +127,7 @@ namespace LootForge.RegTool
 
                 // Detection criterion: high ID (mod custom range), custom skill ID, or non-default behavior variation
                 bool isCustomId = wId >= 9000000;
-                bool isCustomSkill = skillId >= 1000 || (skillId > 0 && swordArtsParam.Rows.Any(r => r.ID == skillId && !string.IsNullOrWhiteSpace(r.Name) && !r.Name.StartsWith("?")));
+                bool isCustomSkill = skillId >= 1000 || (skillId > 0 && dependencies.Skills.TryGetValue(skillId, out var candidateSkill) && !string.IsNullOrWhiteSpace(candidateSkill.Name) && !candidateSkill.Name.StartsWith("?"));
                 bool isCustomMoveset = behVar >= 800 || motCat == 60 || spAtk > 100;
 
                 if (!isCustomId && !isCustomSkill && !isCustomMoveset) continue;
@@ -147,8 +149,7 @@ namespace LootForge.RegTool
                 // Capture skill data
                 if (skillId > 0)
                 {
-                    var saRow = swordArtsParam.Rows.FirstOrDefault(r => r.ID == skillId);
-                    if (saRow != null)
+                    if (dependencies.Skills.TryGetValue(skillId, out var saRow))
                     {
                         wInfo.SkillName = skillNames.TryGetValue(skillId, out var sn) ? sn : saRow.Name;
                         wInfo.SkillCaption = skillCaptions.TryGetValue(skillId, out var sc) ? sc : "";
@@ -168,7 +169,7 @@ namespace LootForge.RegTool
                     if (!result.CustomBehaviors.TryGetValue(behVar, out var bList))
                     {
                         bList = new List<Dictionary<string, object>>();
-                        var behRows = behaviorParam.Rows.Where(r => ParamHelper.GetCellInt(r, "variationId") == behVar).ToList();
+                        var behRows = dependencies.Behaviors.TryGetValue(behVar, out var group) ? group : Enumerable.Empty<PARAM.Row>();
                         foreach (var bRow in behRows)
                         {
                             var bDict = RowToDictionary(bRow);
@@ -176,10 +177,9 @@ namespace LootForge.RegTool
 
                             int refType = ParamHelper.GetCellInt(bRow, "refType");
                             int refId = ParamHelper.GetCellInt(bRow, "refId");
-                            if (refType == 1 && refId > 0 && attackParam != null && !result.CustomAttacks.ContainsKey(refId))
+                            if (refType == 0 && refId >= 0 && attackParam != null && !result.CustomAttacks.ContainsKey(refId))
                             {
-                                var atkRow = attackParam.Rows.FirstOrDefault(r => r.ID == refId);
-                                if (atkRow != null)
+                                if (dependencies.Attacks.TryGetValue(refId, out var atkRow))
                                 {
                                     result.CustomAttacks[refId] = RowToDictionary(atkRow);
                                 }
