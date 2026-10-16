@@ -36,6 +36,7 @@ Develop a cross-platform desktop application and mod engine for *Elden Ring* tha
    - Centralized multi-language localization catalog (`[CS-LOCALIZATION]`).
 
 7. **Diablo-Style Procedural ARPG Loot & Affixes**:
+   - Bosses/chests have a shared maximum of four total reward entries, including originals, across all generated variants and enrichment passes. Count each armor piece and talisman individually; preserve larger native bundles without additions. See `docs/DROP_BUDGET_REPAIR.md`.
    - Resolve Diablo destinations from installed MSB/event/talk provenance, preserve one-time map acquisition flags, keep complete armor groups reachable, use rare single bonus talismans and enforce finite destination capacity. See `docs/LOOT_RUNTIME_REPAIR.md`.
    - Keep early Legendary discoveries possible while scaling rolled bonuses and passive potency with region and rarity. Expose separate Diablo-only toggles for regional power, extra passives, rare Legendary/Mythic combat enchantments and effect-matched cosmetic auras.
    - Optional procedural ARPG loot generator that transforms standalone mod items into multi-tier relics.

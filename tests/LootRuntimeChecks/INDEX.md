@@ -9,3 +9,5 @@
 Run `dotnet run --project tests/LootRuntimeChecks -c Release -- <repo> <source-reg> <target-reg> <game> <specs.json> <report.json> [profile-reg-for-assets-and-map-overrides]`.
 The final argument supports a retained source backup outside the deployed profile.
 This checks files; it does not execute the game.
+
+- `DropBudgetAudit.cs`: Count all original and generated reward rows in each proven boss/chest chain. Run `drop-budget <repo> <profile-reg> <game> <report.json> [enforce]`; native bundles already exceeding four remain intact and receive no additions.

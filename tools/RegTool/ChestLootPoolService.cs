@@ -83,8 +83,8 @@ namespace LootForge.RegTool
             HashSet<int>? customWeaponIds = null, WorldLootCatalog? verified = null)
         {
 
-            var mapRowMap = new Dictionary<int, PARAM.Row>(mapParam.Rows.Count);
-            foreach (var r in mapParam.Rows) mapRowMap[r.ID] = r;
+            minItems = Math.Clamp(minItems, 1, 4);
+            maxItems = Math.Clamp(maxItems, minItems, 4);
 
             // 1. Gather all custom items, prioritizing custom armor, then custom weapons
             var customArmorItems = new List<(int Id, string Name, int Category, EntityProgressionTier Tier)>();
@@ -134,9 +134,8 @@ namespace LootForge.RegTool
                 int baseLotId = chest.LotId;
                 string chestName = chest.Name;
                 EntityProgressionTier tier = chest.Tier;
-                var baseRow = mapRowMap[baseLotId];
-
-                int countToInject = rng.Next(minItems, maxItems + 1);
+                int countToInject = Math.Min(rng.Next(minItems, maxItems + 1),
+                    AdditiveLootService.RemainingRewardSlots(mapParam, baseLotId));
                 var chosenForChest = new List<(int Id, string Name, int Category, EntityProgressionTier Tier)>();
 
                 chosenForChest.AddRange(combinedCustomPool.Where(item => item.Tier == tier && !placedItemIds.Contains(item.Id)).Take(countToInject));

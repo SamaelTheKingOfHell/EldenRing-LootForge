@@ -86,3 +86,9 @@ One generator owns IDs and destination state for an entire forge. Imported moves
 Variant capacity is a product constraint, owned by `src/variant_capacity.py`, using the actual generator destination planner in count-only mode and native source metadata from `CapacityService.cs`. It includes surviving vanilla/overhaul rows, selected mod pieces, companion talismans and optional vanilla-base distribution. The Qt worker debounces recalculation and clamps its input; forge-time and native preflight checks enforce it again. In-place vanilla infusion adds no rows.
 
 Native regulation and FMG output is staged and published together with rollback on failed replacement. Assets are independent copies staged beside the selected regulation. See `docs/PATCHER_PERFORMANCE.md` for measurements, current limits and acceptance boundaries.
+
+## Boss/chest aggregate reward contract (2026-10-16)
+
+`diablo_destinations.py` owns a shared four-item budget for each boss/chest award chain across every generated group and variant. Discovery schema 3 carries original reward counts; each armor piece and optional talisman consumes one remaining slot. Count-only capacity planning uses the same reservations. Groups that cannot fit move intact to another verified destination in the same progression tier.
+
+`AdditiveLootService` counts real reward rows and enforces the same ceiling for direct map injection and both enrichment services. Lottery alternatives and native stacks count as one reward entry; generated equipment has quantity one. Oversized direct groups fail before insertion. Original bundles already larger than four receive no additions and remain intact. See `docs/DROP_BUDGET_REPAIR.md` for deployed-profile exceptions and validation.

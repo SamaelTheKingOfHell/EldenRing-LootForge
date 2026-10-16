@@ -24,6 +24,27 @@ public static class AdditiveLootService
     }
     private static readonly ConditionalWeakTable<PARAM, Index> Indices = new();
 
+    /// <summary>Maximum independent awards in a contiguous chain, including its original rewards.
+    /// A lottery selects one slot; a native stack is one reward, not one reward per unit.</summary>
+    public static int RewardCount(PARAM param, int baseId, bool originalsOnly = false)
+    {
+        var rows = Indices.GetValue(param, p => new Index(p)).Rows;
+        if (!rows.ContainsKey(baseId)) return 0;
+        int first = baseId, count = 0;
+        while ((first - 1) / 10 == baseId / 10 && rows.ContainsKey(first - 1)) first--;
+        for (int id = first; id / 10 == baseId / 10 && rows.TryGetValue(id, out var row); id++)
+        {
+            if (originalsOnly && row.Name?.Contains("[LootForge]") == true) continue;
+            if (Enumerable.Range(1, 8).Any(slot => ParamHelper.GetCellInt(row, $"lotItemId0{slot}") > 0 &&
+                ParamHelper.GetCellInt(row, $"lotItemBasePoint0{slot}") > 0 &&
+                ParamHelper.GetCellInt(row, $"lotItemNum0{slot}") > 0)) count++;
+        }
+        return count;
+    }
+
+    /// <summary>Shared four-item budget used by direct map awards and both enrichment paths.</summary>
+    public static int RemainingRewardSlots(PARAM param, int baseId) => Math.Max(0, 4 - RewardCount(param, baseId));
+
     /// <summary>Count independent insertion rows after removing earlier generated chains.</summary>
     public static int Capacity(PARAM param)
     {
@@ -48,6 +69,7 @@ public static class AdditiveLootService
     {
         var index = Indices.GetValue(param, p => new Index(p));
         if (baseId <= 0 || param.Rows.Count >= ushort.MaxValue || index.Exhausted.Contains(baseId) || !index.Rows.ContainsKey(baseId)) return false;
+        if (preserveAcquisitionFlag && RemainingRewardSlots(param, baseId) == 0) return false;
         int tail = index.Tails.GetValueOrDefault(baseId, baseId);
         while (tail < int.MaxValue && index.Rows.ContainsKey(tail + 1)) tail++;
         // Existing routing reserves ten-ID blocks. Do not connect a previously

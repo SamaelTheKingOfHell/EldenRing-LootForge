@@ -11,6 +11,9 @@ Branch: `codex/loot-refinement`. Reported game behavior reopens balance acceptan
 - [x] Regression coverage: real PARAM/FMG comparisons, positive native effects, category toggles, strength-only prices and fresh output checks.
 - [x] Deployment: back up the current selected profile, stage/review, publish corrected regulation/messages/events, retain hashes, commit and push.
 - [ ] Game retest: acquire fresh items, inspect armor, compare a starting legendary with Uchigatana, test buildup, vendor/sell values, original descriptions and each aura toggle separately.
+- [x] Boss/chest reward flood: shared four-item budget across all variants and enrichment, including originals, individual armor pieces and optional talismans; preserve larger original boss bundles without additions.
+- [x] Reward-budget deployment: all 469 selected groups at two variants each; 309 proven chains have no generated overflow. See `DROP_BUDGET_REPAIR.md` and `DROP_BUDGET_VALIDATION.json`.
+- [ ] Fresh in-game reward-budget retest: count each armor piece and talisman; preserve the five native five-item bundles without additions.
 
 QA tracker: unavailable during initial discovery. Retain a portable retest packet;
 file verification does not close the reported game bugs.

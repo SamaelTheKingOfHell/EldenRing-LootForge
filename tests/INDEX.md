@@ -33,7 +33,7 @@ Automated verification suites adhering to `[CS-NO-MOCK]`. Tests exercise concret
 
 - `test_refinement.py`: Real Qt aura toggles, legacy settings migration, positive affix/resource bonuses and preservation of vanilla text/economy specs.
 
-- `test_loot_runtime_routes.py`: Weapon identity blocks, complete armor reservation, finite vendor stock and source-route immutability.
+- `test_loot_runtime_routes.py`: Weapon identity, complete armor reservation, finite stock, shared boss/chest reward budgets, optional companion suppression and source-route immutability.
 - `LootRuntimeChecks/`: Read-only exact encrypted-profile acceptance for original lotteries, complete generated rewards, armor assets, vendor stock and all installed FMG tables.
 
 - `test_patch_performance.py`: Large multi-set variant, batch validation and incremental file safety regressions.

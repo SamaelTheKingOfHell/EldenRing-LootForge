@@ -4,6 +4,7 @@ using SoulsFormats.Cryptography;
 using LootForge.RegTool;
 
 if(args[0]=="inspect") { RefinementAudit.Run(args[1],args[2],args[3],args[4]); return; }
+if(args[0]=="drop-budget") { DropBudgetAudit.Run(args[1],args[2],args[3],args[4],args.Length>5&&args[5]=="enforce"); return; }
 if(args[0]=="refine") { RefinementVerification.Run(args[1],args[2],args[3],args[4],args[5]); return; }
 if(args[0]=="migrate-messages") { RefinementVerification.MigrateMessages(args[1],args[2],args[3],args[4]); return; }
 

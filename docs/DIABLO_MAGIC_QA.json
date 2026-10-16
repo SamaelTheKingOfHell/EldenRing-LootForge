@@ -5,7 +5,7 @@
   "owner": "Game tester",
   "target": "Freshly forged Diablo equipment in the Ordo Perfectus Elden Ring profile",
   "environment": "Actual installed Elden Ring game, fully restarted after forging",
-  "build": "codex/loot-refinement; use docs/REFINEMENT_VALIDATION.json identities and the corresponding repair commit.",
+  "build": "codex/loot-refinement; use docs/DROP_BUDGET_VALIDATION.json for the latest profile identities and docs/REFINEMENT_VALIDATION.json for prior refinement evidence.",
   "steps": [
     "Compare early and endgame rolls of the same base item, rarity and upgrade level.",
     "Verify HP, FP, stamina, regeneration and protection passives while equipping and unequipping.",
@@ -20,7 +20,7 @@
     "Acquire newly generated armor from boss, chest, NPC and vendor routes; verify every piece and both player bodies.",
     "Check newly acquired weapon name/rarity/caption agreement at reinforcement levels 0 and above; inspect accessory equipment menus for valid names/icons.",
     "At First Step and ingredient gathering nodes, verify no added gear rewards; rest, quit/reload and revisit opened chests with world-reset hotkeys unused.",
-    "Defeat a qualifying boss, collect its original reward plus generated gear; verify ordinary respawns do not repeat the award.",
+    "Defeat qualifying bosses and open fresh chests: total original-plus-generated reward entries must be 1-4, counting each armor piece and talisman. The five original five-item boss bundles listed in DROP_BUDGET_REPAIR.md receive no additions. Verify ordinary respawns do not repeat boss awards.",
     "Visit a verified vendor, purchase a custom item, rest and reload; original stock remains and purchased custom stock stays sold out.",
     "Compare the new starter rolls with the same-rarity later regional gear; verify discovery and additive attributes do not retain full unscaled bonuses.",
     "Inspect all four armor slots: damage negation must be ordinary per-piece values, never 100 across the board; compare against native armor of the same weight.",
@@ -37,6 +37,12 @@
   "executed_game_coverage": "none",
   "next_action": "Submit this assignment to the QA tracker when reachable, then execute the game checks.",
   "runtime_bug_reports": [
+    {
+      "id": "boss-chest-eight-to-ten-item-flood",
+      "status": "file-fix-passed-awaiting-game-retest",
+      "evidence": "DROP_BUDGET_VALIDATION.json",
+      "expected": "Aggregate original-plus-generated rewards never exceed four, except larger preserved original bundles with no generated additions."
+    },
     {
       "id": "description-overlap-and-identity",
       "status": "file-repair-passed-awaiting-game-retest"

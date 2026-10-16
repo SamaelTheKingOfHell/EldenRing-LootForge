@@ -34,6 +34,9 @@ class TestVariantCapacity(unittest.TestCase):
     def test_vanilla_distribution_reduces_maximum(self):
         kb = VanillaKnowledgeBase({}, {})
         kb._weapons = {"2020": {"baseParamId": 2020000, "name": "Sword"}}
+        # Isolate the equipment limit from the finite chest reward budget.
+        kb._merchants = [{"id": "shop_fixture", "name": "Test merchant", "progressionTier": tier}
+                         for tier in (1, 2)]
         plain = calculate_capacity({"EquipParamWeapon": 65525}, [weapon_spec()], kb)
         vanilla = calculate_capacity({"EquipParamWeapon": 65525}, [weapon_spec()], kb, include_vanilla=True)
         self.assertEqual(plain.maximum, 10)
@@ -55,6 +58,17 @@ class TestVariantCapacity(unittest.TestCase):
     def test_full_source_disables_impossible_selection(self):
         capacity = calculate_capacity({"EquipParamWeapon": 65535}, [weapon_spec()], None)
         self.assertEqual(capacity.maximum, 0)
+
+    def test_live_original_rewards_reduce_selection_capacity(self):
+        from src.knowledge_loader import KnowledgeLoader
+        models, routes = {}, {}
+        KnowledgeLoader.ingest_discovered_snapshot({"SchemaVersion": 3, "BossLots": [{
+            "LotId": 10000, "Name": "Boss", "Tier": 1, "FreeRows": 8, "OriginalRewards": 2}]}, models, routes)
+        kb = VanillaKnowledgeBase(models, routes)
+        capacity = calculate_capacity({}, [weapon_spec()], kb, ceiling=20)
+        self.assertEqual(capacity.maximum, 2)
+        self.assertEqual(capacity.generated, {"EquipParamWeapon": 2})
+        self.assertIn("LootDestinations", capacity.limiting_tables)
 
     def test_vanilla_param_only_items_do_not_exhaust_model_namespace(self):
         from src.id_allocator import IdAllocator

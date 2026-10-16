@@ -100,6 +100,8 @@ namespace LootForge.RegTool
             if (allowed != null && !allowed.Contains(targetLotId))
                 throw new InvalidDataException($"Unverified loot destination {tableName}:{targetLotId}. No unrelated pickup was modified.");
             ushort points = (ushort)Math.Clamp((int)Math.Round(dropRatePercent * 10), 0, 1000);
+            if (isMapTable && awardedItems.Count > AdditiveLootService.RemainingRewardSlots(itemLotParam, targetLotId))
+                throw new InvalidOperationException($"Boss/chest {targetLotId} exceeds four total rewards, including original items. Reduce this reward group or reforge with current destination capacity.");
             foreach (int itemId in awardedItems)
             {
                 bool accessory = itemIdToIsAccessory.GetValueOrDefault(itemId);

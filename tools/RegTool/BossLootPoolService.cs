@@ -128,12 +128,13 @@ namespace LootForge.RegTool
 
                 // 1. Prioritize custom weapons and armor pieces
                 var availableCustom = customBossItems.Where(i => i.Tier == tier && !usedItemIds.Contains(i.Id)).ToList();
-                var chosenItems = availableCustom.OrderBy(_ => rng.Next()).Take(weaponsPerBoss).ToList();
+                var destination = isMap ? mapParam : enemyParam;
+                int available = isMap ? AdditiveLootService.RemainingRewardSlots(destination, baseLotId) : 4;
+                var chosenItems = availableCustom.OrderBy(_ => rng.Next()).Take(Math.Min(available, weaponsPerBoss)).ToList();
 
                 if (chosenItems.Count == 0) continue;
                 foreach (var itm in chosenItems) usedItemIds.Add(itm.Id);
 
-                var destination = isMap ? mapParam : enemyParam;
                 foreach (var itm in chosenItems)
                 {
                     if (AdditiveLootService.TryAppend(destination, baseLotId, itm.Id, itm.Category, 1000,

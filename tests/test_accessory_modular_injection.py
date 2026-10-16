@@ -76,6 +76,10 @@ class TestAccessoryModularInjection(unittest.TestCase):
     def test_diablo_companion_accessory_icon_id(self):
         """Verifies DiabloVariantBuilder assigns valid authentic iconId (>= 18000) to companion accessories."""
         from src.diablo_generator import DiabloLootGenerator
+        # Enough independent chests to exercise rare companions without overflowing one pickup.
+        self.kb._discovered_chests = [{"id": f"chest_{i}", "lotParamId": 20000+i*10,
+            "name": f"Fixture chest {i}", "progressionTier": 1, "freeRows": 8, "originalRewards": 1}
+            for i in range(100)]
         mock_generator = DiabloLootGenerator(seed=42, knowledge_base=self.kb)
 
         base_spec = {

@@ -4,6 +4,8 @@
 This folder contains system specifications, guides, and architectural design references for the LootForge engine.
 
 ## Documents
+* [`DROP_BUDGET_REPAIR.md`](DROP_BUDGET_REPAIR.md): Shared 1-4 total boss/chest reward budgets, native bundle exceptions, capacity clamp and regression rationale.
+* `DROP_BUDGET_VALIDATION.json`: Before/after installed-profile reward counts, deployment identities and exact-file checks.
 * [`REFINEMENT_CHECKLIST.md`](REFINEMENT_CHECKLIST.md): Requested checklist for armor stats, nonzero buildup/effects, early legendaries, vanilla text, strength-based economy and separate aura controls.
 * [`REFINEMENT_NOTES.md`](REFINEMENT_NOTES.md): Final native balance rules, restored vanilla text/economy, pricing and aura migration.
 * `REFINEMENT_VALIDATION.json`: Deployed identities, focused checks and remaining game retest.

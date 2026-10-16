@@ -5,7 +5,7 @@ namespace LootForge.RegTool;
 /// <summary>World destinations proven by MSB treasure records and boss-death event code.</summary>
 public sealed class WorldLootCatalog
 {
-    public record Destination(int LotId, string Name, EntityProgressionTier Tier, int FreeRows, string Evidence);
+    public record Destination(int LotId, string Name, EntityProgressionTier Tier, int FreeRows, string Evidence, int OriginalRewards = 1);
     public List<Destination> Chests { get; } = new();
     public List<Destination> Bosses { get; } = new();
     public List<Destination> Enemies { get; } = new();
@@ -70,7 +70,8 @@ public sealed class WorldLootCatalog
             if (id <= 0 || !rows.TryGetValue(id, out var row) || row.Name?.Contains("[LootForge]") == true ||
                 (ReferenceEquals(target, catalog.Chests) && ParamHelper.GetCellInt(row, "getItemFlagId") <= 0) || target.Any(item => item.LotId / 10 == id / 10)) return;
             string name = names.GetValueOrDefault(id, file + " reward " + id);
-            target.Add(new(id, name, Tier(file, name), FreeRows(map, id), proof));
+            target.Add(new(id, name, Tier(file, name), FreeRows(map, id), proof,
+                AdditiveLootService.RewardCount(map, id, originalsOnly: true)));
         }
         var npcRows = npc?.Rows.ToDictionary(row => row.ID) ?? new();
         var enemyRows = enemy?.Rows.ToDictionary(row => row.ID) ?? new();

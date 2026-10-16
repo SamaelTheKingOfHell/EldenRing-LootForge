@@ -36,7 +36,7 @@ With progression enabled, chest rarity uses regional weights. Early Legendary/My
 Vanilla chests in *Elden Ring* typically reward a single item. LootForge upgrades chests to function like ARPG treasure troves:
 - **Primary Reward**: The forged standalone weapon or armor set.
 - **Companion Injections**: A 7% chance of one extra regional talisman; ordinary enemy and merchant placements do not receive bonus talismans.
-- **Total Yield**: Original reward plus the selected complete equipment group and its rare optional companion, limited by actual contiguous row space.
+- **Total Yield**: At most four reward entries across the original reward and all generated groups, variants and companions. Every armor piece and talisman counts individually. A native stack or lottery contributes one reward entry. An optional companion is omitted when the equipment fills the budget. See [aggregate budget repair](DROP_BUDGET_REPAIR.md).
 
 ### 2.3. Non-Destructive Sequential Lot Chaining
 To prevent overwriting vanilla rewards (such as key items, somber smithing stones, or spells):
@@ -61,7 +61,7 @@ LootForge enforces strict progression locking (`ProgressionTier`) across all ite
 ### Progression Invariants
 - **No Early-Game Spoilers**: Late-game and endgame gear (e.g. Malenia, Maliketh, Radagon/Elden Beast) can **never** drop in Early or Mid-game chests or bosses (e.g. Margit, Godrick, Gatefront).
 - **No Endgame Degradation**: Early-game items do not dilute endgame treasure vaults.
-- **Consistent Set Preservation**: All pieces of a 4-piece armor set remain unified in the exact same chest.
+- **Consistent Set Preservation**: Armor pieces remain in one destination. A four-piece set cannot fit beside an original chest reward, so the Diablo planner moves the whole group to another verified regional destination, such as an equipment-dropping NPC or merchant.
 
 ---
 
@@ -74,7 +74,7 @@ LootForge enforces strict progression locking (`ProgressionTier`) across all ite
 | [`data/vanilla_models.json`](../data/vanilla_models.json) | Tags all protectors, weapons, and vanilla accessories with canonical progression tiers. |
 | [`src/knowledge_base.py`](../src/knowledge_base.py) | Provides `get_chest_after_boss()`, `list_chests(tier=...)`, and tier-filtered accessory lookups. |
 | [`src/loot_distributor.py`](../src/loot_distributor.py) | Implements `_route_chest_after_boss()` and tier-constrained `_rotate_boss_drop()` cascade. |
-| [`src/diablo_generator.py`](../src/diablo_generator.py) | Enforces `is_chest=True` rarity elevation and injects multiple companion accessories. |
+| [`src/diablo_destinations.py`](../src/diablo_destinations.py) | Shares physical capacity and four-reward budgets across groups; admits a rare single companion only when it fits. |
 | [`src/param_builder.py`](../src/param_builder.py) | Constructs non-destructive chained rows in `ItemLotParam_map` for chest drops. |
 | [`src/ui/param_schema.py`](../src/ui/param_schema.py) | Exposes `[3] Chest After Boss` in the UI drop rule selector. |
 

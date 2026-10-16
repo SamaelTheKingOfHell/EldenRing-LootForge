@@ -209,10 +209,10 @@ namespace LootForge.RegTool
             var mapRows = mapLotParam.Rows.ToDictionary(row => row.ID);
             var discoveredBossLots = world.Bosses.Select(item => new DiscoveredBossLot(item.LotId, item.Name,
                 ParamHelper.GetCellInt(mapRows[item.LotId], "lotItemId01"), ParamHelper.GetCellInt(mapRows[item.LotId], "lotItemCategory01"),
-                item.Tier, true, item.FreeRows, item.Evidence)).ToList();
+                item.Tier, true, item.FreeRows, item.Evidence, item.OriginalRewards)).ToList();
             var discoveredChests = world.Chests.Select(item => new DiscoveredChest(item.LotId, item.Name,
                 ParamHelper.GetCellInt(mapRows[item.LotId], "lotItemId01"), ParamHelper.GetCellInt(mapRows[item.LotId], "lotItemCategory01"),
-                item.Tier, false, item.FreeRows, item.Evidence)).ToList();
+                item.Tier, false, item.FreeRows, item.Evidence, item.OriginalRewards)).ToList();
             var snapshot = new DiscoveredWorldSnapshot(
                 discoveredWeapons.Count,
                 baseWepCount,
@@ -225,7 +225,7 @@ namespace LootForge.RegTool
                 discoveredAccessories,
                 discoveredBossLots,
                 discoveredChests,
-                world.Merchants, 2, world.Enemies
+                world.Merchants, 3, world.Enemies
             );
 
             if (isStdout)

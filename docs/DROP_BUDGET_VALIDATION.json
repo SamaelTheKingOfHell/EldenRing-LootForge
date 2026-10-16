@@ -1,0 +1,2355 @@
+{
+  "recorded_utc": "2026-10-16T20:21:35.405285+00:00",
+  "branch": "codex/loot-refinement",
+  "git_base": "dfbb88360782b11e5e769a81f8cfadc9c1299dcd",
+  "scope": "Aggregate original-plus-generated 1-4 reward entries for each proven boss/chest, shared across all item groups, variants and native enrichment paths.",
+  "deployment": {
+    "status": "PASS",
+    "profile": "Ordo Perfectus",
+    "target": "C:\\Users\\bigra\\AppData\\Local\\garyttierney\\me3\\config\\profiles\\eldenring-mods\\Ordo Perfectus\\Ordo Perfectus\\regulation.bin",
+    "pipeline": "Normal PatchOrchestrator with source-identity guards, backups, assets, manifest and saved capacity clamp",
+    "source_before_sha256": "c8c02bbe2c6d839fdcb45cf0d30fde8a4d6d46d5038eb58f6b69048691d21cf1",
+    "native_release": {
+      "bytes": 260096,
+      "sha256": "8d22cc09175bd077c5fef8acd4b0d750d2662b4a2d3809dd04e4c5b6e3b5694e"
+    },
+    "identities": {
+      "regulation.bin": {
+        "bytes": 2616896,
+        "sha256": "3ac4d97d85dfaaace562718d4c43eabaff1609e99b4c33a39e7ed9ecb76bbcbe"
+      },
+      "lootforge_diablo_fields.json": {
+        "bytes": 4027717,
+        "sha256": "642a964799fbe39156c3aa6e6007c8688fc0824d7588c84f4484b5d8e97d168d"
+      },
+      "lootforge_diablo_texts.json": {
+        "bytes": 15604244,
+        "sha256": "e0eb72ce17bfaccdd2dedc4470deff66a0975896a0b6fc575f1bfc67db0dcc9d"
+      },
+      "event\\common.emevd.dcx": {
+        "bytes": 35760,
+        "sha256": "297d5fe85c733e51bff7e06df5063db73e36316a13f4e09aa26f8e252dee7e35"
+      },
+      "msg\\engus\\item.msgbnd.dcx": {
+        "bytes": 267200,
+        "sha256": "320e43ac3ccfa1b4a3570bf97292d08a6e0a57dfaf9bcd1b0cf8768bdf496b62"
+      },
+      "msg\\engus\\item_dlc02.msgbnd.dcx": {
+        "bytes": 390416,
+        "sha256": "9da275c3bab9771309e4136fd7a7febac413649b6614533eace65999f8b76040"
+      },
+      "msg\\zhocn\\item_dlc02.msgbnd.dcx": {
+        "bytes": 313744,
+        "sha256": "0b341eb60b26621344135883d4c4d24e8c0e86595d968747bad2c0c5efe5dad4"
+      }
+    },
+    "selected_groups": 469,
+    "armor_groups": 68,
+    "variants_per_group": 2,
+    "generated_equipment": {
+      "EquipParamWeapon": 802,
+      "EquipParamAccessory": 10,
+      "EquipParamProtector": 216
+    },
+    "manifest_files": 715,
+    "missing_manifest_files": [],
+    "actual_published_spec": {
+      "artifact": "scratch/drop-cap/deployed-specs.json",
+      "bytes": 3005903,
+      "sha256": "b34b6c4c85ddb9784d914ab511a44cb5797b14f2ec6e9f5a578eb1ea34b1c17d"
+    },
+    "launcher_note": "Publication succeeded; a cp1252 encoding error affected only the helper final console print. The retained success result and actual output files were independently verified. No second forge was run."
+  },
+  "reward_budget": {
+    "before": {
+      "destinations": 309,
+      "maximum": 10,
+      "distribution": {
+        "4": 14,
+        "5": 13,
+        "9": 32,
+        "3": 23,
+        "2": 77,
+        "6": 2,
+        "10": 40,
+        "1": 107,
+        "7": 1
+      }
+    },
+    "before_over_budget": 83,
+    "after": {
+      "destinations": 309,
+      "maximum": 5,
+      "distribution": {
+        "4": 96,
+        "2": 79,
+        "3": 22,
+        "1": 107,
+        "5": 5
+      }
+    },
+    "after_over_budget": 0,
+    "preserved_native_exceptions": [
+      {
+        "kind": "boss",
+        "LotId": 30515,
+        "Name": "[Mountaintops of the Giants - Evergaol - Roundtable Knight Vyke] Vyke's Dragonbolt",
+        "original": 5,
+        "total": 5
+      },
+      {
+        "kind": "boss",
+        "LotId": 30810,
+        "Name": "Dancing Blade of Ranah",
+        "original": 5,
+        "total": 5
+      },
+      {
+        "kind": "boss",
+        "LotId": 30820,
+        "Name": "Greatsword of Solitude",
+        "original": 5,
+        "total": 5
+      },
+      {
+        "kind": "boss",
+        "LotId": 30900,
+        "Name": "Red Bear's Claw",
+        "original": 5,
+        "total": 5
+      },
+      {
+        "kind": "boss",
+        "LotId": 30830,
+        "Name": "Rakshasa's Great Katana",
+        "original": 5,
+        "total": 5
+      }
+    ],
+    "semantics": "Every original or generated reward row contributes at most one lottery outcome. Original stacks count once; each generated armor piece, weapon and talisman has quantity one. Original bundles above four receive no generated additions.",
+    "published_destinations": [
+      {
+        "kind": "boss",
+        "LotId": 30600,
+        "Name": "[Lake of Rot - Dragonkin Soldier] Dragonscale Blade",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 30620,
+        "Name": "[Siofra River - Dragonkin Soldier] Dragon Halberd",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 12030950,
+        "Name": "[LD - Deeproot Depths] Siluria's Tree",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 101830,
+        "Name": "[Patches] Golden Rune [1]",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 20330,
+        "Name": "[Groveside Cave - Beastman of Farum Azula] Flamedrake Talisman",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 20340,
+        "Name": "[Coastal Cave - Demi-Human Chief] Sewing Needle",
+        "original": 2,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 30265,
+        "Name": "[Liurnia - Evergaol - Alecto- Black Knife Ringleader] Black Knife Tiche",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 30205,
+        "Name": "[Liurnia - Field - Erdtree Avatar] Cerulean Crystal Tear",
+        "original": 2,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 30250,
+        "Name": "[Liurnia - Evergaol - Bols- Carian Knight] Greatblade Phalanx",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 30210,
+        "Name": "[Liurnia - Field - Glintstone Dragon Smarag] Dragon Heart",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 30225,
+        "Name": "[Liurnia - Field - Omenkiller] Crucible Knot Talisman",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 30390,
+        "Name": "[Mt. Gelmir - Field - Magma Wyrm] Dragon Heart",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "boss",
+        "LotId": 1036450400,
+        "Name": "[Sorcery] Ancient Death Rancor",
+        "original": 1,
+        "total": 3
+      },
+      {
+        "kind": "boss",
+        "LotId": 1036480400,
+        "Name": "Ash of War: Giant Hunt",
+        "original": 2,
+        "total": 3
+      },
+      {
+        "kind": "boss",
+        "LotId": 30375,
+        "Name": "[Mt. Gelmir - Field - Full-grown Fallingstar Beast] Somber Smithing Stone [6]",
+        "original": 3,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 1037420400,
+        "Name": "Red-Feathered Branchsword",
+        "original": 1,
+        "total": 3
+      },
+      {
+        "kind": "boss",
+        "LotId": 1037460400,
+        "Name": "Meat Peddler's Bell Bearing",
+        "original": 1,
+        "total": 3
+      },
+      {
+        "kind": "boss",
+        "LotId": 30300,
+        "Name": "[Altus Plateau - Field - Ancient Dragon Lansseax] Lansseax's Glaive",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "boss",
+        "LotId": 30380,
+        "Name": "[Mt. Gelmir - Field - Ulcerated Tree Spirit] Leaden Hardtear",
+        "original": 2,
+        "total": 3
+      },
+      {
+        "kind": "boss",
+        "LotId": 30245,
+        "Name": "[Liurnia - Evergaol - Adan- Thief of Fire] Flame of the Fell God",
+        "original": 1,
+        "total": 3
+      },
+      {
+        "kind": "boss",
+        "LotId": 1039430400,
+        "Name": "Ash of War: Ice Spear",
+        "original": 1,
+        "total": 3
+      },
+      {
+        "kind": "boss",
+        "LotId": 1039500100,
+        "Name": "Godfrey Icon",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "boss",
+        "LotId": 1039510200,
+        "Name": "Ash of War: Shared Order",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "boss",
+        "LotId": 30350,
+        "Name": "[Altus Plateau - Field - Black Knife Assassin] Black Knife",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "boss",
+        "LotId": 30310,
+        "Name": "[Altus Plateau - Field - Fallingstar Beast] Somber Smithing Stone [5]",
+        "original": 4,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 30335,
+        "Name": "[Capital Outskirts - Field - Tree Sentinel Duo] Erdtree Greatshield",
+        "original": 2,
+        "total": 3
+      },
+      {
+        "kind": "boss",
+        "LotId": 30320,
+        "Name": "[Altus Plateau - Field - Wormface] Speckled Hardtear",
+        "original": 2,
+        "total": 3
+      },
+      {
+        "kind": "boss",
+        "LotId": 1042330100,
+        "Name": "Radagon's Scarseal",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 30100,
+        "Name": "[Limgrave - Field - Tree Sentinel] Golden Halberd",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 30120,
+        "Name": "[Limgrave - Evergaol - Crucible Knight] Aspects of the Crucible: Tail",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 1042380400,
+        "Name": "Blue-Feathered Branchsword",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 1042380410,
+        "Name": "Bone Peddler's Bell Bearing",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 30185,
+        "Name": "[Weeping Penisula - Field - Erdtree Avatar] Crimsonburst Crystal Tear",
+        "original": 2,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 30110,
+        "Name": "[Limgrave - Field - Flying Dragon Agheel] Dragon Heart",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 1043370400,
+        "Name": "Ash of War: Repeating Thrust",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 1043530400,
+        "Name": "Medicine Peddler's Bell Bearing",
+        "original": 1,
+        "total": 3
+      },
+      {
+        "kind": "boss",
+        "LotId": 1044320400,
+        "Name": "Sacrificial Axe",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 1044320410,
+        "Name": "Ash of War: Barricade Shield",
+        "original": 2,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 30130,
+        "Name": "[Limgrave - Evergaol - Bloodhound Knight Darriwil] Bloodhound's Fang",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 1044530300,
+        "Name": "Twinbird Kite Shield",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "boss",
+        "LotId": 30170,
+        "Name": "[Limgrave - Field - Tibia Mariner] Deathroot",
+        "original": 2,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 30410,
+        "Name": "[Caelid - Field - Erdtree Avatar] Greenburst Crystal Tear",
+        "original": 2,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 30400,
+        "Name": "[Mt. Gelmir - Field - Magma Wyrm] Dragon Heart",
+        "original": 1,
+        "total": 3
+      },
+      {
+        "kind": "boss",
+        "LotId": 1048410800,
+        "Name": "Gravity Stone Peddler's Bell Bearing",
+        "original": 1,
+        "total": 3
+      },
+      {
+        "kind": "boss",
+        "LotId": 1048570700,
+        "Name": "[Sorcery] Explosive Ghostflame",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "boss",
+        "LotId": 1049370100,
+        "Name": "Ash of War: Poison Moth Flight",
+        "original": 1,
+        "total": 3
+      },
+      {
+        "kind": "boss",
+        "LotId": 1049370110,
+        "Name": "Death's Poker",
+        "original": 1,
+        "total": 3
+      },
+      {
+        "kind": "boss",
+        "LotId": 1049390800,
+        "Name": "Nox Flowing Sword",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 1049390850,
+        "Name": "Battlemage Hugues",
+        "original": 1,
+        "total": 3
+      },
+      {
+        "kind": "boss",
+        "LotId": 30505,
+        "Name": "[Forbidden Lands - Field - Black Blade Kindred] Gargoyle's Black Blades",
+        "original": 2,
+        "total": 2
+      },
+      {
+        "kind": "boss",
+        "LotId": 30550,
+        "Name": "[Mountaintops of the Giants - Field - Great Wyrm Theodorix] Dragon Heart",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "boss",
+        "LotId": 30530,
+        "Name": "[Mountaintops of the Giants - Field - Death Rite Bird] Death Ritual Spear",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "boss",
+        "LotId": 30425,
+        "Name": "[Caelid - Field - Blade Blade Kindred] Gargoyle's Blackblade",
+        "original": 2,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 1052410100,
+        "Name": "Ash of War: Bloodhound's Step",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 30525,
+        "Name": "[Mountaintops of the Giants - Field - Erdtree Avatar] Cerulean Crystal Tear",
+        "original": 2,
+        "total": 2
+      },
+      {
+        "kind": "boss",
+        "LotId": 30515,
+        "Name": "[Mountaintops of the Giants - Evergaol - Roundtable Knight Vyke] Vyke's Dragonbolt",
+        "original": 5,
+        "total": 5
+      },
+      {
+        "kind": "boss",
+        "LotId": 30910,
+        "Name": "[Incantation] Roar of Rugalea",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "boss",
+        "LotId": 30860,
+        "Name": "Dragon Heart",
+        "original": 2,
+        "total": 2
+      },
+      {
+        "kind": "boss",
+        "LotId": 30810,
+        "Name": "Dancing Blade of Ranah",
+        "original": 5,
+        "total": 5
+      },
+      {
+        "kind": "boss",
+        "LotId": 30845,
+        "Name": "Star-Lined Sword",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "boss",
+        "LotId": 30820,
+        "Name": "Greatsword of Solitude",
+        "original": 5,
+        "total": 5
+      },
+      {
+        "kind": "boss",
+        "LotId": 30900,
+        "Name": "Red Bear's Claw",
+        "original": 5,
+        "total": 5
+      },
+      {
+        "kind": "boss",
+        "LotId": 30940,
+        "Name": "[Incantation] Divine Beast Tornado",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "boss",
+        "LotId": 30855,
+        "Name": "Ash of War: Ghostflame Call",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "boss",
+        "LotId": 30955,
+        "Name": "Black Steel Greatshield",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "boss",
+        "LotId": 30965,
+        "Name": "Ash of War: Aspects of the Crucible: Wings",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "boss",
+        "LotId": 30930,
+        "Name": "Pelt of Ralva",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "boss",
+        "LotId": 30830,
+        "Name": "Rakshasa's Great Katana",
+        "original": 5,
+        "total": 5
+      },
+      {
+        "kind": "boss",
+        "LotId": 30800,
+        "Name": "Dragon Heart",
+        "original": 2,
+        "total": 2
+      },
+      {
+        "kind": "boss",
+        "LotId": 10000,
+        "Name": "[Stormveil - Margit] Talisman Pouch",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 10010,
+        "Name": "[Stormveil - Godrick] Godrick's Great Rune",
+        "original": 2,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 10040,
+        "Name": "[Leyndell - Morgott] Remembrance of the Omen King",
+        "original": 2,
+        "total": 3
+      },
+      {
+        "kind": "boss",
+        "LotId": 10070,
+        "Name": "[Ashen Leyndell - Hoarah Loux] Remembrance of Hoarah Loux",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "boss",
+        "LotId": 10080,
+        "Name": "[Lake or Rot - Astel] Remembrance of the Naturalborn",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 10110,
+        "Name": "[Deeproot Depths - Fortissax] Remembrance of the Lichdragon",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 10120,
+        "Name": "[Mohgwyn Palace - Mohg] Remembrance of the Blood Lord",
+        "original": 2,
+        "total": 2
+      },
+      {
+        "kind": "boss",
+        "LotId": 10150,
+        "Name": "[Farum Azula - Dragonlord Placidusax] Remembrance of the Dragonlord",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "boss",
+        "LotId": 10160,
+        "Name": "[Farum Azula - Maliketh] Remembrance of the Black Blade",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "boss",
+        "LotId": 10180,
+        "Name": "[Raya Lucaria - Rennala] Remembrance of the Full Moon Queen",
+        "original": 3,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 10200,
+        "Name": "[Haligtree - Malenia] Remembrance of the Rot Goddess",
+        "original": 2,
+        "total": 2
+      },
+      {
+        "kind": "boss",
+        "LotId": 10220,
+        "Name": "[Mt. Gelmir - Rykard] Remembrance of the Blasphemous",
+        "original": 2,
+        "total": 3
+      },
+      {
+        "kind": "boss",
+        "LotId": 10230,
+        "Name": "[Erdtree - Elden Beast] Elden Remembrance",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "boss",
+        "LotId": 10300,
+        "Name": "[Caelid - Radahn] Remembrance of the Starscourge",
+        "original": 2,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 10310,
+        "Name": "[Mountaintops - Fire Giant] Remembrance of the Fire Giant",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "boss",
+        "LotId": 10330,
+        "Name": "[Nokron - Regal Ancestor Spirit] Remembrance of the Regal Ancestor",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 10400,
+        "Name": "Remembrance of the Dancing Lion",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 10430,
+        "Name": "Remembrance of a God and a Lord",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 10460,
+        "Name": "Remembrance of the Impaler",
+        "original": 2,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 10480,
+        "Name": "Remembrance of Putrescence",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 10550,
+        "Name": "Remembrance of the Mother of Fingers",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 10560,
+        "Name": "Remembrance of the Lord of Frenzied Flame",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 10600,
+        "Name": "Remembrance of the Saint of the Bud",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 10620,
+        "Name": "Remembrance of the Shadow Sunflower",
+        "original": 2,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 10640,
+        "Name": "Remembrance of the Wild Boar Rider",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "boss",
+        "LotId": 10900,
+        "Name": "Remembrance of the Twin Moon Knight",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 10000960,
+        "Name": "[LD - Stormveil] Pickled Turtle Neck",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 10000970,
+        "Name": "[LD - Stormveil] Mimic's Veil",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 10000990,
+        "Name": "[LD - Stormveil] Godskin Prayerbook",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 10010900,
+        "Name": "[LD - Chapel of Anticipation] Stormhawk Deenh",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 11000015,
+        "Name": "[LD - Leyndell] Erdtree Bow",
+        "original": 1,
+        "total": 3
+      },
+      {
+        "kind": "chest",
+        "LotId": 11000130,
+        "Name": "[LD - Leyndell] Perfume Bottle",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 11000980,
+        "Name": "[LD - Leyndell] Stonesword Key",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 11001020,
+        "Name": "[LD - Leyndell] Blessed Dew Talisman",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 11100700,
+        "Name": "[LD - Roundtable Hold] Assassin's Prayerbook",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 11100710,
+        "Name": "[LD - Roundtable Hold] Crepus's Black-Key Crossbow",
+        "original": 2,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 12010020,
+        "Name": "[LD - Ainsel/Lake of Rot] Nomadic Warrior's Cookbook [22]",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 12010690,
+        "Name": "[LD - Ainsel/Lake of Rot] Great Ghost Glovewort",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 12010700,
+        "Name": "[LD - Ainsel/Lake of Rot] Somber Smithing Stone [7]",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 12010900,
+        "Name": "[LD - Ainsel/Lake of Rot] Wing of Astel",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 12010910,
+        "Name": "[LD - Ainsel/Lake of Rot] Great Ghost Glovewort",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 12010920,
+        "Name": "[LD - Ainsel/Lake of Rot] Scorpion's Stinger",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 12010940,
+        "Name": "[LD - Ainsel/Lake of Rot] Somber Smithing Stone [7]",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 12010950,
+        "Name": "[LD - Ainsel/Lake of Rot] Ghost Glovewort [9]",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 12010960,
+        "Name": "[LD - Ainsel/Lake of Rot] Moon of Nokstella",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 12010970,
+        "Name": "[LD - Ainsel/Lake of Rot] Ant's Skull Plate",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 12010980,
+        "Name": "[LD - Ainsel/Lake of Rot] Ghost-Glovewort Picker's Bell Bearing [2]",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 12010990,
+        "Name": "[LD - Ainsel/Lake of Rot] Nightmaiden & Swordstress Puppets",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 12020880,
+        "Name": "[LD - Nokron / Siofra] Mimic Tear Ashes",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 12020080,
+        "Name": "[LD - Nokron / Siofra] Fingerslayer Blade",
+        "original": 2,
+        "total": 3
+      },
+      {
+        "kind": "chest",
+        "LotId": 12020070,
+        "Name": "[LD - Nokron / Siofra] Lightning Bastard Sword",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 12020090,
+        "Name": "[LD - Nokron / Siofra] Ancestral Infant's Head",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 12030300,
+        "Name": "[LD - Deeproot Depths] Crucible Tree Helm",
+        "original": 4,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 12050900,
+        "Name": "[LD - Mohgwyn] Somber Ancient Dragon Smithing Stone",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 13000900,
+        "Name": "[LD - Crumbling Farum Azula] Ancient Dragon Smithing Stone",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 13000910,
+        "Name": "[LD - Crumbling Farum Azula] Glovewort Picker's Bell Bearing [3]",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 13000920,
+        "Name": "[LD - Crumbling Farum Azula] Drake Knight Helm",
+        "original": 4,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 13000930,
+        "Name": "[LD - Crumbling Farum Azula]",
+        "original": 0,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 13000940,
+        "Name": "[LD - Crumbling Farum Azula] Dragon Towershield",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 13000950,
+        "Name": "[LD - Crumbling Farum Azula] Old Lord's Talisman",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 14000880,
+        "Name": "[LD - Academy of Raya Lucaria] [Sorcery] Comet",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 14000900,
+        "Name": "[LD - Academy of Raya Lucaria] Ritual Pot",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 14000910,
+        "Name": "[LD - Academy of Raya Lucaria] Glintstone Scarab",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 14000920,
+        "Name": "[LD - Academy of Raya Lucaria] Terra Magicus",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 14000940,
+        "Name": "[LD - Academy of Raya Lucaria] Radagon Icon",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 14000950,
+        "Name": "[LD - Academy of Raya Lucaria] Glintstone Craftsman's Cookbook [5]",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 14000960,
+        "Name": "[LD - Academy of Raya Lucaria] Dark Moon Ring",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 14000970,
+        "Name": "[LD - Academy of Raya Lucaria] Full Moon Crossbow",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 15000350,
+        "Name": "[LD - Elphael / Miquella's Haligtree] Viridian Amber Medallion +2",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 15000460,
+        "Name": "[LD - Elphael / Miquella's Haligtree] Ancient Dragon Smithing Stone",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 15000560,
+        "Name": "[LD - Elphael / Miquella's Haligtree] [Incantation] Triple Rings of Light",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 15000580,
+        "Name": "[LD - Elphael / Miquella's Haligtree] Cleanrot Knight Finlay",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 15000590,
+        "Name": "[LD - Elphael / Miquella's Haligtree] Somber Ancient Dragon Smithing Stone",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 15000860,
+        "Name": "[LD - Elphael / Miquella's Haligtree] Rotten Crystal Sword",
+        "original": 1,
+        "total": 3
+      },
+      {
+        "kind": "chest",
+        "LotId": 15000930,
+        "Name": "[LD - Elphael / Miquella's Haligtree] Dragoncrest Greatshield Talisman",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 30030010,
+        "Name": "[Liurnia - Road's End Catacombs] Raya Lucaria Soldier Ashes",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 30050030,
+        "Name": "[Liurnia - Black Knife Catacombs] Deathroot",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 30090000,
+        "Name": "[Mt. Gelmir - Gelmir Hero's Grave] Deathroot",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 30090010,
+        "Name": "[Mt. Gelmir - Gelmir Hero's Grave] Ringed Finger",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 30110000,
+        "Name": "[Stormhill - Deathtouched Catacombs] Deathroot",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 30160040,
+        "Name": "[Caelid - War-Dead Catacombs] [Sorcery] Collapsing Stars",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 30180900,
+        "Name": "[Flame Peak - Giants' Mountaintop Catacombs] Deathroot",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 30180070,
+        "Name": "[Flame Peak - Giants' Mountaintop Catacombs] Fire Monk Ashes",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 30200900,
+        "Name": "[Forbidden Lands - Hidden Path to the Haligtree] Silver Scarab",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 30200910,
+        "Name": "[Forbidden Lands - Hidden Path to the Haligtree] Deathroot",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 31000000,
+        "Name": "[Limgrave - Murkwater Cave] Mushroom",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 31000010,
+        "Name": "[Limgrave - Murkwater Cave] Cloth Garb",
+        "original": 2,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 31000030,
+        "Name": "Glass Shard",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 31010100,
+        "Name": "[Weeping Peninsula - Earthbore Cave] Pickled Turtle Neck",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 31050100,
+        "Name": "[Liurnia - Lakeside Crystal Cave] Spear Talisman",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 31050070,
+        "Name": "[Liurnia - Lakeside Crystal Cave] Arteria Leaf",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 31060100,
+        "Name": "[Liurnia - Academy Crystal Cave] Rune Arc",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 31060110,
+        "Name": "[Liurnia - Academy Crystal Cave] Crystal Staff",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 31110200,
+        "Name": "[Greyoll's Dragonbarrow - Sellia Hideaway] Crystal Spear",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 31110220,
+        "Name": "[Greyoll's Dragonbarrow - Sellia Hideaway] Crystalian Ashes",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 31180000,
+        "Name": "[Altus Plateau - Perfumer's Grotto] Perfume Bottle",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 31180020,
+        "Name": "[Altus Plateau - Perfumer's Grotto] Living Jar Shard",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 31190000,
+        "Name": "[Altus Plateau - Sage's Cave] Rejuvenating Boluses",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 31190010,
+        "Name": "[Altus Plateau - Sage's Cave] Lost Ashes of War",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 31190030,
+        "Name": "[Altus Plateau - Sage's Cave] Candletree Wooden Shield",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 31190040,
+        "Name": "[Altus Plateau - Sage's Cave] Silver-Pickled Fowl Foot",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 31190050,
+        "Name": "[Altus Plateau - Sage's Cave] Black Hood",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 31190060,
+        "Name": "[Altus Plateau - Sage's Cave] Nascent Butterfly",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 31190080,
+        "Name": "[Altus Plateau - Sage's Cave] Stonesword Key",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 31190090,
+        "Name": "[Altus Plateau - Sage's Cave] Dragonwound Grease",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 31190100,
+        "Name": "[Altus Plateau - Sage's Cave] Raptor Talons",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 31190110,
+        "Name": "[Altus Plateau - Sage's Cave] Golden Great Arrow",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 31190120,
+        "Name": "[Altus Plateau - Sage's Cave] Raptor's Black Feathers",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 31190130,
+        "Name": "[Altus Plateau - Sage's Cave] Skeletal Mask",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 31210400,
+        "Name": "[Caelid - Gaol Cave] Rune Arc",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 31210200,
+        "Name": "[Caelid - Gaol Cave] Somber Smithing Stone [5]",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 32000900,
+        "Name": "[Weeping Peninsula - Morne Tunnel] Exalted Flesh",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 32020000,
+        "Name": "[Liurnia - Raya Lucaria Crystal Tunnel Somber Smithing Stone [2]",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 32020900,
+        "Name": "[Liurnia - Raya Lucaria Crystal Tunnel Crystal Knife",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 32050910,
+        "Name": "[Altus Plateau - Altus Tunnel] Rune Arc",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 32080900,
+        "Name": "[Caelid - Sellia Crystal Tunnel] Gravity Stone Fan",
+        "original": 2,
+        "total": 3
+      },
+      {
+        "kind": "chest",
+        "LotId": 32080910,
+        "Name": "[Caelid - Sellia Crystal Tunnel] [Sorcery] Rock Blaster",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 34120900,
+        "Name": "[Capital Outskirts - Divine Tower of West Altus] Smithing-Stone Miner's Bell Bearing [2]",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 34130900,
+        "Name": "[Greyoll's Dragonbarrow - Divine Tower of Caelid] Godslayer's Greatsword",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 35000900,
+        "Name": "[Subterranean Shunning-Grounds] Ghost Glovewort [6]",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 35000780,
+        "Name": "[Subterranean Shunning-Grounds] Rune Arc",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 35000700,
+        "Name": "[Subterranean Shunning-Grounds] Erdtree's Favor +1",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 40000900,
+        "Name": "Ash of War: Blinkbolt",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 40010900,
+        "Name": "Ancient Dragon Knight's Cookbook [2]",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 40020020,
+        "Name": "Viridian Amber Medallion +3",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 40020140,
+        "Name": "Ghost Glovewort [9]",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 40020220,
+        "Name": "Bigmouth Imp Ashes",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 41000140,
+        "Name": "Hefty Cracked Pot",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 41020000,
+        "Name": "Gaol Upper Level Key",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 41020320,
+        "Name": "Gaol Lower Level Key",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 1033470200,
+        "Name": "Carian Knight's Sword",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 1038510030,
+        "Name": "Greatshield Talisman",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 1038510090,
+        "Name": "Troll's Golden Sword",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 942370070,
+        "Name": "[Troll Carriage] Lordsworn's Greatsword",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 942370060,
+        "Name": "[Troll Carriage] Flail",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 1040400000,
+        "Name": "Treespear",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 1042500000,
+        "Name": "Giant-Crusher",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 1040540000,
+        "Name": "Great Stars",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 1044330210,
+        "Name": "Morning Star",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 944360200,
+        "Name": "[Troll Carriage] Greataxe",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 1047400920,
+        "Name": "Greatsword",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 1048550900,
+        "Name": "Flowing Curved Sword",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 1049540900,
+        "Name": "St. Trina's Torch",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 1033400100,
+        "Name": "[Moonlight Altar] Ranni's Dark Moon",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 1033470010,
+        "Name": "Smithing Stone [4]",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 1033470020,
+        "Name": "Imbued Sword Key",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 1033470900,
+        "Name": "Albinauric Bloodclot",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 1033470910,
+        "Name": "Cuckoo Glintstone",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 1034420100,
+        "Name": "Somber Smithing Stone [8]",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 1034430100,
+        "Name": "Memory Stone",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 1034440900,
+        "Name": "Icerind Hatchet",
+        "original": 1,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 1034480100,
+        "Name": "Frozen Needle",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1034500100,
+        "Name": "Memory Stone",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1034500300,
+        "Name": "m60_34_50_00.msb.dcx reward 1034500300",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1034510900,
+        "Name": "Snow Witch Hat",
+        "original": 3,
+        "total": 3
+      },
+      {
+        "kind": "chest",
+        "LotId": 1035410100,
+        "Name": "Cerulean Amber Medallion +2",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1035410110,
+        "Name": "Smithing Stone [8]",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1035470100,
+        "Name": "Memory Stone",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1035500900,
+        "Name": "Sword of Night and Flame",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1036440100,
+        "Name": "Glintstone Craftsman's Cookbook [4]",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1036450110,
+        "Name": "Stonesword Key",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1036510010,
+        "Name": "Perfumer's Cookbook [1]",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1036520010,
+        "Name": "Perfumer's Talisman",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1037420900,
+        "Name": "Wraith Calling Bell",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1037460000,
+        "Name": "Gold Sewing Needle",
+        "original": 2,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 1037490200,
+        "Name": "Great Mace",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1038420100,
+        "Name": "Glintstone Craftsman's Cookbook [3]",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1038490900,
+        "Name": "[Incantation] Howl of Shabriri",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1038510050,
+        "Name": "Ritual Sword Talisman",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1038520000,
+        "Name": "Pearldrake Talisman +1",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1039410100,
+        "Name": "Two Fingers Heirloom",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1039480100,
+        "Name": "[Sorcery] Cannon of Haima",
+        "original": 2,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 1039510020,
+        "Name": "Sacrificial Twig",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1039530050,
+        "Name": "[Sorcery] Unseen Blade",
+        "original": 2,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 1039540300,
+        "Name": "Valkyrie's Prosthesis",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1040510020,
+        "Name": "[Incantation] Dragonbolt Blessing",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1040530010,
+        "Name": "Bloody Helice",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1041530020,
+        "Name": "[Incantation] Wrath of Gold",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1042340100,
+        "Name": "Winged Scythe",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 1042371300,
+        "Name": "Arrow's Reach Talisman",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 1042371010,
+        "Name": "Whetstone Knife",
+        "original": 2,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 1042390900,
+        "Name": "Beast Crest Heater Shield",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 1042540060,
+        "Name": "Greatbow",
+        "original": 2,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 1043310900,
+        "Name": "Twinblade Talisman",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 1043310910,
+        "Name": "Claymore",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 1043340100,
+        "Name": "Shield of the Guilty",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 1043361010,
+        "Name": "Twinblade",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 1044350900,
+        "Name": "Great Epee",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 1045330100,
+        "Name": "Memory Stone",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 1045371000,
+        "Name": "Axe Talisman",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 1045370010,
+        "Name": "Smithing Stone [2]",
+        "original": 1,
+        "total": 4
+      },
+      {
+        "kind": "chest",
+        "LotId": 1047380900,
+        "Name": "Starscourge Heirloom",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1047380910,
+        "Name": "Meteoric Ore Blade",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1047380920,
+        "Name": "Katar",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1047390080,
+        "Name": "Slumbering Egg",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1047400900,
+        "Name": "Rune Arc",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1047400910,
+        "Name": "Sword of St. Trina",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1047550900,
+        "Name": "[Incantation] Unendurable Frenzy",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1048390900,
+        "Name": "[Sorcery] Rock Sling",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1048400900,
+        "Name": "Visage Shield",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1049390900,
+        "Name": "Lusat's Glintstone Staff",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1049390910,
+        "Name": "Spelldrake Talisman +1",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1049530900,
+        "Name": "Smithing-Stone Miner's Bell Bearing [3]",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1050360900,
+        "Name": "Arrow's Sting Talisman",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1050390900,
+        "Name": "[Sorcery] Night Comet",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1050390910,
+        "Name": "Imbued Sword Key",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1050550900,
+        "Name": "Rune Arc",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1051360910,
+        "Name": "Smithing Stone [6]",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1051390900,
+        "Name": "Dectus Medallion (Right)",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1051560900,
+        "Name": "Primal Glintstone Blade",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1052410900,
+        "Name": "Memory Stone",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1052550900,
+        "Name": "Giant's Prayerbook",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 1052570900,
+        "Name": "[Sorcery] Founding Rain of Stars",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 2044450900,
+        "Name": "Talisman of All Crucibles",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 2045410800,
+        "Name": "Outer God Heirloom",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 2045460900,
+        "Name": "Mottled Necklace +2",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 2045460910,
+        "Name": "Beast Horn",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 2046450910,
+        "Name": "Two-Handed Sword Talisman",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 2046450920,
+        "Name": "Divine Bird Warrior Ornis",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 2047410800,
+        "Name": "Blade of Mercy",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 2047440800,
+        "Name": "Milady",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 2047440810,
+        "Name": "Loyal Knight's Cookbook",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 2047440820,
+        "Name": "Carian Sorcery Sword",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 2047440830,
+        "Name": "Wolf Crest Shield",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 2047440840,
+        "Name": "Firespark Perfume Bottle",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 2047450900,
+        "Name": "Serpent Flail",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 2047450910,
+        "Name": "Arrow's Soaring Sting Talisman",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 2047450920,
+        "Name": "Smithing Stone [7]",
+        "original": 2,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 2047470900,
+        "Name": "Pearl Shield Talisman",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 2048410800,
+        "Name": "Ancient Dragon Smithing Stone",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 2048440800,
+        "Name": "Imbued Sword Key",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 2048440810,
+        "Name": "Ash of War: Wing Stance",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 2049430270,
+        "Name": "Flamedrake Talisman +3",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 2049430500,
+        "Name": "Smithing Stone [6]",
+        "original": 2,
+        "total": 2
+      },
+      {
+        "kind": "chest",
+        "LotId": 2049430510,
+        "Name": "Battlefield Priest's Cookbook [2]",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 2049430520,
+        "Name": "Smithing Stone [8]",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 2049440900,
+        "Name": "[Sorcery] Golden Arcs",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 2050460900,
+        "Name": "Stone-Sheathed Sword",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 2050460910,
+        "Name": "[Sorcery] Giant Golden Arc",
+        "original": 1,
+        "total": 1
+      },
+      {
+        "kind": "chest",
+        "LotId": 2051460900,
+        "Name": "Rabbath's Cannon",
+        "original": 1,
+        "total": 1
+      }
+    ]
+  },
+  "checks": {
+    "python": {
+      "passed": 156,
+      "failed": 0,
+      "seconds": 76.628
+    },
+    "native_regressions": {
+      "passed": 66,
+      "failed": 0
+    },
+    "published_routing": {
+      "checks": 46382,
+      "generated": {
+        "EquipParamWeapon": 802,
+        "EquipParamAccessory": 10,
+        "EquipParamProtector": 216
+      },
+      "routes": {
+        "boss": 142,
+        "chest": 193,
+        "enemy": 543,
+        "merchant": 60
+      },
+      "messageTables": 63,
+      "combatEvents": 9
+    },
+    "published_refinement": {
+      "checks": 104920,
+      "restoredOrPreservedVanillaTexts": 93597,
+      "restoredVanillaPriceFields": 9863,
+      "armor": 216,
+      "generatedBuy": {
+        "min": 300,
+        "max": 5650,
+        "average": 2069.3093385214006
+      },
+      "generatedSell": {
+        "min": 15,
+        "max": 280,
+        "average": 103.5408560311284
+      }
+    },
+    "staged_routing_checks": 46382,
+    "staged_refinement_checks": 104920
+  },
+  "source_hashes": {
+    "src/diablo_destinations.py": "82ee6fc8e910f4528fd4ecb0e06d444484488a95b27c27ef2cac4828a89e953c",
+    "src/knowledge_loader.py": "d10337f244ad6adf6cfd197fe8d63abf75a33d70786728dfea7814553d35d91b",
+    "tools/RegTool/AdditiveLootService.cs": "cf56eee0977872bda9353dd7465642a77c360d573705a34264b5328cabcad8c3",
+    "tools/RegTool/LootInjector.cs": "ee961dc006fe9b8c36252281e522a45d35903f8fbe87f2bab70fcfeb7b42cde7",
+    "tools/RegTool/WorldLootCatalog.cs": "75eed853b000f142a7269f648175cd51ae5ee355a5be60c39f0ff0cd23c3eacf",
+    "tools/RegTool/SmartDiscoveryModels.cs": "e3b914f2315a69849783bd59f55a40bc7af399b88a1f095a24195a487c8e3c47",
+    "tools/RegTool/SmartDiscoveryService.cs": "cf5efd68406984dc1cc848ab384ee81c91eaef3eba386a4453123b2fb33c88ff",
+    "tools/RegTool/BossLootPoolService.cs": "317ec0be1ded9a28c075369ba228a7d8533facfcf9384cb8a96593ebc453ab83",
+    "tools/RegTool/ChestLootPoolService.cs": "3ede73eeafa5a2e6ce955d71660aad7e4f98f615811eaee63e7883069d00b12d"
+  },
+  "game_acceptance": "Unexecuted; source/output file checks and controlled regressions do not prove fresh in-game boss/chest awards.",
+  "portable_retest": "docs/DIABLO_MAGIC_QA.json",
+  "tracker": "Unavailable; retain portable evidence until tracker can accept the return."
+}

@@ -238,3 +238,10 @@ This roadmap defines the implementation phases for the cross-platform Standalone
 - [x] Split armor and weapon auras into independently persisted booleans with legacy migration and actual Qt checks.
 - [x] Reforge the active profile through the normal backup/manifest pipeline and retain exact output/source verification in `docs/REFINEMENT_VALIDATION.json`.
 - [ ] In-game retest of reported balance, descriptions, actual buildup/damage, economy and both aura controls. See `docs/REFINEMENT_CHECKLIST.md`.
+
+## Boss/chest aggregate reward correction (2026-10-16)
+- [x] Share a four-reward budget across variants, item groups, bonus talismans and boss/chest chain aliases, including original rewards.
+- [x] Enforce the same native ceiling across direct injection and both enrichment passes; preserve original five-item bundles and add nothing to them.
+- [x] Integrate the reward budget into existing selection-aware capacity planning; all 469 input groups fit at two variants each.
+- [x] Publish and retain exact deployed reward counts, source/output identities and regression evidence in `docs/DROP_BUDGET_VALIDATION.json`: 156 Python tests, 66 native regressions, 46,382 routing checks and 104,920 refinement checks passed; all 309 proven reward chains have no generated overflow.
+- [ ] Actual game retest of fresh boss/chest awards, counting individual armor pieces and talismans. See `docs/DIABLO_MAGIC_QA.json`.

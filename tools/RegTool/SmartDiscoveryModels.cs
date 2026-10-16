@@ -49,7 +49,8 @@ namespace LootForge.RegTool
         EntityProgressionTier Tier,
         bool IsMapTable = true,
         int FreeRows = 0,
-        string Evidence = ""
+        string Evidence = "",
+        int OriginalRewards = 1
     );
 
     public record DiscoveredChest(
@@ -60,7 +61,8 @@ namespace LootForge.RegTool
         EntityProgressionTier Tier,
         bool IsModded = false,
         int FreeRows = 0,
-        string Evidence = ""
+        string Evidence = "",
+        int OriginalRewards = 1
     );
 
     public record DiscoveredWorldSnapshot(
@@ -76,7 +78,7 @@ namespace LootForge.RegTool
         List<DiscoveredBossLot> BossLots,
         List<DiscoveredChest> Chests,
         List<ShopRangeCatalog.Shop>? Merchants = null,
-        int SchemaVersion = 2,
+        int SchemaVersion = 3,
         List<WorldLootCatalog.Destination>? Enemies = null
     );
 }

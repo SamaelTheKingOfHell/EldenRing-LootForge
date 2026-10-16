@@ -136,6 +136,7 @@ class KnowledgeLoader:
                     "progressionTier": bl.get("Tier", 1),
                     "isMapTable": bl.get("IsMapTable", True),
                     "freeRows": bl.get("FreeRows", 0),
+                    "originalRewards": bl.get("OriginalRewards", 1),
                     "evidence": bl.get("Evidence", ""),
                     "defaultCost": 30000
                 })
@@ -154,6 +155,7 @@ class KnowledgeLoader:
                     "baseItemId": c.get("BaseItemId", 0),
                     "category": c.get("Category", 0),
                     "freeRows": c.get("FreeRows", 0),
+                    "originalRewards": c.get("OriginalRewards", 1),
                     "evidence": c.get("Evidence", "")
                 })
         routes_data["_discovered_chests"] = disc_chests if snap.get("SchemaVersion", 0) >= 2 else []
