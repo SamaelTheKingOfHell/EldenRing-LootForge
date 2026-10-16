@@ -44,7 +44,7 @@ public static class AdditiveLootService
     }
 
     /// <summary>Append a fresh roll after the existing chain, leaving a gap before any unrelated lot.</summary>
-    public static bool TryAppend(PARAM param, int baseId, int itemId, int category, ushort points, string label)
+    public static bool TryAppend(PARAM param, int baseId, int itemId, int category, ushort points, string label, bool preserveAcquisitionFlag = false)
     {
         var index = Indices.GetValue(param, p => new Index(p));
         if (baseId <= 0 || param.Rows.Count >= ushort.MaxValue || index.Exhausted.Contains(baseId) || !index.Rows.ContainsKey(baseId)) return false;
@@ -61,6 +61,10 @@ public static class AdditiveLootService
         var row = new PARAM.Row((int)next, $"[LootForge] {label}", param.AppliedParamdef);
         // Construct from defaults, not an original row with one-shot flags,
         // accumulated lottery counters, luck or another item's quantity.
+        // Preserve a one-time world pickup's acquisition flag. Proven boss
+        // awards without a lot flag are gated by their existing defeat event.
+        if (preserveAcquisitionFlag)
+            ParamHelper.SetCellIfExists(row, "getItemFlagId", ParamHelper.FindCell(index.Rows[baseId], "getItemFlagId")!.Value);
         var layout = ItemLotLayout.Extract(param);
         ParamHelper.SetCellFast(row, layout.ItemIdIndices[0], itemId);
         ParamHelper.SetCellFast(row, layout.CategoryIndices[0], category);

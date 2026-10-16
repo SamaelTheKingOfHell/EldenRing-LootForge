@@ -39,6 +39,7 @@ Check(ParamHelper.GetCellInt(lot, "LOTITEMID01") == 700, "case-insensitive index
 Check(ParamHelper.FindCell(lot, "absent") == null, "missing fields remain optional");
 Check(ReferenceEquals(layout, ItemLotLayout.Extract(lots)), "loot layouts are reused");
 AdditiveLootChecks.Run(defs, Check);
+BalanceChecks.Run(defs, Check);
 
 var chain = Row(lots, 10031, "Existing vanilla reward");
 ParamHelper.SetCellIfExists(chain, "lotItemId01", 12345);

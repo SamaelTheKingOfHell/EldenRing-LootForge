@@ -30,12 +30,16 @@ def calculate_capacity(existing, mod_specs, knowledge_base, include_vanilla=Fals
         generator = DiabloLootGenerator(seed=0, knowledge_base=knowledge_base)
         generator._distribution_contexts = contexts
         totals = Counter()
-        for spec in specs:
-            totals.update(DiabloVariantBuilder.generate_variants(generator, spec, variants, knowledge_base, count_only=True))
+        from src.diablo_destinations import DestinationCapacityError
+        try:
+            for spec in specs:
+                totals.update(DiabloVariantBuilder.generate_variants(generator, spec, variants, knowledge_base, count_only=True))
+        except DestinationCapacityError:
+            return None
         return dict(totals)
 
     def fits(totals):
-        return (all(existing.get(table, 0) + count <= 65535 for table, count in totals.items())
+        return (totals is not None and all(existing.get(table, 0) + count <= 65535 for table, count in totals.items())
                 and sum(totals.values()) <= existing.get("IndependentLootRows", float("inf")))
 
     # Primary equipment imposes a cheap upper bound before destination simulation.
@@ -50,8 +54,10 @@ def calculate_capacity(existing, mod_specs, knowledge_base, include_vanilla=Fals
             high = middle - 1
     totals = projected(low) if low else {}
     next_totals = projected(low + 1) if low < ceiling else totals
-    limiting = tuple(table for table, count in next_totals.items() if existing.get(table, 0) + count > 65535)
-    if sum(next_totals.values()) > existing.get("IndependentLootRows", float("inf")):
+    limiting = tuple(table for table, count in (next_totals or {}).items() if existing.get(table, 0) + count > 65535)
+    if next_totals is None:
+        limiting += ("LootDestinations",)
+    if next_totals is not None and sum(next_totals.values()) > existing.get("IndependentLootRows", float("inf")):
         limiting += ("IndependentLootRows",)
     return VariantCapacity(low, dict(existing), totals, limiting)
 

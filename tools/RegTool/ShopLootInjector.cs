@@ -7,15 +7,18 @@ using SoulsFormats;
 namespace LootForge.RegTool
 {
     /// <summary>
-    /// Handles merchant shop lineup injections and capacity overflow rotations into shop/enemy tables.
+    /// Inserts finite stock only inside shop intervals opened by installed talk scripts.
     /// Adheres to [CS-MODULAR] and [CS-GRANULARITY] (<= 300 lines).
     /// </summary>
     public static class ShopLootInjector
     {
         private static HashSet<int>? _shopRowIds = null;
+        private static List<ShopRangeCatalog.Shop>? ranges;
+        public static void Configure(List<ShopRangeCatalog.Shop> verified) => ranges = verified;
+
 
         /// <summary>Release table-specific state between patch operations.</summary>
-        public static void ResetCache() => _shopRowIds = null;
+        public static void ResetCache() { _shopRowIds = null; ranges = null; }
 
         public static void InjectShopLineup(
             JsonElement lootEl,
@@ -43,19 +46,17 @@ namespace LootForge.RegTool
             else if (lootEl.TryGetProperty("shop_id", out var sIdEl))
                 targetId = sIdEl.GetString() ?? "";
 
-            int rangeStart = 100500, rangeEnd = 100524;
-            if (targetId.Contains("twin", StringComparison.OrdinalIgnoreCase) || shopName.Contains("twin", StringComparison.OrdinalIgnoreCase) || shopName.Contains("husks", StringComparison.OrdinalIgnoreCase))
-            {
-                rangeStart = 101800; rangeEnd = 101899;
-            }
-            else if (targetId.Contains("liurnia", StringComparison.OrdinalIgnoreCase) || shopName.Contains("liurnia", StringComparison.OrdinalIgnoreCase))
-            {
-                rangeStart = 100625; rangeEnd = 100637;
-            }
-            else if (targetId.Contains("remembrance", StringComparison.OrdinalIgnoreCase) || shopName.Contains("remembrance", StringComparison.OrdinalIgnoreCase) || shopName.Contains("enia", StringComparison.OrdinalIgnoreCase))
-            {
-                rangeStart = 101900; rangeEnd = 101949;
-            }
+            int rangeStart = lootEl.TryGetProperty("range_start",out var first) && first.ValueKind == JsonValueKind.Number ? first.GetInt32() : -1;
+            int rangeEnd = lootEl.TryGetProperty("range_end",out var last) && last.ValueKind == JsonValueKind.Number ? last.GetInt32() : -1;
+            var verified = ranges?.FirstOrDefault(range => range.Start == rangeStart && range.End == rangeEnd);
+            if (verified == null && ranges != null)
+                verified = ranges.FirstOrDefault(range => targetId == $"shop_{range.Start}");
+            if (verified == null && ranges != null && (targetId.Contains("remembrance") || targetId.Contains("enia")))
+                verified = ranges.FirstOrDefault(range => range.IsExchange);
+            if (verified == null && ranges != null)
+                verified = ranges.FirstOrDefault(range => range.Name.Contains(targetId.Replace("nomadic_", "").Replace('_',' '),StringComparison.OrdinalIgnoreCase));
+            if (verified == null) throw new InvalidDataException($"No verified talk-script shop range for {targetId}.");
+            rangeStart = verified.Start; rangeEnd = verified.End;
 
             if (_shopRowIds == null)
             {
@@ -65,9 +66,6 @@ namespace LootForge.RegTool
                     _shopRowIds.Add(r.ID);
                 }
             }
-
-            var templateRow = shopParam.Rows.FirstOrDefault(r => r.ID >= rangeStart && r.ID <= rangeEnd)
-                              ?? shopParam.Rows.FirstOrDefault();
 
             for (int i = 0; i < awardedItems.Count; i++)
             {
@@ -84,41 +82,11 @@ namespace LootForge.RegTool
                 }
 
                 if (shopRowId == -1)
-                {
-                    for (int cand = 101800; cand <= 101899; cand++)
-                    {
-                        if (!_shopRowIds.Contains(cand))
-                        {
-                            shopRowId = cand;
-                            shopName = "Twin Maiden Husks";
-                            break;
-                        }
-                    }
-                }
-
-                if (shopRowId == -1)
-                {
-                    for (int cand = 101900; cand <= 101949; cand++)
-                    {
-                        if (!_shopRowIds.Contains(cand))
-                        {
-                            shopRowId = cand;
-                            shopName = "Finger Reader Enia";
-                            break;
-                        }
-                    }
-                }
-
-                if (shopRowId == -1)
-                {
-                    Console.WriteLine($"[RegTool WARN] ShopLineupParam capacity limit reached. Rotating overflowed item ID {itemId} to ItemLotParam_enemy pool.");
-                    RotateOverflowToEnemyDrop(itemId, getOrLoadParam, itemIdToIsProtector, itemIdToIsWeapon, itemIdToIsAccessory, ref injectedLootCount);
-                    continue;
-                }
+                    throw new InvalidOperationException($"Shop {verified.Name} has no row space. No item was silently moved to another vendor or loot table.");
 
                 _shopRowIds.Add(shopRowId);
 
-                PARAM.Row targetShopRow = new PARAM.Row(templateRow!)
+                PARAM.Row targetShopRow = new PARAM.Row(shopRowId, $"[LootForge] {shopName}", shopParam.AppliedParamdef)
                 {
                     ID = shopRowId,
                     Name = $"[LootForge] {shopName}"
@@ -142,8 +110,8 @@ namespace LootForge.RegTool
                 ParamHelper.SetCellIfExists(targetShopRow, "value", itemCost);
                 ParamHelper.SetCellIfExists(targetShopRow, "mtrlId", -1);
                 ParamHelper.SetCellIfExists(targetShopRow, "eventFlag_forRelease", 0u);
-                ParamHelper.SetCellIfExists(targetShopRow, "eventFlag_forStock", 0u);
-                ParamHelper.SetCellIfExists(targetShopRow, "sellQuantity", (short)-1);
+                ParamHelper.SetCellIfExists(targetShopRow, "eventFlag_forStock", (uint)(1900870000 + shopRowId));
+                ParamHelper.SetCellIfExists(targetShopRow, "sellQuantity", (short)1);
                 ParamHelper.SetCellIfExists(targetShopRow, "costType", (byte)0);
                 ParamHelper.SetCellIfExists(targetShopRow, "setNum", (ushort)1);
                 ParamHelper.SetCellIfExists(targetShopRow, "value_Add", 0);
@@ -165,23 +133,7 @@ namespace LootForge.RegTool
             Dictionary<int, bool> itemIdToIsAccessory,
             ref int injectedLootCount)
         {
-            var (itemLotParam, _) = getOrLoadParam("ItemLotParam_enemy", "ItemLotParam");
-            bool isAccessory = itemIdToIsAccessory.TryGetValue(itemId, out var ia) && ia;
-            bool isArmor = itemIdToIsProtector.TryGetValue(itemId, out var ip) ? ip : (!isAccessory && !itemIdToIsWeapon.GetValueOrDefault(itemId, false));
-            int lotCategory = isAccessory ? 4 : (isArmor ? 3 : 2);
-
-            if (AdditiveLootService.TryAppendAny(itemLotParam, itemId, lotCategory, 250, "Shop overflow drop"))
-            {
-                injectedLootCount++;
-                return;
-            }
-            var mapParam = getOrLoadParam("ItemLotParam_map", "ItemLotParam").Param;
-            if (AdditiveLootService.TryAppendAny(mapParam, itemId, lotCategory, 250, "Shop overflow drop"))
-            {
-                injectedLootCount++;
-                return;
-            }
-            throw new InvalidOperationException($"No independent loot row remains for item {itemId}. Reduce variants per item.");
+            throw new InvalidOperationException("Unscoped shop overflow is disabled. Select a verified destination or reduce variants.");
         }
     }
 }

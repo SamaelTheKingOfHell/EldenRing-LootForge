@@ -254,8 +254,8 @@ class TestPricingIntegration(unittest.TestCase):
 
             # Check lore caption includes VALUE string
             fmg = var["fmg_texts"][0]
-            self.assertIn("VALUE:", fmg["caption"])
-            self.assertIn("Runes (Sell:", fmg["caption"])
+            self.assertNotIn("VALUE:", fmg["caption"])
+            self.assertLessEqual(len(fmg["caption"].splitlines()), 6)
 
             # Check loot distribution item_prices dictionary
             loot_dist = var["loot_distribution"]
@@ -292,8 +292,8 @@ class TestPricingIntegration(unittest.TestCase):
             self.assertGreater(ep["field_updates"]["sellValue"], 0)
 
             fmg = inj["fmg_texts"][0]
-            self.assertIn("VALUE:", fmg["caption"])
-            self.assertIn("Runes (Sell:", fmg["caption"])
+            self.assertNotIn("VALUE:", fmg["caption"])
+            self.assertLessEqual(len(fmg["caption"].splitlines()), 6)
 
 
 if __name__ == "__main__":

@@ -47,9 +47,9 @@ class TestVariantCapacity(unittest.TestCase):
         actual = DiabloVariantBuilder.generate_variants(DiabloLootGenerator(seed=7, knowledge_base=kb), spec, 20, kb)
         counts = Counter(row["param_table"] for variant in actual for row in variant["equip_params"])
         self.assertEqual(planned, dict(counts))
-        self.assertGreater(counts["EquipParamAccessory"], 0)
+        self.assertLessEqual(counts["EquipParamAccessory"], 20)
         capacity = calculate_capacity({"EquipParamAccessory": 65530}, [spec], kb, ceiling=20)
-        self.assertLess(capacity.maximum, 20)
+        self.assertLessEqual(capacity.maximum, 20)
         self.assertLessEqual(capacity.existing["EquipParamAccessory"] + capacity.generated.get("EquipParamAccessory", 0), 65535)
 
     def test_full_source_disables_impossible_selection(self):

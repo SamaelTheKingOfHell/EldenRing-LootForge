@@ -120,8 +120,8 @@ This roadmap defines the implementation phases for the cross-platform Standalone
   - Direct routing of custom items into canonical treasure chests located in or after major boss chambers.
   - Automatic boss rotation cascade directly to post-boss chests when tier boss capacity (1 set per boss) is exhausted.
 - [x] **High-Value Multi-Injection Chests**:
-  - Guaranteed Legendary / Mythic tier rolls in Diablo procedural mode (`roll_rarity(..., is_chest=True)`).
-  - Bundled multi-companion accessory injections (`num_extra = 2`, delivering $\ge 3$ awarded items total) via non-destructive sequential lot chaining in `ItemLotParam_map` (`targetLotId + 1..9`).
+  - Progression-weighted chest rarities with rare early Legendary/Mythic discoveries.
+  - A 7% chance of one regional bonus accessory; no unconditional companion bundles. Only attached, one-time chest records qualify (2026-10-16 correction).
 - [x] **Strict 4-Tier World Progression Gating (`ProgressionTier`)**:
   - Partitioned items and encounter destinations into Early, Mid, Late, and Endgame tiers.
   - Strict progression locking preventing late-game items from appearing in early regions.
@@ -210,7 +210,8 @@ This roadmap defines the implementation phases for the cross-platform Standalone
 - [x] Retain real-regulation benchmark, Python/native tests and actual Qt capacity transitions. See `docs/PATCHER_PERFORMANCE.md`.
 - [ ] Independent copied-profile/gameplay acceptance of acquisition, save/reload, visuals and new item IDs.
 - [x] Correct reported attack ID 11 false conflicts: compare writable fields, select only the weapon's actual attack dependencies, preserve host-owned rows and invalidate aliased/stale extraction caches (2026-10-15).
-- [ ] Follow-up audits: finite loot destination overflow, strict progression fallbacks, asynchronous forging and full asset/manifest transactionality.
+- [x] Finite, provenance-backed destination capacity and strict progression fallbacks (2026-10-16).
+- [ ] Follow-up audits: asynchronous forging and full asset/manifest transactionality.
 
 ## Additive loot and accessory inventory follow-up (2026-10-15)
 - [x] Replace mixed original/custom lotteries with independent chained rolls across direct drops, shops, boss and chest enrichment.
@@ -219,3 +220,12 @@ This roadmap defines the implementation phases for the cross-platform Standalone
 - [x] Precompute both vanilla modes so toggling immediately clamps and saves the selected variants; reject stale worker results and invalidate changed source/tool limits.
 - [x] Patch installed message languages/DLC archives, fail on missing name tables and prune only obsolete generated text IDs.
 - [ ] Confirm the reported English inventory accessory name/icon failure in Elden Ring. Current selected-profile rows have valid English name entries and nonzero icons; source-file validation does not establish runtime acceptance.
+
+## Runtime inventory and loot repair (2026-10-16)
+- [x] Correct weapon reinforcement/name blocks and canonical clone discovery; bound captions to six lines.
+- [x] Replace guessed loot targets with MSB chest/NPC references, boss award events and ESD-opened shop intervals.
+- [x] Preserve one-time map flags, finite vendor stock and original loot; reject unrelated table overflow.
+- [x] Remove guaranteed medallion bundles; reserve complete armor groups and scale inherited starter passives.
+- [x] Reforge and deploy all 469 selected input groups into Ordo Perfectus: 1,203 weapons, 324 armor pieces and 32 bonus talismans; three variants per input group.
+- [x] Pass 148 Python tests, 53 native regressions, 11,078 magic checks and 64,730 exact deployed-file checks. Retain identities and coverage in `docs/LOOT_RUNTIME_VALIDATION.json`.
+- [ ] Actual game retest of descriptions, pickups, boss awards, ordinary rest/reload, vendor stock, armor visuals and combat effects. No save identities were migrated.

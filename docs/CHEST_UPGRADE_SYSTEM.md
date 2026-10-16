@@ -4,7 +4,7 @@
 
 The **Chest Upgrade System** transforms treasure discovery across the Lands Between into high-value, progression-locked encounters. By extending the anti-duplication architecture (`AntiDup.CHEST_AFTER_BOSS`), custom armor sets, weapons, and standalone relics are routed directly into canonical treasure chests located in or immediately after major boss chambers. 
 
-Chests are explicitly configured as high-prestige loot caches: in Diablo ARPG mode, they guarantee elevated rarity tiers (Legendary and Mythic), and **always drop multiple companion injections** (the main relic accompanied by at least 2 extra accessories/talismans, yielding $\ge 3$ items awarded simultaneously) via FromSoftware's non-destructive sequential lot chaining in `ItemLotParam_map`.
+Current implementation: only attached one-time MSB chest records qualify. Diablo chest rarity follows regional weights, and each boss/chest group has a 7% chance of one bonus talisman. Complete armor groups reserve their rows together. The earlier guaranteed rarity and two-companion design caused flooding and was removed. See [runtime repair and evidence](LOOT_RUNTIME_REPAIR.md).
 
 ---
 
@@ -29,18 +29,19 @@ The system integrates directly with the `AntiDup` enum (`src/models.py`) to gove
 
 ## 2. High-Value Chest Mechanics & Multi-Injections
 
-### 2.1. Guaranteed Elevated Rarity
-In Diablo procedural mode (`src/diablo_generator.py`), chest rolls trigger `roll_rarity(..., is_chest=True)`. This bypasses lower rarity tiers (Common and Magic), guaranteeing high-prestige **Legendary** or **Mythic** rolls with enhanced star ratings, elevated stat affinities, and potent `SpEffectParam` passives.
+### 2.1. Progression-weighted rarity
+With progression enabled, chest rarity uses regional weights. Early Legendary/Mythic items remain possible with weaker bonuses. Disabling progression retains the legacy high-rarity behavior.
 
-### 2.2. Multi-Relic Drop Injections ($\ge 3$ Items Total)
+### 2.2. Bounded equipment groups
 Vanilla chests in *Elden Ring* typically reward a single item. LootForge upgrades chests to function like ARPG treasure troves:
 - **Primary Reward**: The forged standalone weapon or armor set.
-- **Companion Injections**: Always bundles at least **two extra companion accessories/talismans** (`num_extra = 2`) drawn from the matching progression tier (e.g. Erdtree's Favor, Radagon's Scarseal, Dragoncrest Shield Talisman, Lord of Blood's Exultation).
-- **Total Yield**: Opening the chest awards $\ge 3$ distinct items in a single action.
+- **Companion Injections**: A 7% chance of one extra regional talisman; ordinary enemy and merchant placements do not receive bonus talismans.
+- **Total Yield**: Original reward plus the selected complete equipment group and its rare optional companion, limited by actual contiguous row space.
 
 ### 2.3. Non-Destructive Sequential Lot Chaining
 To prevent overwriting vanilla rewards (such as key items, somber smithing stones, or spells):
 - LootForge injects extra drops into sequential chained rows: `targetLotId + 1`, `targetLotId + 2`, etc., in `ItemLotParam_map`.
+- Added chest rows share the original acquisition flag and never spill into another map pickup or enemy table.
 - The retail *Elden Ring* engine triggers all contiguous lot rows within the container event script simultaneously upon chest interaction.
 - Vanilla loot remains 100% intact while the modded rewards appear concurrently in the player's acquisition banner.
 

@@ -316,9 +316,9 @@ class TestLootDistributor(unittest.TestCase):
         awarded = loot["awarded_items"]
 
         # Primary piece + at least 2 companion accessory injections = at least 3 awarded items
-        self.assertGreaterEqual(len(awarded), 3, "Chests must always contain multiple extra injections!")
+        self.assertEqual(len(awarded), 1, "The base builder must not force talismans into every chest.")
         accessory_params = [ep for ep in spec["equip_params"] if ep.get("param_table") == "EquipParamAccessory"]
-        self.assertGreaterEqual(len(accessory_params), 2, "Chests must bundle multiple companion accessories!")
+        self.assertEqual(len(accessory_params), 0)
 
 
 if __name__ == "__main__":

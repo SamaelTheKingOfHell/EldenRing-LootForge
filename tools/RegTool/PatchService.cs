@@ -164,6 +164,17 @@ namespace LootForge.RegTool
             LootInjector.ResetCache();
             PatchPreflight.Validate(specs, GetOrLoadParam);
             Stage("load and purge");
+            var world = WorldLootCatalog.Load(inputPath, options.GetValueOrDefault("game-dir"), defsDir,
+                GetOrLoadParam("ItemLotParam_map","ItemLotParam").Param,
+                GetOrLoadParam("ItemLotParam_enemy","ItemLotParam").Param,
+                GetOrLoadParam("NpcParam","NpcParam").Param,
+                GetOrLoadParam("ShopLineupParam","ShopLineupParam").Param);
+            LootInjector.Configure(world);
+            var routed = specs.Where(spec=>spec.TryGetProperty("loot_distribution",out var loot) && loot.ValueKind==JsonValueKind.Object && loot.TryGetProperty("awarded_items",out _))
+                .SelectMany(spec=>spec.GetProperty("loot_distribution").GetProperty("awarded_items").EnumerateArray().Select(item=>item.GetInt32())).ToHashSet();
+            var unroutedNew = specs.Where(spec=>spec.TryGetProperty("equip_params",out _)).SelectMany(spec=>spec.GetProperty("equip_params").EnumerateArray())
+                .Where(item=>!item.TryGetProperty("update_existing",out var update) || !update.GetBoolean())
+                .Select(item=>item.GetProperty("new_param_id").GetInt32()).Where(id=>!routed.Contains(id)).ToHashSet();
             var diabloEffects = new DiabloEffectService(GetOrLoadParam);
             diabloEffects.InfusionState = new DiabloInfusionState(outputPath, GetOrLoadParam);
 
@@ -243,17 +254,17 @@ namespace LootForge.RegTool
 
             Stage("inject specifications");
             // Optional In-Memory Single-Pass Enrichment for Bosses and Chests
-            if (options.TryGetValue("enrich-bosses", out var eb) && eb.Equals("true", StringComparison.OrdinalIgnoreCase))
+            if (unroutedNew.Count > 0 && options.TryGetValue("enrich-bosses", out var eb) && eb.Equals("true", StringComparison.OrdinalIgnoreCase))
             {
                 int bCount = options.TryGetValue("boss-count", out var bcStr) && int.TryParse(bcStr, out int bc) ? bc : 3;
                 var enemyP = GetOrLoadParam("ItemLotParam_enemy", "ItemLotParam").Param;
                 var mapP = GetOrLoadParam("ItemLotParam_map", "ItemLotParam").Param;
                 var wepP = GetOrLoadParam("EquipParamWeapon", "EquipParamWeapon").Param;
                 var protP = GetOrLoadParam("EquipParamProtector", "EquipParamProtector").Param;
-                BossLootPoolService.EnrichBossLootPools(enemyP, mapP, wepP, protP, bCount, itemIdToIsWeapon.Where(x => x.Value).Select(x => x.Key).ToHashSet(), itemIdToIsProtector.Where(x => x.Value).Select(x => x.Key).ToHashSet());
+                BossLootPoolService.EnrichBossLootPools(enemyP, mapP, wepP, protP, bCount, itemIdToIsWeapon.Where(x => x.Value && unroutedNew.Contains(x.Key)).Select(x => x.Key).ToHashSet(), itemIdToIsProtector.Where(x => x.Value && unroutedNew.Contains(x.Key)).Select(x => x.Key).ToHashSet(), world);
             }
 
-            if (options.TryGetValue("enrich-chests", out var ec) && ec.Equals("true", StringComparison.OrdinalIgnoreCase))
+            if (unroutedNew.Count > 0 && options.TryGetValue("enrich-chests", out var ec) && ec.Equals("true", StringComparison.OrdinalIgnoreCase))
             {
                 int minItms = options.TryGetValue("chest-min-items", out var miStr) && int.TryParse(miStr, out int mi) ? mi : 1;
                 int maxItms = options.TryGetValue("chest-max-items", out var mxStr) && int.TryParse(mxStr, out int mx) ? mx : 4;
@@ -261,7 +272,7 @@ namespace LootForge.RegTool
                 var enemyP = GetOrLoadParam("ItemLotParam_enemy", "ItemLotParam").Param;
                 var protP = GetOrLoadParam("EquipParamProtector", "EquipParamProtector").Param;
                 var wepP = GetOrLoadParam("EquipParamWeapon", "EquipParamWeapon").Param;
-                ChestLootPoolService.EnrichChestLootPools(mapP, enemyP, protP, wepP, minItms, maxItms, itemIdToIsProtector.Where(x => x.Value).Select(x => x.Key).ToHashSet(), itemIdToIsWeapon.Where(x => x.Value).Select(x => x.Key).ToHashSet());
+                ChestLootPoolService.EnrichChestLootPools(mapP, enemyP, protP, wepP, minItms, maxItms, itemIdToIsProtector.Where(x => x.Value && unroutedNew.Contains(x.Key)).Select(x => x.Key).ToHashSet(), itemIdToIsWeapon.Where(x => x.Value && unroutedNew.Contains(x.Key)).Select(x => x.Key).ToHashSet(), world);
             }
 
             var sweepEffects = new List<SweepFmgService.Effect>();

@@ -227,6 +227,17 @@ public sealed class DiabloEffectService
                 if (cell != null) Set(row, name, Math.Clamp(Math.Round(Convert.ToDouble(cell.Value) * multiplier), 0, 65535));
             }
         }
+        if (updates.TryGetProperty("_lf_diablo_power", out var inheritedPower))
+        {
+            foreach (string slot in ResidentSlots(table))
+            {
+                int effect = ParamHelper.GetCellInt(row,slot);
+                if (effect > 0 && effectIds.TryGetValue(effect,out var original) && original.Name?.StartsWith("[LootForge]") != true)
+                    Set(row,slot,ScalePassive(effect,inheritedPower.GetDouble(),new()));
+            }
+            if (updates.TryGetProperty("_lf_diablo_tier",out var region))
+                DiabloBalanceService.Apply(row,table,region.GetInt32(),inheritedPower.GetDouble());
+        }
         if (updates.TryGetProperty("_lf_diablo_passives", out var passives))
         {
             var fields = passives.EnumerateObject().ToDictionary(p => p.Name, p => (object)p.Value.Clone());
@@ -258,7 +269,9 @@ public sealed class DiabloEffectService
                 (name.EndsWith("Rate") || name.EndsWith("PowerRate")))
                 fields[name] = Math.Max(0.1, 1 + (number - 1) * power);
             else if (name is "changeHpRate" or "changeMpRate" or "changeHpPoint" or "changeMpPoint" or "staminaRecoverChangeSpeed" or
-                     "bloodAttackPower" or "poizonAttackPower" or "diseaseAttackPower" or "freezeAttackPower")
+                     "bloodAttackPower" or "poizonAttackPower" or "diseaseAttackPower" or "freezeAttackPower" or "itemDropRate" ||
+                     (name.StartsWith("add") && name.EndsWith("Status")) ||
+                     (name.StartsWith("change") && name.EndsWith("Point") && !name.Contains("Equip")))
             {
                 double original = Convert.ToDouble(cell.Value);
                 double scaled = Math.Round(original * power);

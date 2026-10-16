@@ -80,6 +80,7 @@ class TestAccessoryModularInjection(unittest.TestCase):
 
         base_spec = {
             "set_id": "test_boss_set",
+            "tier": 1,
             "equip_params": [{
                 "param_table": "EquipParamProtector",
                 "new_param_id": 9000100,
@@ -103,12 +104,12 @@ class TestAccessoryModularInjection(unittest.TestCase):
         variants = DiabloVariantBuilder.generate_variants(
             generator=mock_generator,
             base_spec=base_spec,
-            variants_per_item=2,
+            variants_per_item=100,
             knowledge_base=self.kb
         )
-        self.assertEqual(len(variants), 2)
+        self.assertEqual(len(variants), 100)
 
-        v_spec = variants[0]
+        v_spec = next(v for v in variants if any(ep["param_table"] == "EquipParamAccessory" for ep in v["equip_params"]))
         acc_params = [p for p in v_spec["equip_params"] if p["param_table"] == "EquipParamAccessory"]
         self.assertTrue(len(acc_params) >= 1)
 
@@ -148,7 +149,7 @@ class TestAccessoryModularInjection(unittest.TestCase):
 
         spec = builder.build_patch_spec(mod_set)
         acc_params = [p for p in spec["equip_params"] if p["param_table"] == "EquipParamAccessory"]
-        self.assertEqual(len(acc_params), 2)
+        self.assertEqual(len(acc_params), 0)
 
         for acc in acc_params:
             self.assertIn("iconId", acc["field_updates"])

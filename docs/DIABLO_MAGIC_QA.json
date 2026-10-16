@@ -5,7 +5,7 @@
   "owner": "Game tester",
   "target": "Freshly forged Diablo equipment in the Ordo Perfectus Elden Ring profile",
   "environment": "Actual installed Elden Ring game, fully restarted after forging",
-  "build": "Record the feature commit and deployed regulation/common/message hashes before execution",
+  "build": "Runtime repair; use identities in docs/LOOT_RUNTIME_VALIDATION.json and the corresponding feature commit.",
   "steps": [
     "Compare early and endgame rolls of the same base item, rarity and upgrade level.",
     "Verify HP, FP, stamina, regeneration and protection passives while equipping and unequipping.",
@@ -16,11 +16,55 @@
     "Reforge the same seed twice; verify stats do not accumulate and external field edits remain intact.",
     "Equip fire/lightning/glintstone/holy/frost/blood/poison/rot/renewal gear and confirm matching visuals in both hands and each armor slot.",
     "Apply grease, spell and Ash of War buffs over cosmetic auras; confirm buff eligibility, damage and timers are unchanged, the temporary visual takes precedence and the aura returns after expiration.",
-    "Disable auras alone, reforge and restart; compare identical-seed stats/passives and confirm only the cosmetic visuals disappear."
+    "Disable auras alone, reforge and restart; compare identical-seed stats/passives and confirm only the cosmetic visuals disappear.",
+    "Acquire newly generated armor from boss, chest, NPC and vendor routes; verify every piece and both player bodies.",
+    "Check newly acquired weapon name/rarity/caption agreement at reinforcement levels 0 and above; inspect accessory equipment menus for valid names/icons.",
+    "At First Step and ingredient gathering nodes, verify no added gear rewards; rest, quit/reload and revisit opened chests with world-reset hotkeys unused.",
+    "Defeat a qualifying boss, collect its original reward plus generated gear; verify ordinary respawns do not repeat the award.",
+    "Visit a verified vendor, purchase a custom item, rest and reload; original stock remains and purchased custom stock stays sold out.",
+    "Compare the new starter rolls with the same-rarity later regional gear; verify discovery and additive attributes do not retain full unscaled bonuses."
   ],
   "expected": "Regional power scales; magic is limited to rare Legendary/Mythic rolls and the right equipment category; disabling options removes previous effects on reforge.",
   "limits": "Armor retaliation is a magic burst, not attacker-specific percentage reflection. Native data and Qt checks do not prove combat behavior.",
   "evidence_required": "Retained game video/screenshots, seed, item IDs, game build, source revision, output hashes and timestamps",
   "executed_game_coverage": "none",
-  "next_action": "Submit this assignment to the QA tracker when reachable, then execute the game checks."
+  "next_action": "Submit this assignment to the QA tracker when reachable, then execute the game checks.",
+  "runtime_bug_reports": [
+    {
+      "id": "description-overlap-and-identity",
+      "status": "file-repair-passed-awaiting-game-retest"
+    },
+    {
+      "id": "unknown-accessory",
+      "status": "file-repair-passed-awaiting-game-retest"
+    },
+    {
+      "id": "boss-detection",
+      "status": "file-repair-passed-awaiting-game-retest"
+    },
+    {
+      "id": "medallion-flood",
+      "status": "file-repair-passed-awaiting-game-retest"
+    },
+    {
+      "id": "resource-and-starting-pickup-loot",
+      "status": "file-repair-passed-awaiting-game-retest"
+    },
+    {
+      "id": "respawning-talisman",
+      "status": "file-repair-passed-awaiting-game-retest"
+    },
+    {
+      "id": "missing-vendor-stock",
+      "status": "file-repair-passed-awaiting-game-retest"
+    },
+    {
+      "id": "starter-overpowered",
+      "status": "file-repair-passed-awaiting-game-retest"
+    },
+    {
+      "id": "missing-custom-armor",
+      "status": "file-repair-passed-awaiting-game-retest"
+    }
+  ]
 }

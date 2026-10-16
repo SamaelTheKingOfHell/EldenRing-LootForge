@@ -51,47 +51,45 @@ class DiabloTextFormatter:
         stats_multiplier: float = 1.0
     ) -> str:
         """Appends formatted rarity, skill, pricing, and affix breakdown to the bottom of item description."""
-        lines = [base_caption.rstrip(), ""]
-        lines.append("----------------------------------------")
-        tier_title = f"GIGA {rarity.display_name.upper()}" if boss_name else rarity.display_name.upper()
-        mult_tag = f" (Stats x{stats_multiplier:g})" if stats_multiplier != 1.0 else ""
-        lines.append(f"RARITY: {tier_title} {rarity.stars}{mult_tag}")
-
-        if skill:
-            lines.append(f"SKILL: {skill.name}")
-
-        if boss_name:
-            lines.append(f"[BOSS TROPHY] Claimed from {boss_name}")
-
-        if pricing and pricing.get("buy_price"):
-            lines.append(f"VALUE: {pricing['buy_price']:,} Runes (Sell: {pricing.get('sell_price', 0):,})")
-
-        if affixes:
-            lines.append("----------------------------------------")
-            header = "DIABLO AFFIXES:"
-            if stats_multiplier != 1.0:
-                header += f" (Potency x{stats_multiplier:g})"
-            lines.append(header)
-            for aff in affixes:
-                aff_type_str = "Prefix" if aff.affix_type == AffixType.PREFIX else "Suffix"
-                desc = aff.description
-                if aff.sp_effect_id and aff.power_scale != 1.0:
-                    potency = max(0.0, round(aff.power_scale * stats_multiplier * 4) / 4)
-                    desc += f" [Base passive; rolled potency x{potency:g}]"
-                if stats_multiplier != 1.0 and aff.field_modifiers:
-                    for delta in aff.field_modifiers.values():
-                        if isinstance(delta, (int, float)) and delta != 0:
-                            scaled = int(round(delta * stats_multiplier)) if isinstance(delta, int) else round(delta * stats_multiplier, 1)
-                            desc = desc.replace(f"+{delta}", f"+{scaled}").replace(f"{delta}%", f"{scaled}%")
-                if aff.native_fields and stats_multiplier != 1.0:
-                    for key, value in aff.native_fields.items():
-                        old = round(abs((value - 1) * 100 if key.endswith("Rate") else value), 2)
-                        new = round(old * stats_multiplier, 2) if key.endswith("Rate") else abs(int(round(value * stats_multiplier)))
-                        desc = desc.replace(f"{old:g}", f"{new:g}")
-                lines.append(f"- [{aff_type_str}] {aff.name}: {desc}")
-        else:
-            lines.append("----------------------------------------")
-            lines.append("- Standard Mundane Quality (No Magical Affixes)")
-
-        lines.append("----------------------------------------")
-        return "\n".join(lines)
+        import textwrap
+        labels = {"attackBasePhysics": "Physical", "attackBaseMagic": "Magic", "attackBaseFire": "Fire",
+                  "attackBaseThunder": "Lightning", "attackBaseDark": "Holy", "correctStrength": "STR scaling",
+                  "correctAgility": "DEX scaling", "correctMagic": "INT scaling", "correctFaith": "FAI scaling",
+                  "defensePhysics": "Defense", "defenseMagic": "Magic defense", "defenseFire": "Fire defense",
+                  "defenseThunder": "Lightning defense", "defenseDark": "Holy defense", "toughnessCorrectRate": "Poise"}
+        native_labels = {"maxHpRate": "HP", "maxMpRate": "FP", "maxStaminaRate": "Stamina",
+                         "staminaRecoverChangeSpeed": "Stamina recovery", "changeHpPoint": "HP/s",
+                         "physicsDiffenceRate": "Physical ward"}
+        triggers = {"attack_cast": "Attack casts magic (6s)", "guard_cast": "Guard casts magic (10s)",
+                    "guard_heal": "Guard heals (10s)", "thorns": "Hit: magic burst (8s)", "hurt_heal": "Hit: heal (12s)"}
+        bonuses = []
+        for aff in affixes:
+            for field, delta in aff.field_modifiers.items():
+                value = round(delta * stats_multiplier, 2)
+                bonuses.append(f"{labels.get(field, field)} {value:+g}")
+            if aff.sp_effect_id:
+                power = max(0.0, round(aff.power_scale * stats_multiplier * 4) / 4)
+                bonuses.append(f"{aff.name.removeprefix('of ')} x{power:g}")
+            for field, value in aff.native_fields.items():
+                rate = field.endswith("Rate")
+                amount = (value - 1) * 100 * stats_multiplier if rate else round(value * stats_multiplier)
+                if field in ("changeHpPoint", "physicsDiffenceRate"):
+                    amount = abs(amount)
+                bonuses.append(f"{native_labels.get(field, field)} {amount:+g}{'%' if rate else ''}")
+            if aff.proc_kind:
+                bonuses.append(triggers[aff.proc_kind])
+        title = f"RARITY: {'GIGA ' if boss_name else ''}{rarity.display_name.upper()}"
+        if stats_multiplier != 1:
+            title += f" (Stats x{stats_multiplier:g})"
+        # The game adds its own skill panel underneath WeaponCaption. Long lore
+        # plus a second skill/economy panel overlaps that fixed layout.
+        summary = "; ".join(bonuses) if bonuses else "No additional magical effects."
+        effect_lines = textwrap.wrap(summary, width=54, break_long_words=False, break_on_hyphens=False)
+        lore = " ".join(base_caption.split())
+        if lore.startswith("Standalone relic forged") or lore.startswith("Extra treasure"):
+            lore = ""
+        lines = [title]
+        if lore and len(effect_lines) <= 3:
+            lines += textwrap.wrap(lore[:100], width=54)[:2]
+        lines += effect_lines
+        return "\n".join(lines[:6])

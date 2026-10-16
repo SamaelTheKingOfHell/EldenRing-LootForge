@@ -4,6 +4,8 @@
 This folder contains system specifications, guides, and architectural design references for the LootForge engine.
 
 ## Documents
+* [`LOOT_RUNTIME_REPAIR.md`](LOOT_RUNTIME_REPAIR.md): Screenshot-driven repair of inventory identity, one-time chests, event-proven bosses, vendor stock, armor completeness and starter balance.
+* `LOOT_RUNTIME_VALIDATION.json`: Exact-profile acceptance counts, deployed identities and outstanding game QA.
 * [`DIABLO_POWER_AND_MAGIC.md`](DIABLO_POWER_AND_MAGIC.md): Progression scaling, optional passives, combat magic toggles, reversible infusion and local validation boundaries.
 * [`DIABLO_LOOT_SYSTEM.md`](DIABLO_LOOT_SYSTEM.md): Architectural design, rarity tiers, affix pools, FromSoftware engine mappings, and configuration for the Diablo-style procedural ARPG loot engine.
 * [`ITEM_DISTRIBUTION_PLAN.md`](ITEM_DISTRIBUTION_PLAN.md): Architectural plan for eliminating shop monoculture, expanding merchant roster from 3 to 22+, regional progression tiering, and item category balance.

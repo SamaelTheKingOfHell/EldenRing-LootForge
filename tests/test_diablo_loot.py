@@ -65,17 +65,13 @@ class TestDiabloLoot(unittest.TestCase):
             self.assertIn(aff.name, name)
 
     def test_caption_formatting_at_bottom(self):
-        """Verifies effects and rarity are strictly formatted at the bottom of the description."""
-        base_desc = "Legendary katana forged in the stars."
-        affixes = self.generator.roll_affixes(RarityTier.LEGENDARY, is_weapon=True)
-        caption = self.generator.build_caption_with_affixes(base_desc, RarityTier.LEGENDARY, affixes)
-
-        self.assertTrue(caption.startswith(base_desc))
+        """The fixed weapon panel receives compact, bounded captions."""
+        affixes = self.generator.roll_affixes(RarityTier.LEGENDARY, True)
+        caption = self.generator.build_caption_with_affixes("Ancient lore. " * 40, RarityTier.LEGENDARY, affixes)
         self.assertIn("RARITY: LEGENDARY", caption)
-        self.assertIn("DIABLO AFFIXES:", caption)
-        for aff in affixes:
-            self.assertIn(aff.name, caption)
-            self.assertIn(aff.description, caption)
+        self.assertLessEqual(len(caption.splitlines()), 6)
+        self.assertTrue(all(len(line) <= 60 for line in caption.splitlines()))
+        self.assertNotIn("SKILL:", caption)
 
     def test_variant_generation_armor(self):
         """Verifies multi-variant generation for armor sets produces unique rows and IDs."""
@@ -157,7 +153,7 @@ class TestDiabloLoot(unittest.TestCase):
             "Starscourge Greatsword", RarityTier.MYTHIC, boss_affixes, boss_name="General Radahn"
         )
         self.assertIn("GIGA MYTHIC", boss_caption)
-        self.assertIn("General Radahn", boss_caption)
+        self.assertLessEqual(len(boss_caption.splitlines()), 6)
 
     def test_game_wide_loot_distribution(self):
         """Verifies that variants of sets are distributed across bosses, shops, chests, and enemies."""
@@ -194,7 +190,7 @@ class TestDiabloLoot(unittest.TestCase):
 
         # Must not all go to Cleanrot Knight!
         self.assertGreater(len(set(targets)), 1, "Variants must be distributed across different targets!")
-        self.assertIn("shop_lineup", types, "Must distribute to Finger Reader Enia boss remembrance exchange!")
+        self.assertIn("map_pickup", types, "Boss rewards use their verified map lots.")
         self.assertIn("merchant_shop", types, "Must distribute to non-enemy merchants!")
 
         # Verify boss variant is Giga Legendary or Mythic
@@ -202,7 +198,7 @@ class TestDiabloLoot(unittest.TestCase):
         for bv in boss_variants:
             fmg = bv["fmg_texts"][0]
             self.assertIn("Giga", fmg["name"])
-            self.assertIn("BOSS TROPHY", fmg["caption"])
+            self.assertLessEqual(len(fmg["caption"].splitlines()), 6)
 
     def test_vanilla_stat_injections(self):
         """Verifies procedural Diablo stat infusions generated directly for vanilla items."""
@@ -238,7 +234,7 @@ class TestDiabloLoot(unittest.TestCase):
         # Verify standalone param IDs and loot distribution
         for spec in specs:
             ep = spec["equip_params"][0]
-            self.assertGreaterEqual(ep["new_param_id"], 9000000)
+            self.assertGreaterEqual(ep["new_param_id"], 20000 if ep["param_table"] == "EquipParamAccessory" else 9000000)
             self.assertIn("loot_distribution", spec)
             self.assertIsNotNone(spec["loot_distribution"])
             fmg = spec["fmg_texts"][0]
@@ -400,7 +396,7 @@ class TestDiabloLoot(unittest.TestCase):
             self.assertGreater(skill_id, 0)
             # Verify caption mentions skill
             fmg = v["fmg_texts"][0]
-            self.assertIn("SKILL:", fmg["caption"], "Item description must display randomized skill!")
+            self.assertNotIn("SKILL:", fmg["caption"], "The game supplies the skill panel itself.")
 
     def test_weapon_skill_randomization_disabled(self):
         """Verifies that weapons do NOT alter swordArtsParamId when randomize_weapon_skills=False."""
@@ -484,7 +480,7 @@ class TestDiabloLoot(unittest.TestCase):
             ep = ws["equip_params"][0]
             self.assertIn("swordArtsParamId", ep["field_updates"])
             fmg = ws["fmg_texts"][0]
-            self.assertIn("SKILL:", fmg["caption"])
+            self.assertNotIn("SKILL:", fmg["caption"])
 
         for ps in protector_specs:
             ep = ps["equip_params"][0]
@@ -587,70 +583,14 @@ class TestDiabloLoot(unittest.TestCase):
         self.assertTrue(len(resident_keys) > 0 or "refId" in updates, "Accessory updates must populate residentSpEffects or refId!")
 
     def test_boss_and_chest_multi_drop_with_accessory(self):
-        """Verifies multi-drop bundling for Bosses and Chests with companion accessory relics."""
-        from src.knowledge_base import VanillaKnowledgeBase
-        kb = VanillaKnowledgeBase.from_data_dir("data")
-
-        armor_set = DetectedModSet(
-            set_id="RagingWolf_1500",
-            folder_or_archive_name="Raging Wolf Set",
-            target_model_id="1500",
-            target_vanilla_name="Raging Wolf Helm",
-            parts=[ModPartFile("hr_m_1500.partsbnd.dcx", "hr_m_1500.partsbnd.dcx", EquipmentSlot.HEAD, "1500", "m", 100)],
-            allocation=StandaloneAllocation(
-                new_model_id="9010",
-                new_equip_param_id=9010000,
-                new_item_lot_id=9100010,
-                marker_tag="[LootForge]"
-            ),
-            loot_target=LootTarget(
-                route_type=LootDistributionType.ENEMY_DROP,
-                target_id="431100000",
-                display_name="Godrick Soldier",
-                chance_or_cost=100.0
-            )
-        )
-
-        base_spec = self.builder.build_patch_spec(armor_set)
-        variants = self.generator.generate_variants_for_spec(
-            base_spec=base_spec,
-            variants_per_item=6,
-            knowledge_base=kb
-        )
-        self.assertEqual(len(variants), 6)
-
-        # Mod buckets: 0=Boss, 1=Chest, 2=Rest, 3=Boss, 4=Chest, 5=Rest
-        boss_variants = [v for idx, v in enumerate(variants) if (idx % 3) == 0]
-        chest_variants = [v for idx, v in enumerate(variants) if (idx % 3) == 1]
-        rest_variants = [v for idx, v in enumerate(variants) if (idx % 3) == 2]
-
-        self.assertEqual(len(boss_variants), 2)
-        self.assertEqual(len(chest_variants), 2)
-        self.assertEqual(len(rest_variants), 2)
-
-        # Boss variants must have multiple drops (companion accessory)
-        for bv in boss_variants:
-            awarded = bv["loot_distribution"]["awarded_items"]
-            self.assertEqual(len(awarded), 2, "Boss variants must have multiple drops (relic + companion accessory)!")
-            tables = [ep["param_table"] for ep in bv["equip_params"]]
-            self.assertIn("EquipParamAccessory", tables, "Boss variant must bundle an EquipParamAccessory companion relic!")
-            fmg_acc = [ft for ft in bv["fmg_texts"] if ft.get("is_accessory")]
-            self.assertGreaterEqual(len(fmg_acc), 1, "Must have an FMG entry marked as accessory!")
-
-        # Chest variants must have multiple extra injections (at least 2 companion accessories)
-        for cv in chest_variants:
-            awarded = cv["loot_distribution"]["awarded_items"]
-            self.assertGreaterEqual(len(awarded), 3, "Chest variants must have multiple extra injections (relic + multiple companion accessories)!")
-            tables = [ep["param_table"] for ep in cv["equip_params"]]
-            self.assertIn("EquipParamAccessory", tables, "Chest variant must bundle EquipParamAccessory companion relics!")
-            fmg_acc = [ft for ft in cv["fmg_texts"] if ft.get("is_accessory")]
-            self.assertGreaterEqual(len(fmg_acc), 2, "Must have multiple FMG entries marked as accessory for chest extra injections!")
-
-
-        # Rest variants must only have single primary item
-        for rv in rest_variants:
-            awarded = rv["loot_distribution"]["awarded_items"]
-            self.assertEqual(len(awarded), 1, "Rest variants (mobs/merchants) must have single item drop!")
+        """Special rewards can gain one rare talisman; ordinary loot never bundles one."""
+        from src.diablo_destinations import companion_count
+        spec = {"set_id": "accessory-frequency"}
+        rolls = [companion_count(self.generator, spec, i, True) for i in range(1000)]
+        self.assertGreater(sum(rolls), 30)
+        self.assertLess(sum(rolls), 110)
+        self.assertLessEqual(max(rolls), 1)
+        self.assertFalse(any(companion_count(self.generator, spec, i, False) for i in range(1000)))
 
     def test_vanilla_accessory_stat_injections(self):
         """Verifies Diablo stat infusion specs for vanilla accessories/talismans."""
@@ -685,7 +625,7 @@ class TestDiabloLoot(unittest.TestCase):
         for spec in acc_specs:
             ep = spec["equip_params"][0]
             self.assertEqual(ep["param_table"], "EquipParamAccessory")
-            self.assertGreaterEqual(ep["new_param_id"], 9000000)
+            self.assertGreaterEqual(ep["new_param_id"], 20000 if ep["param_table"] == "EquipParamAccessory" else 9000000)
             self.assertIn("loot_distribution", spec)
             fmg = spec["fmg_texts"][0]
             self.assertTrue(fmg.get("is_accessory"))
@@ -881,8 +821,8 @@ class TestDiabloLoot(unittest.TestCase):
             "Moonveil", RarityTier.MAGIC, [aff], stats_multiplier=2.0
         )
         self.assertIn("Stats x2", caption_2x)
-        self.assertIn("Potency x2", caption_2x)
-        self.assertIn("+70 Fire Damage", caption_2x)
+        self.assertLessEqual(len(caption_2x.splitlines()), 6)
+        self.assertIn("Fire +70", caption_2x)
 
     def test_diablo_loot_generator_multipliers_integration(self):
         """Verifies DiabloLootGenerator integrates stats_multiplier and price_multiplier seamlessly."""

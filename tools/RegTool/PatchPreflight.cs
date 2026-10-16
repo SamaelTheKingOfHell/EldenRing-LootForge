@@ -27,6 +27,8 @@ public static class PatchPreflight
                 }
                 if (!requested[table].Add(id))
                     throw new InvalidDataException($"Duplicate equipment ID {id} in {table}.");
+                if (table == "EquipParamWeapon" && id >= 100000000 && id % 100 != 0)
+                    throw new InvalidDataException($"Custom weapon {id} is not aligned to its 100-ID name/reinforcement block.");
                 bool update = item.TryGetProperty("update_existing", out var flag) && flag.GetBoolean();
                 if (!tableIds.Add(id) && !update)
                     throw new InvalidDataException($"Equipment ID {id} already exists in {table}. Refusing to discard or overwrite an item.");

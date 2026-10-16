@@ -15,6 +15,8 @@ class VanillaKnowledgeBase:
     """Registry for resolving FromSoftware model IDs and routing loot."""
 
     def __init__(self, models_data: Dict[str, Any], routes_data: Dict[str, Any]):
+        self._verified_routes = routes_data.get("_verified_routes", False)
+        self._discovered_enemies = routes_data.get("_discovered_enemies", [])
         self._protectors = models_data.get("protectors", {})
         self._weapons = models_data.get("weapons", {})
         self._accessories = models_data.get("accessories", {})
@@ -280,15 +282,15 @@ class VanillaKnowledgeBase:
         ]
 
         bosses = list(self._discovered_boss_lots) if self._discovered_boss_lots else list(self._boss_remembrances)
-        if not any(b.get("lotParamId") == 10030 for b in bosses):
-            bosses.insert(0, {"id": "boss_lot_10030", "name": "Chapel of Anticipation - Grafted Scion", "boss": "Grafted Scion", "lotParamId": 10030, "progressionTier": 1, "isMapTable": True})
-            bosses.insert(1, {"id": "boss_lot_18000050", "name": "Cave of Knowledge - Stranded Graveyard Reward", "boss": "Soldier of Godrick", "lotParamId": 18000050, "progressionTier": 1, "isMapTable": True})
-            bosses.insert(2, {"id": "boss_lot_431100000", "name": "Cave of Knowledge - Soldier of Godrick", "boss": "Soldier of Godrick", "lotParamId": 431100000, "progressionTier": 1, "isMapTable": False})
-
+        if self._verified_routes:
+            chests = list(self._discovered_chests)
+            bosses = list(self._discovered_boss_lots)
+            elites = list(self._discovered_enemies)
+            roaming = []
         return {
             "bosses": bosses,
             "merchants": list(self._merchants),
             "chests": chests,
-            "elites": list(self._elite_enemies),
-            "roaming": roaming if roaming else list(self._elite_enemies)
+            "elites": elites if self._verified_routes else list(self._elite_enemies),
+            "roaming": [] if self._verified_routes else (roaming if roaming else list(self._elite_enemies))
         }

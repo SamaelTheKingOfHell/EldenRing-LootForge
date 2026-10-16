@@ -76,7 +76,7 @@ class KnowledgeLoader:
                     "wepType": w.get("WepType", 0)
                 }
                 disc_weps[wid] = entry
-                if mid and (mid not in disc_weps or w.get("IsBaseWeapon")):
+                if mid and (mid not in disc_weps or (w.get("IsBaseWeapon") and disc_weps[mid].get("baseParamId") != disc_weps[mid].get("familyId"))):
                     disc_weps[mid] = entry
         models_data["_discovered_weapons"] = disc_weps
 
@@ -135,9 +135,11 @@ class KnowledgeLoader:
                     "lotParamId": lot_id,
                     "progressionTier": bl.get("Tier", 1),
                     "isMapTable": bl.get("IsMapTable", True),
+                    "freeRows": bl.get("FreeRows", 0),
+                    "evidence": bl.get("Evidence", ""),
                     "defaultCost": 30000
                 })
-        routes_data["_discovered_boss_lots"] = disc_bosses
+        routes_data["_discovered_boss_lots"] = disc_bosses if snap.get("SchemaVersion", 0) >= 2 else []
 
         # Ingest ALL discovered chests and map pickups (Vanilla, DLC, Modded)
         disc_chests: List[Dict[str, Any]] = []
@@ -150,9 +152,19 @@ class KnowledgeLoader:
                     "lotParamId": lot_id,
                     "progressionTier": c.get("Tier", 1),
                     "baseItemId": c.get("BaseItemId", 0),
-                    "category": c.get("Category", 0)
+                    "category": c.get("Category", 0),
+                    "freeRows": c.get("FreeRows", 0),
+                    "evidence": c.get("Evidence", "")
                 })
-        routes_data["_discovered_chests"] = disc_chests
+        routes_data["_discovered_chests"] = disc_chests if snap.get("SchemaVersion", 0) >= 2 else []
+        if snap.get("SchemaVersion", 0) >= 2:
+            routes_data["_verified_routes"] = True
+            routes_data["_discovered_enemies"] = [{"id": f"enemy_{row['LotId']}", "name": row["Name"],
+                "lotParamId": row["LotId"], "progressionTier": row["Tier"], "freeRows": row["FreeRows"],
+                "defaultDropChance": 12.0, "evidence": row["Evidence"]} for row in snap.get("Enemies", [])]
+            routes_data["merchants"] = [{"id": f"shop_{row['Start']}", "name": row["Name"],
+                "rangeStart": row["Start"], "rangeEnd": row["End"], "freeRows": row.get("FreeRows", 0), "progressionTier": row["Tier"],
+                "evidence": row["Evidence"]} for row in snap.get("Merchants", []) if not row.get("IsExchange", False)]
 
         system_logger.info(
             f"Smart Discovery: Ingested live snapshot ({len(disc_weps)} weapons, "

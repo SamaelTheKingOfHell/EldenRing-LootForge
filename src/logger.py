@@ -65,7 +65,12 @@ class EventLogger:
 
         # Standard console echo with clear formatting
         prefix = f"[{timestamp}] [{record['level']}] [{source}]"
-        print(f"{prefix} {message}")
+        try:
+            print(f"{prefix} {message}")
+        except UnicodeEncodeError:
+            import sys
+            text = f"{prefix} {message}"
+            print(text.encode(sys.stdout.encoding or "utf-8", errors="backslashreplace").decode(sys.stdout.encoding or "utf-8"))
 
     def debug(self, message: str, source: str = "System", details: Optional[Dict[str, Any]] = None) -> None:
         """Log a diagnostic debug trace."""

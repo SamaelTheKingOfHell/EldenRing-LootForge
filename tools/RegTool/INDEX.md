@@ -37,6 +37,10 @@ Adheres to `[CS-MODULAR]`, `[CS-GRANULARITY]`, and `[CS-DECOUPLE]` by decomposin
 
 ## Patcher performance and capacity
 
+- `WorldLootCatalog.cs`: Installed MSB chests, NPC gear drops and boss-event award provenance with contiguous free-row bounds.
+- `ShopRangeCatalog.cs`: ESD-opened regular and transposition shop intervals, finite capacity and source evidence.
+- `DiabloBalanceService.cs`: Regional imported weapon bounds and starter armor absorption caps.
+
 - `CapacityService.cs`: Fast surviving equipment row counts from source metadata.
 - `SkillExtractionIndex.cs`: Single-pass skill, behavior variation and attack lookup indices for dependency extraction.
 - `PatchPreflight.cs`: Native collision and row-limit validation before large batch cloning.

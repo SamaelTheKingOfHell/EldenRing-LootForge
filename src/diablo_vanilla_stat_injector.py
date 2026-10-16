@@ -233,5 +233,6 @@ class VanillaStatInjector:
     def power(generator, fields, rarity, tier):
         if generator.progression_scaling:
             from src.diablo_power import REGION_POWER, RARITY_POWER, RARITIES, tier_value
+            fields["_lf_diablo_tier"] = tier_value(tier)
             fields["_lf_diablo_power"] = round(REGION_POWER[tier_value(tier)-1] *
                 RARITY_POWER[RARITIES.index(rarity)] * generator.stats_multiplier, 4)

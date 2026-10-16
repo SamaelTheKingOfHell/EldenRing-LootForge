@@ -74,8 +74,19 @@ public static class AdditiveLootChecks
         LootInjector.ResetCache();
         LootInjector.InjectLootDistribution(spec.RootElement, Load, new(), new(), new() { [100000003] = true, [100000004] = true }, ref count);
         check(Snapshot(chest) == chestBefore && count == 2 && map.Rows.Count == 3, "ordinary chest injection adds both items without changing its original lottery");
-        ShopLootInjector.RotateOverflowToEnemyDrop(100000005, Load, new(), new(), new() { [100000005] = true }, ref count);
-        check(Snapshot(original) == before && Snapshot(unrelated) == unrelatedBefore, "shop overflow also preserves every original drop");
+        bool overflowRejected = false;
+        try { ShopLootInjector.RotateOverflowToEnemyDrop(100000005, Load, new(), new(), new() { [100000005] = true }, ref count); }
+        catch (InvalidOperationException) { overflowRejected = true; }
+        check(overflowRejected && Snapshot(original) == before && Snapshot(unrelated) == unrelatedBefore,
+            "full shops reject unscoped overflow without touching enemy or gathering loot");
+        var flaggedMap = Table("ItemLotParam");
+        var flaggedChest = Row(flaggedMap, 20000);
+        ParamHelper.SetCellIfExists(flaggedChest, "getItemFlagId", 987u);
+        ParamHelper.SetCellIfExists(flaggedChest, "cumulateNumFlagId", 876u);
+        AdditiveLootService.TryAppend(flaggedMap, 20000, 20001, 4, 1000, "One-time chest", true);
+        check(ParamHelper.GetCellInt(flaggedMap.Rows[1], "getItemFlagId") == 987 &&
+            ParamHelper.GetCellInt(flaggedMap.Rows[1], "cumulateNumFlagId") == 0,
+            "chest bonuses share acquisition flags without inheriting pity counters");
         BossLootPoolService.EnrichBossLootPools(enemy, map, tables["EquipParamWeapon"], tables["EquipParamProtector"], 2);
         ChestLootPoolService.EnrichChestLootPools(map, enemy, tables["EquipParamProtector"], tables["EquipParamWeapon"], 1, 2);
         check(Snapshot(chest) == chestBefore && Snapshot(original) == before && Snapshot(existingChain) == chainBefore,

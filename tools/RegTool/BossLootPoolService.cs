@@ -34,7 +34,7 @@ namespace LootForge.RegTool
                 var file = bnd.Files.FirstOrDefault(f => f.Name.EndsWith($"{tableName}.param", StringComparison.OrdinalIgnoreCase));
                 if (file == null) throw new Exception($"Table {tableName} not found in regulation.");
                 var param = PARAM.Read(file.Bytes);
-                string xmlFile = Path.Combine(defsDir, "ItemLotParam.xml");
+                string xmlFile = Path.Combine(defsDir, (tableName.StartsWith("ItemLot") ? "ItemLotParam" : tableName) + ".xml");
                 if (File.Exists(xmlFile))
                 {
                     var def = PARAMDEF.XmlDeserialize(xmlFile, false, false);
@@ -45,13 +45,11 @@ namespace LootForge.RegTool
 
             var enemyParam = LoadParam("ItemLotParam_enemy");
             var mapParam = LoadParam("ItemLotParam_map");
-            PARAM? wepParam = null, protParam = null;
-            var wepFile = bnd.Files.FirstOrDefault(f => f.Name.EndsWith("EquipParamWeapon.param", StringComparison.OrdinalIgnoreCase));
-            if (wepFile != null) wepParam = PARAM.Read(wepFile.Bytes);
-            var protFile = bnd.Files.FirstOrDefault(f => f.Name.EndsWith("EquipParamProtector.param", StringComparison.OrdinalIgnoreCase));
-            if (protFile != null) protParam = PARAM.Read(protFile.Bytes);
-
-            EnrichBossLootPools(enemyParam, mapParam, wepParam, protParam, weaponsPerBoss);
+            var wepParam = LoadParam("EquipParamWeapon");
+            var protParam = LoadParam("EquipParamProtector");
+            var world = WorldLootCatalog.Load(inputPath, options.GetValueOrDefault("game-dir"), defsDir, mapParam,
+                enemyParam, LoadParam("NpcParam"));
+            EnrichBossLootPools(enemyParam, mapParam, wepParam, protParam, weaponsPerBoss, verified: world);
 
             // Write back both tables
             var enemyFile = bnd.Files.First(f => f.Name.EndsWith("ItemLotParam_enemy.param", StringComparison.OrdinalIgnoreCase));
@@ -66,7 +64,7 @@ namespace LootForge.RegTool
 
             Console.WriteLine($"[BossLootPool] Encrypting and saving updated regulation to: {outputPath}...");
             RegulationDecryptor.EncryptERRegulation(outputPath, bnd);
-            Console.WriteLine($"[BossLootPool SUCCESS] Saved {new FileInfo(outputPath).Length} bytes. All bosses and tutorial encounters enriched!");
+            Console.WriteLine($"[BossLootPool SUCCESS] Saved {new FileInfo(outputPath).Length} bytes. Verified boss rewards processed.");
 
             return 0;
         }
@@ -78,64 +76,10 @@ namespace LootForge.RegTool
             PARAM? protParam,
             int weaponsPerBoss = 3,
             HashSet<int>? customWeaponIds = null,
-            HashSet<int>? customArmorIds = null)
+            HashSet<int>? customArmorIds = null, WorldLootCatalog? verified = null)
         {
-            var enemyLayout = ItemLotLayout.Extract(enemyParam);
-            var mapLayout = ItemLotLayout.Extract(mapParam);
-
-            var enemyRowMap = new Dictionary<int, PARAM.Row>(enemyParam.Rows.Count);
-            foreach (var r in enemyParam.Rows) enemyRowMap[r.ID] = r;
-
-            var mapRowMap = new Dictionary<int, PARAM.Row>(mapParam.Rows.Count);
-            foreach (var r in mapParam.Rows) mapRowMap[r.ID] = r;
-
-            // Target boss encounters across both ItemLotParam_enemy and ItemLotParam_map
             var targetBosses = new Dictionary<int, (string Name, EntityProgressionTier Tier, bool IsMapTable)>();
-
-            // 1. Explicit Tutorial & Early Boss Registrations
-            targetBosses[10030] = ("Chapel of Anticipation - Grafted Scion", EntityProgressionTier.Early, true);
-            targetBosses[10031] = ("Chapel of Anticipation - Grafted Scion (Shield)", EntityProgressionTier.Early, true);
-            targetBosses[431100000] = ("Cave of Knowledge - Soldier of Godrick", EntityProgressionTier.Early, false);
-            targetBosses[18000050] = ("Cave of Knowledge / Stranded Graveyard Reward", EntityProgressionTier.Early, true);
-            targetBosses[20330] = ("Groveside Cave - Beastman of Farum Azula", EntityProgressionTier.Early, true);
-            targetBosses[1037420400] = ("Groveside Cave - Beastman of Farum Azula (Event)", EntityProgressionTier.Early, true);
-
-            // 2. Discover boss rows in ItemLotParam_enemy
-            int eBp = enemyLayout.BasePointIndices[0], eId = enemyLayout.ItemIdIndices[0], eCat = enemyLayout.CategoryIndices[0];
-            foreach (var r in enemyParam.Rows)
-            {
-                int itm1 = ParamHelper.GetCellIntFast(r, eId);
-                int p1 = ParamHelper.GetCellIntFast(r, eBp);
-                int cat1 = ParamHelper.GetCellIntFast(r, eCat);
-
-                if (itm1 > 0 && p1 >= 1000 && (cat1 == 2 || cat1 == 4))
-                {
-                    if (!targetBosses.ContainsKey(r.ID))
-                    {
-                        var tier = ProgressionTierClassifier.ClassifyTier(r.ID, r.Name);
-                        targetBosses[r.ID] = (r.Name ?? $"Enemy Boss {r.ID}", tier, false);
-                    }
-                }
-            }
-
-            // 3. Discover boss rows in ItemLotParam_map (dungeon bosses, remembrances, major events)
-            int mBp = mapLayout.BasePointIndices[0], mId = mapLayout.ItemIdIndices[0], mCat = mapLayout.CategoryIndices[0];
-            foreach (var r in mapParam.Rows)
-            {
-                int itm1 = ParamHelper.GetCellIntFast(r, mId);
-                int p1 = ParamHelper.GetCellIntFast(r, mBp);
-                int cat1 = ParamHelper.GetCellIntFast(r, mCat);
-
-                if (itm1 > 0 && p1 >= 1000 && (cat1 == 2 || cat1 == 4) && (r.ID < 100000 || r.ID >= 1000000000))
-                {
-                    if (!targetBosses.ContainsKey(r.ID))
-                    {
-                        var tier = ProgressionTierClassifier.ClassifyTier(r.ID, r.Name);
-                        targetBosses[r.ID] = (r.Name ?? $"Map Boss {r.ID}", tier, true);
-                    }
-                }
-            }
-
+            foreach (var item in verified?.Bosses ?? new()) targetBosses[item.LotId] = (item.Name,item.Tier,true);
             Console.WriteLine($"[BossLootPool] Discovered {targetBosses.Count} total boss targets ({targetBosses.Values.Count(v => !v.IsMapTable)} enemy, {targetBosses.Values.Count(v => v.IsMapTable)} map/dungeon).");
 
             // Gather custom weapons and armors to prioritize on bosses
@@ -184,22 +128,7 @@ namespace LootForge.RegTool
 
                 // 1. Prioritize custom weapons and armor pieces
                 var availableCustom = customBossItems.Where(i => i.Tier == tier && !usedItemIds.Contains(i.Id)).ToList();
-                if (availableCustom.Count < weaponsPerBoss)
-                    availableCustom = customBossItems.Where(i => !usedItemIds.Contains(i.Id)).ToList();
-
                 var chosenItems = availableCustom.OrderBy(_ => rng.Next()).Take(weaponsPerBoss).ToList();
-
-                // 2. Supplement with curated weapons if needed
-                if (chosenItems.Count < weaponsPerBoss)
-                {
-                    var tierWeapons = CuratedWeaponPool.GetWeaponsByTier(tier).Where(w => !usedItemIds.Contains(w.Id)).ToList();
-                    if (tierWeapons.Count < weaponsPerBoss - chosenItems.Count) tierWeapons = CuratedWeaponPool.WEAPONS;
-                    var extra = tierWeapons.Where(w => !chosenItems.Any(c => c.Id == w.Id)).OrderBy(_ => rng.Next()).Take(weaponsPerBoss - chosenItems.Count);
-                    foreach (var w in extra)
-                    {
-                        chosenItems.Add((w.Id, w.Name, 2, w.Tier));
-                    }
-                }
 
                 if (chosenItems.Count == 0) continue;
                 foreach (var itm in chosenItems) usedItemIds.Add(itm.Id);
@@ -208,13 +137,13 @@ namespace LootForge.RegTool
                 foreach (var itm in chosenItems)
                 {
                     if (AdditiveLootService.TryAppend(destination, baseLotId, itm.Id, itm.Category, 1000,
-                            $"Boss Pool T{(int)tier}: {itm.Name} (for {bossName})"))
+                            $"Boss Pool T{(int)tier}: {itm.Name} (for {bossName})", isMap))
                         totalItemsInjected++;
                 }
                 bossesEnriched++;
             }
 
-            Console.WriteLine($"[BossLootPool] Successfully enriched {bossesEnriched} bosses (including tutorial encounters) with {totalItemsInjected} non-repeating weapons!");
+            Console.WriteLine($"[BossLootPool] Successfully enriched {bossesEnriched} bosses with {totalItemsInjected} non-repeating custom items!");
             return bossesEnriched;
         }
     }

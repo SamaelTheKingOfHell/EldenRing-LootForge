@@ -254,6 +254,12 @@ class RegulationManager:
             "--input", str(reg_path),
             "--defs", str(self.defs_dir)
         ]
+        import json as _json
+        settings = self.base_dir / "config.json"
+        if settings.exists():
+            game_path = _json.loads(settings.read_text(encoding="utf-8")).get("game_directory")
+            if game_path:
+                cmd.extend(["--game-dir", game_path])
         if out_path:
             cmd.extend(["--output", str(out_path)])
         else:
@@ -264,7 +270,7 @@ class RegulationManager:
 
         res = subprocess.run(cmd, capture_output=True, text=True, cwd=str(self.base_dir), check=False)
         if res.returncode != 0:
-            system_logger.warning(f"Introspect world returned non-zero code {res.returncode}: {res.stderr or res.stdout}", source="RegulationManager")
+            raise RuntimeError(f"World discovery failed: {res.stderr or res.stdout}")
 
         if out_path and Path(out_path).exists():
             try:

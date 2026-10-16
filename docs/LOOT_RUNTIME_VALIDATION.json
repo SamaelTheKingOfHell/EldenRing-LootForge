@@ -1,0 +1,119 @@
+{
+  "recorded_utc": "2026-10-16T04:00:58.807358+00:00",
+  "git_base": "844900b269ff3499a3896bc2b1eb39ddc798b5b7",
+  "branch": "feature/souls-armor-port",
+  "scope": "Screenshot-driven inventory, finite loot routing, complete custom armor and starter balance repair",
+  "release": {
+    "deployment": "PASS: normal PatchOrchestrator pipeline into selected Ordo Perfectus profile, backups and manifest recorded",
+    "active_game_profile_forged": true,
+    "native_release_build": "PASS: 0 warnings, 0 errors",
+    "native_dll_sha256": "4db5f0ce3a8c4ec19779ad9a09f09504b0ea0f0c28f44c7e32a15703c319837e",
+    "regulation_before_sha256": "2a29b1a3a6b74ece3b14867a51a647f5cf1807f41fa97ecd400caea69ba2f24f",
+    "deployed_files": 715,
+    "missing_manifest_files": [],
+    "identities": {
+      "regulation.bin": {
+        "bytes": 2034128,
+        "sha256": "e308fc2c041792e34584f2bed7fcb6752f1e03f833b6063e5f1443fcbcd2b283"
+      },
+      "event\\common.emevd.dcx": {
+        "bytes": 35344,
+        "sha256": "a81afad39ea1d408fb3e53f44cc7beb0bc87296fe54bbd1f1ae8825a04dc430d"
+      },
+      "lootforge_diablo_fields.json": {
+        "bytes": 3019244,
+        "sha256": "220f1bf0b9c515eef2495db355aad9c7ee30791e9f0d6c51ea075fe04f948bad"
+      },
+      "lootforge_diablo_texts.json": {
+        "bytes": 15661025,
+        "sha256": "9e715781e7d3b7c988d7f40096550931911465fd1ad8ea066b8c208f90751fe8"
+      },
+      "msg\\engus\\item.msgbnd.dcx": {
+        "bytes": 1312448,
+        "sha256": "c7bd579dd5fa01450025066277a5022f18538756b774a6a512186a42367efce0"
+      },
+      "msg\\engus\\item_dlc02.msgbnd.dcx": {
+        "bytes": 3727024,
+        "sha256": "f65a7f261221bf378a146301b7352232755347df7d0d6f02d21b0a8063248298"
+      },
+      "msg\\zhocn\\item_dlc02.msgbnd.dcx": {
+        "bytes": 3688672,
+        "sha256": "7324960f94480e407e631449cec441dd1621e6b8244c3643f363ac397ae70f85"
+      }
+    }
+  },
+  "python": {
+    "passed": 148,
+    "failed": 0,
+    "log": "scratch/runtime-loot/python-release.log"
+  },
+  "native_regressions": {
+    "passed": 53,
+    "failed": 0,
+    "log": "scratch/runtime-loot/native-release.log"
+  },
+  "native_magic": {
+    "passed": 11078,
+    "failed": 0,
+    "coverage_items": 2355,
+    "log": "scratch/runtime-loot/native-magic.log"
+  },
+  "deployed_file_checks": {
+    "passed": 64730,
+    "failed": 0,
+    "bonus_talisman_distinct_bases": 30,
+    "vendor_stock_items": 80,
+    "generated_equipment": {
+      "EquipParamWeapon": 1203,
+      "EquipParamAccessory": 32,
+      "EquipParamProtector": 324
+    },
+    "variant_routes": {
+      "boss": 283,
+      "chest": 416,
+      "enemy": 640,
+      "merchant": 68
+    },
+    "armor_input_groups": 68,
+    "armor_variant_routes": 204,
+    "armor_route_kinds": {
+      "boss": 63,
+      "chest": 63,
+      "merchant": 54,
+      "enemy": 24
+    },
+    "message_tables": 63,
+    "combat_events": 5,
+    "log": "scratch/runtime-loot/deployed-audit-final.log",
+    "coverage": [
+      "All original enemy/map lot field values unchanged",
+      "Sorted unique PARAM lookup and reinforcement-safe weapon IDs",
+      "Every generated equipment row has a complete reachable award",
+      "Every generated armor slot has its deployed model asset",
+      "Verified MSB/event/talk destination membership and native item categories",
+      "Finite vendor stock and original acquisition flags",
+      "All installed base/DLC name, caption and info entries resolve; generated captions fit six lines",
+      "Host common-event instructions/rest behavior unchanged; one initializer per generated combat event"
+    ]
+  },
+  "configuration": {
+    "diablo_variants_per_item": 3,
+    "diablo_seed": 0,
+    "diablo_progression_scaling": true,
+    "diablo_extra_passives": true,
+    "diablo_triggered_effects": true,
+    "diablo_auras_enabled": true
+  },
+  "game_acceptance": {
+    "executed": false,
+    "assignment": "docs/DIABLO_MAGIC_QA.json",
+    "remaining": [
+      "New gear description layout in the equipment menu",
+      "Actual boss/chest awards, normal rest and save/reload",
+      "Merchant purchases and stock persistence",
+      "Custom armor appearance on both player bodies",
+      "Combat proc cooldowns, aura rendering and buff interaction"
+    ],
+    "save_migration": "No saves edited. Old generated item identities require reacquisition after a full game restart."
+  }
+}

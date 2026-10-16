@@ -31,6 +31,9 @@ Automated verification suites adhering to `[CS-NO-MOCK]`. Tests exercise concret
 
 ## Patcher performance and capacity
 
+- `test_loot_runtime_routes.py`: Weapon identity blocks, complete armor reservation, finite vendor stock and source-route immutability.
+- `LootRuntimeChecks/`: Read-only exact encrypted-profile acceptance for original lotteries, complete generated rewards, armor assets, vendor stock and all installed FMG tables.
+
 - `test_patch_performance.py`: Large multi-set variant, batch validation and incremental file safety regressions.
 - `test_import_conflicts.py`: Attack ID 11 padding regression, selected-weapon dependencies, host-row preservation and extraction cache invalidation.
 - `test_variant_capacity.py`: Exact maximum, source occupancy, vanilla inclusion and real companion-count parity.

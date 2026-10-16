@@ -42,6 +42,8 @@ This directory contains the core Python engine implementation for LootForge, org
 
 ## Patcher performance and capacity
 
+- `diablo_destinations.py`: Shared finite destination reservations, complete-set routing and rare single companion rolls; no unscoped overflow.
+
 - `diablo_distribution_context.py`: Per-forge cached world/tier candidates shared by generation and capacity planning.
 - `variant_capacity.py`: Exact per-table variant maximum including vanilla bases and companion talismans.
 - `patch_validation.py`: Early collision/row-limit checks and imported row compaction.

@@ -6,7 +6,7 @@ from src.models import ProgressionTier
 
 
 RARITIES = list(RarityTier)
-REGION_POWER = (0.40, 0.75, 1.15, 1.65)
+REGION_POWER = (0.18, 0.60, 1.05, 1.55)
 RARITY_POWER = (0.50, 0.70, 0.90, 1.15, 1.40)
 DROP_WEIGHTS = (
     (40, 43, 15, 1.8, 0.2), (25, 40, 28, 6, 1),

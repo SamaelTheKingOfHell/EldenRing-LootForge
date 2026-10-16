@@ -18,9 +18,9 @@ namespace LootForge.RegTool
                 return EntityProgressionTier.Early;
 
             // Endgame landmarks
-            if (n.Contains("haligtree") || n.Contains("malenia") || n.Contains("maliketh") || n.Contains("mohg") ||
+            if (n.Contains("dark moon") || n.Contains("moonlight") || n.Contains("ranni") || n.Contains("haligtree") || n.Contains("malenia") || n.Contains("maliketh") || n.Contains("mohg") ||
                 n.Contains("placidusax") || n.Contains("elden beast") || n.Contains("snowfield") || n.Contains("mountaintop") ||
-                n.Contains("castle sol") || n.Contains("niall") || n.Contains("farum azula"))
+                n.Contains("ashen leyndell") || n.Contains("hoarah loux") || n.Contains("castle sol") || n.Contains("niall") || n.Contains("farum azula"))
                 return EntityProgressionTier.Endgame;
 
             // Late game landmarks
@@ -31,7 +31,7 @@ namespace LootForge.RegTool
 
             // Mid game landmarks
             if (n.Contains("liurnia") || n.Contains("raya lucaria") || n.Contains("caria") || n.Contains("rennala") ||
-                n.Contains("radahn") || n.Contains("caelid") || n.Contains("redmane") || n.Contains("siofra") ||
+                n.Contains("starscourge") || n.Contains("radahn") || n.Contains("caelid") || n.Contains("redmane") || n.Contains("siofra") ||
                 n.Contains("ainsel") || n.Contains("dragonbarrow"))
                 return EntityProgressionTier.Mid;
 

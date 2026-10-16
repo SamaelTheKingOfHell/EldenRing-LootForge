@@ -31,9 +31,11 @@ def distribution_context(generator, kb, tier):
             elites, roaming = raw_elites, raw_roaming
         enemy_pool = (elites + roaming) if (elites or roaming) else []
 
-    acc_catalog = kb.list_all_vanilla_accessories(tier=tier) if (kb and hasattr(kb, "list_all_vanilla_accessories")) else {}
-    if not acc_catalog and kb and hasattr(kb, "list_all_vanilla_accessories") and not generator.progression_scaling:
+    acc_catalog = kb.list_all_discovered_accessories() if (kb and hasattr(kb,"list_all_discovered_accessories")) else {}
+    if not acc_catalog and kb and hasattr(kb,"list_all_vanilla_accessories"):
         acc_catalog = kb.list_all_vanilla_accessories()
+    if tier and generator.progression_scaling:
+        acc_catalog = {key: info for key,info in acc_catalog.items() if info.get("progressionTier",1)==getattr(tier,"value",tier)}
     result = (pools, raw_bosses, raw_chests, boss_pool, chest_pool, merchant_pool, enemy_pool, elites, acc_catalog)
     cache[key] = result
     return result

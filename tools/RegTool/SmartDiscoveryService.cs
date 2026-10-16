@@ -49,9 +49,9 @@ namespace LootForge.RegTool
             }
 
             // FMG text reader if msg directory is provided
-            var weaponNames = new Dictionary<int, string>();
-            var protectorNames = new Dictionary<int, string>();
-            var accessoryNames = new Dictionary<int, string>();
+            var weaponNames = WorldLootCatalog.Names(defsDir, "EquipParamWeapon");
+            var protectorNames = WorldLootCatalog.Names(defsDir, "EquipParamProtector");
+            var accessoryNames = WorldLootCatalog.Names(defsDir, "EquipParamAccessory");
 
             if (!string.IsNullOrEmpty(msgDir) && Directory.Exists(msgDir))
             {
@@ -69,7 +69,7 @@ namespace LootForge.RegTool
                                 var fmg = FMG.Read(f.Bytes);
                                 foreach (var entry in fmg.Entries)
                                 {
-                                    if (!string.IsNullOrWhiteSpace(entry.Text) && !entry.Text.StartsWith("?"))
+                                    if (!string.IsNullOrWhiteSpace(entry.Text) && !entry.Text.StartsWith("?") && !entry.Text.Contains("[LootForge]") && !entry.Text.Any(ch=>ch>=0x2e80))
                                         map[entry.ID] = entry.Text.Trim();
                                 }
                             }
@@ -84,6 +84,23 @@ namespace LootForge.RegTool
                     }
                 }
                 log($"[SmartDiscovery] Loaded FMG strings across {msgFiles.Length} message archives: {weaponNames.Count} weapons, {protectorNames.Count} protectors, {accessoryNames.Count} accessories.");
+            }
+
+            string textHistory = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(inputPath))!, DiabloTextState.Filename);
+            if (File.Exists(textHistory))
+            {
+                using var history = JsonDocument.Parse(File.ReadAllText(textHistory));
+                foreach (var archive in history.RootElement.EnumerateObject())
+                    foreach (var file in archive.Value.EnumerateObject())
+                    {
+                        var target = FmgArchiveService.MatchesCategory(file.Name,"WeaponName") ? weaponNames :
+                            FmgArchiveService.MatchesCategory(file.Name,"ProtectorName") ? protectorNames :
+                            FmgArchiveService.MatchesCategory(file.Name,"AccessoryName") ? accessoryNames : null;
+                        if (target == null) continue;
+                        foreach (var entry in file.Value.EnumerateObject())
+                            if (entry.Value.GetProperty("Original").GetString() is string original && !string.IsNullOrWhiteSpace(original) && !original.Contains("[LootForge]") && !original.Any(ch=>ch>=0x2e80))
+                                target[int.Parse(entry.Name)] = original;
+                    }
             }
 
             var wepParam = LoadParam("EquipParamWeapon");
@@ -104,13 +121,13 @@ namespace LootForge.RegTool
                 int originId = ParamHelper.GetCellInt(r, "originEquipWep");
                 int reinforceType = ParamHelper.GetCellInt(r, "reinforceTypeId");
 
-                if (wepType > 0 && isDeposit == 1 && sortId > 0 && modelId > 0)
+                if (r.ID < 100000000 && r.Name?.Contains("[LootForge]") != true && wepType > 0 && isDeposit == 1 && sortId > 0 && modelId > 0)
                 {
-                    bool isBase = originId <= 0 || originId == r.ID || (r.ID % 100 == 0);
+                    bool isBase = originId <= 0 || originId == r.ID;
                     int baseId = originId > 0 ? originId : (r.ID - (r.ID % 100));
                     if (isBase) baseWepCount++;
 
-                    string name = weaponNames.TryGetValue(r.ID, out var fn) ? fn : (r.Name ?? $"Weapon {r.ID}");
+                    string name = weaponNames.TryGetValue(r.ID-r.ID%100, out var fn) ? fn : (r.Name ?? $"Weapon {r.ID}");
                     var tier = ProgressionTierClassifier.ClassifyTier(r.ID, name);
 
                     discoveredWeapons.Add(new DiscoveredWeapon(
@@ -136,7 +153,7 @@ namespace LootForge.RegTool
                 int modelId = ParamHelper.GetCellInt(r, "equipModelId");
                 int cat = ParamHelper.GetCellInt(r, "protectorCategory");
 
-                if (isDeposit == 1 && sortId > 0 && modelId > 0)
+                if (r.ID < 100000000 && r.Name?.Contains("[LootForge]") != true && isDeposit == 1 && sortId > 0 && modelId > 0)
                 {
                     string slot = cat switch
                     {
@@ -171,7 +188,7 @@ namespace LootForge.RegTool
                 int refId = ParamHelper.GetCellInt(r, "refId");
                 int iconId = ParamHelper.GetCellInt(r, "iconId");
 
-                if (isDeposit == 1 && sortId > 0)
+                if (r.Name?.Contains("[LootForge]") != true && isDeposit == 1 && sortId > 0)
                 {
                     string name = accessoryNames.TryGetValue(r.ID, out var fn) ? fn : (r.Name ?? $"Talisman {r.ID}");
                     var tier = ProgressionTierClassifier.ClassifyTier(r.ID, name);
@@ -187,54 +204,15 @@ namespace LootForge.RegTool
                 }
             }
 
-            // 4. Discover boss encounters and chests across ItemLotParam_enemy and ItemLotParam_map
-            var discoveredBossLots = new List<DiscoveredBossLot>();
-            var discoveredChests = new List<DiscoveredChest>();
-            var seenBossLots = new HashSet<int>();
-
-            void AddBoss(int id, string name, int itm, int cat, EntityProgressionTier t, bool isMap)
-            {
-                if (seenBossLots.Add(id))
-                    discoveredBossLots.Add(new DiscoveredBossLot(id, name, itm, cat, t, isMap));
-            }
-
-            // Guaranteed early/tutorial boss lots
-            AddBoss(10030, "Chapel of Anticipation - Grafted Scion", 2060000, 2, EntityProgressionTier.Early, true);
-            AddBoss(10031, "Chapel of Anticipation - Grafted Scion (Shield)", 32090000, 2, EntityProgressionTier.Early, true);
-            AddBoss(18000050, "Cave of Knowledge - Stranded Graveyard Reward", 1040, 4, EntityProgressionTier.Early, true);
-            AddBoss(431100000, "Cave of Knowledge - Soldier of Godrick", 2040000, 2, EntityProgressionTier.Early, false);
-
-            foreach (var r in enemyLotParam.Rows)
-            {
-                int itm1 = ParamHelper.GetCellInt(r, "lotItemId01");
-                int p1 = ParamHelper.GetCellInt(r, "lotItemBasePoint01");
-                int cat1 = ParamHelper.GetCellInt(r, "lotItemCategory01");
-                if (itm1 > 0 && p1 >= 1000 && (cat1 == 2 || cat1 == 3 || cat1 == 4))
-                {
-                    string name = r.Name ?? $"Enemy Boss {r.ID}";
-                    AddBoss(r.ID, name, itm1, cat1, ProgressionTierClassifier.ClassifyTier(r.ID, name), false);
-                }
-            }
-
-            foreach (var r in mapLotParam.Rows)
-            {
-                int itm1 = ParamHelper.GetCellInt(r, "lotItemId01");
-                int p1 = ParamHelper.GetCellInt(r, "lotItemBasePoint01");
-                int cat1 = ParamHelper.GetCellInt(r, "lotItemCategory01");
-                int itm2 = ParamHelper.GetCellInt(r, "lotItemId02");
-                string name = r.Name ?? $"Map Lot {r.ID}";
-                var tier = ProgressionTierClassifier.ClassifyTier(r.ID, name);
-
-                if (itm1 > 0 && p1 >= 1000 && (cat1 == 2 || cat1 == 3 || cat1 == 4))
-                    AddBoss(r.ID, name, itm1, cat1, tier, true);
-
-                if (itm1 > 0 && itm2 <= 0)
-                {
-                    bool isMod = r.ID >= 100000 && r.ID < 1000000000;
-                    discoveredChests.Add(new DiscoveredChest(r.ID, name, itm1, cat1, tier, isMod));
-                }
-            }
-
+            // Proven acquisition sources only; a guaranteed item is not evidence of a boss/chest.
+            var world = WorldLootCatalog.Load(inputPath, options.GetValueOrDefault("game-dir"), defsDir, mapLotParam, enemyLotParam, LoadParam("NpcParam"), LoadParam("ShopLineupParam"));
+            var mapRows = mapLotParam.Rows.ToDictionary(row => row.ID);
+            var discoveredBossLots = world.Bosses.Select(item => new DiscoveredBossLot(item.LotId, item.Name,
+                ParamHelper.GetCellInt(mapRows[item.LotId], "lotItemId01"), ParamHelper.GetCellInt(mapRows[item.LotId], "lotItemCategory01"),
+                item.Tier, true, item.FreeRows, item.Evidence)).ToList();
+            var discoveredChests = world.Chests.Select(item => new DiscoveredChest(item.LotId, item.Name,
+                ParamHelper.GetCellInt(mapRows[item.LotId], "lotItemId01"), ParamHelper.GetCellInt(mapRows[item.LotId], "lotItemCategory01"),
+                item.Tier, false, item.FreeRows, item.Evidence)).ToList();
             var snapshot = new DiscoveredWorldSnapshot(
                 discoveredWeapons.Count,
                 baseWepCount,
@@ -246,7 +224,8 @@ namespace LootForge.RegTool
                 discoveredProtectors,
                 discoveredAccessories,
                 discoveredBossLots,
-                discoveredChests
+                discoveredChests,
+                world.Merchants, 2, world.Enemies
             );
 
             if (isStdout)

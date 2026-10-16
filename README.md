@@ -19,7 +19,7 @@
    - **Full UI Customization**: Easily change any mod's target boss or drop chance in the interactive table.
 4. **High-Value Post-Boss Chests & Progression Locking**:
    - **Chest After Boss (`AntiDup.CHEST_AFTER_BOSS`)**: Directly routes standalone gear to canonical post-boss treasure chambers or cascades from occupied bosses.
-   - **Multi-Relic Drops**: Chests guarantee elevated rarity (Legendary/Mythic) and always drop multiple companion accessories ($\ge 3$ items awarded simultaneously) via non-destructive `ItemLotParam_map` lot chaining.
+   - **Bounded Drops**: Actual one-time chests and boss rewards can roll one bonus talisman at 7%. Diablo rarity and power follow progression; full armor groups reserve capacity together. See [runtime routing and inventory repair](docs/LOOT_RUNTIME_REPAIR.md).
    - **Strict 4-Tier Progression Locking**: Items strictly match regional tiers (`EARLY`, `MID`, `LATE`, `ENDGAME`), preventing endgame gear from appearing in starting areas.
 5. **Safety & 1-Click Rollback**:
    - Timestamped pre-write snapshots of `regulation.bin` with SHA-256 verification.

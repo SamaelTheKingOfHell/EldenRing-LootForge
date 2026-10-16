@@ -89,12 +89,12 @@ class TestRegulationManager(unittest.TestCase):
         mod_set.allocation = StandaloneAllocation(
             new_model_id="9000",
             new_equip_param_id=9000000,
-            new_item_lot_id=100400,  # Targeting Cleanrot Knight lot (100400)
+            new_item_lot_id=380000000,  # Targeting Cleanrot Knight lot (100400)
             marker_tag="[LootForge]"
         )
         mod_set.loot_target = LootTarget(
             route_type=LootDistributionType.ENEMY_DROP,
-            target_id="100400",
+            target_id="380000000",
             display_name="Cleanrot Knight",
             chance_or_cost=25.0
         )
@@ -106,7 +106,9 @@ class TestRegulationManager(unittest.TestCase):
         result = self.manager.execute_patch(
             specs=[patch_spec],
             source_reg=self.real_reg,
-            target_reg=target_reg
+            target_reg=target_reg,
+            game_dir=str(Path("D:/SteamLibrary/steamapps/common/ELDEN RING/Game")),
+            boss_loot_pools_enabled=False, chest_loot_pools_enabled=False
         )
 
         self.assertTrue(result["success"])
@@ -155,7 +157,7 @@ class TestRegulationManager(unittest.TestCase):
         self.assertGreater(target_reg.stat().st_size, 1000000)
 
     def test_chest_loot_pool_enrichment(self):
-        """Verify that RegTool inject-chest-loot-pools dynamically enriches chests with 1-4 custom items and routes overflow to enemies."""
+        """Without map provenance the standalone enrichment command leaves rewards unchanged."""
         if not self.real_reg or not self.real_reg.exists():
             self.skipTest("No real backup regulation.bin available in backups/ for roundtrip test.")
 
@@ -178,7 +180,8 @@ class TestRegulationManager(unittest.TestCase):
         import subprocess
         res = subprocess.run(cmd, capture_output=True, text=True, cwd=str(self.base_dir))
         self.assertEqual(res.returncode, 0)
-        self.assertIn("All chests populated", res.stdout)
+        self.assertIn("All chests processed through verified one-time rewards", res.stdout)
+        self.assertIn("Enriched 0 chests with 0 items", res.stdout)
         self.assertTrue(target_reg.exists())
         self.assertGreater(target_reg.stat().st_size, 1000000)
 
@@ -266,7 +269,9 @@ class TestRegulationManager(unittest.TestCase):
         result = self.manager.execute_patch(
             specs=[patch_spec],
             source_reg=self.real_reg,
-            target_reg=target_reg
+            target_reg=target_reg,
+            game_dir=str(Path("D:/SteamLibrary/steamapps/common/ELDEN RING/Game")),
+            boss_loot_pools_enabled=False, chest_loot_pools_enabled=False
         )
 
         self.assertTrue(result["success"])

@@ -155,11 +155,11 @@ class PatchOrchestrator:
         # Real-time discovery of all chests and bosses in source_reg (supporting any overhaul mod)
         try:
             snapshot_path = base_dir / "data" / "world_snapshot.json"
-            regulation_manager.introspect_world(source_reg, output_json=snapshot_path)
+            regulation_manager.introspect_world(source_reg, msg_dir=source_reg.parent / "msg" / "engUS", output_json=snapshot_path)
             from src.knowledge_base import VanillaKnowledgeBase
             knowledge_base = VanillaKnowledgeBase.from_data_dir(str(base_dir / "data"))
         except Exception as ie:
-            system_logger.warning(f"Real-time world introspection notice: {ie}", source="PatchOrchestrator")
+            raise RuntimeError(f"Could not verify loot destinations: {ie}") from ie
 
         from src.variant_capacity import calculate_capacity, clamp_variants
         param_builder.kb = knowledge_base

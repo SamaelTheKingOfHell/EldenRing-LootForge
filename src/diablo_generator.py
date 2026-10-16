@@ -65,6 +65,7 @@ class DiabloLootGenerator:
         triggered_effects: bool = False,
         auras_enabled: bool = False
     ):
+        self.seed = seed or 0
         self._rng = random.Random(seed)
         self.progression_scaling = progression_scaling
         self.extra_passives = extra_passives
@@ -93,12 +94,21 @@ class DiabloLootGenerator:
         from src.pricing_engine import PricingEngine
         self.pricing_engine = pricing_engine if pricing_engine is not None else PricingEngine(price_multiplier=self.price_multiplier)
 
-    def allocate_variant_id(self) -> int:
+    def allocate_variant_id(self, is_accessory=False) -> int:
         """Allocate a unique procedural item ID below the inventory category bits."""
+        if is_accessory:
+            next_id = getattr(self, '_next_accessory_id', 20000)
+            occupied = {row.get('baseParamId') for row in getattr(self._knowledge_base, '_discovered_accessories', {}).values()}
+            while next_id in occupied:
+                next_id += 1
+            if next_id >= 60000:
+                raise ValueError('Custom talisman ID space exhausted.')
+            self._next_accessory_id = next_id + 1
+            return next_id
         if self._next_variant_id >= 0x10000000:
             raise RuntimeError("Procedural equipment ID namespace exhausted.")
         item_id = self._next_variant_id
-        self._next_variant_id += 1
+        self._next_variant_id += 100
         return item_id
 
     def roll_weapon_skill(self, tier: Optional[Union[ProgressionTier, int]] = None) -> WeaponSkill:
@@ -312,11 +322,6 @@ class DiabloLootGenerator:
             base_caption, rarity, affixes, boss_name=boss_name, skill=skill, pricing=pricing,
             stats_multiplier=self.stats_multiplier
         )
-        if self.auras_enabled:
-            from src.diablo_auras import aura_theme
-            theme = aura_theme(affixes)
-            if theme:
-                caption += f"\nCOSMETIC AURA: {theme.title()}"
         return caption
 
     def generate_variants_for_spec(

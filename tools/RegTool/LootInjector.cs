@@ -15,11 +15,19 @@ namespace LootForge.RegTool
     /// </summary>
     public static class LootInjector
     {
+        private static HashSet<int>? allowedMap, allowedEnemy;
+        public static void Configure(WorldLootCatalog catalog)
+        {
+            allowedMap = catalog.Chests.Concat(catalog.Bosses).Select(item=>item.LotId).ToHashSet();
+            allowedEnemy = catalog.Enemies.Select(item=>item.LotId).ToHashSet();
+            ShopLootInjector.Configure(catalog.Merchants);
+        }
         private static Dictionary<int, PARAM.Row>? _enemyLotRowMap;
         private static Dictionary<int, PARAM.Row>? _mapLotRowMap;
 
         public static void ResetCache()
         {
+            allowedMap = allowedEnemy = null;
             _enemyLotRowMap = null;
             _mapLotRowMap = null;
             ShopLootInjector.ResetCache();
@@ -68,9 +76,9 @@ namespace LootForge.RegTool
         {
             string rawTid = lootEl.TryGetProperty("target_id", out var tid) ? tid.GetString() ?? "" : "";
             int targetLotId = 0;
-            if (int.TryParse(rawTid, out int parsedTid) && parsedTid > 10000 && !(parsedTid >= 9100000 && parsedTid < 9200000))
+            if (int.TryParse(rawTid, out int parsedTid) && parsedTid > 0 && !(parsedTid >= 9100000 && parsedTid < 9200000))
                 targetLotId = parsedTid;
-            else if (lootEl.TryGetProperty("lot_id", out var lid) && lid.GetInt32() > 10000 && !(lid.GetInt32() >= 9100000 && lid.GetInt32() < 9200000))
+            else if (lootEl.TryGetProperty("lot_id", out var lid) && lid.GetInt32() > 0 && !(lid.GetInt32() >= 9100000 && lid.GetInt32() < 9200000))
                 targetLotId = lid.GetInt32();
             else
                 targetLotId = ResolveEnemyLotId(rawTid);
@@ -88,6 +96,9 @@ namespace LootForge.RegTool
             }
 
             bool isMapTable = tableName.Equals("ItemLotParam_map", StringComparison.OrdinalIgnoreCase);
+            var allowed = isMapTable ? allowedMap : allowedEnemy;
+            if (allowed != null && !allowed.Contains(targetLotId))
+                throw new InvalidDataException($"Unverified loot destination {tableName}:{targetLotId}. No unrelated pickup was modified.");
             ushort points = (ushort)Math.Clamp((int)Math.Round(dropRatePercent * 10), 0, 1000);
             foreach (int itemId in awardedItems)
             {
@@ -95,15 +106,7 @@ namespace LootForge.RegTool
                 bool armor = itemIdToIsProtector.GetValueOrDefault(itemId);
                 int category = accessory ? 4 : (armor ? 3 : 2);
                 bool placed = AdditiveLootService.TryAppend(itemLotParam, targetLotId, itemId, category,
-                    points, $"Additional drop for {targetLotId}");
-                if (!placed)
-                {
-                    string other = isMapTable ? "ItemLotParam_enemy" : "ItemLotParam_map";
-                    var otherParam = getOrLoadParam(other, "ItemLotParam").Param;
-                    placed = AdditiveLootService.TryAppend(otherParam, targetLotId, itemId, category, points, "Additional cross-table drop")
-                        || AdditiveLootService.TryAppendAny(itemLotParam, itemId, category, points, "Additional overflow drop")
-                        || AdditiveLootService.TryAppendAny(otherParam, itemId, category, points, "Additional overflow drop");
-                }
+                    points, $"Additional drop for {targetLotId}", isMapTable);
                 if (!placed)
                     throw new InvalidOperationException($"No independent loot row remains for item {itemId}. Existing rewards were preserved. Reduce variants per item.");
                 injectedLootCount++;

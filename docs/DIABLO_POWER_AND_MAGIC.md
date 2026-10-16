@@ -13,12 +13,15 @@ and reforge to apply changed settings to game files.
 | Rare legendary combat magic | Off | Legendary items have a 6% enchantment chance; Mythic items have 14%. Lower rarities cannot roll one. |
 | Optional Diablo item auras | Off | Persistent cosmetic visuals matching rolled elemental, status, magic or healing effects. |
 
-Early/Mid/Late/Endgame potency factors are `0.40/0.75/1.15/1.65`.
+Early/Mid/Late/Endgame potency factors are `0.18/0.60/1.05/1.55`.
 Common/Magic/Rare/Legendary/Mythic factors are `0.50/0.70/0.90/1.15/1.40`.
 Ordinary affix values vary by another 90–110%; native passive/proc strength uses
 bounded quarter-step buckets to share effect rows across many items. Base attack
 and flat defense receive an additional `10% * regional rarity potency` bonus.
 Affix stat changes add to the original equipment values.
+Inherited native resident passives are scaled too, including discovery and additive
+attributes. Imported starter weapons and armor have additional base-power bounds.
+See [the runtime repair](LOOT_RUNTIME_REPAIR.md) for current routing and identity rules.
 
 Early ordinary drops use weights `40/43/15/1.8/0.2`, retaining rare early
 Legendary/Mythic discoveries. Mid: `25/40/28/6/1`; Late: `15/35/35/12/3`;
