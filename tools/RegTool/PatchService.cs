@@ -153,6 +153,9 @@ namespace LootForge.RegTool
             }
 
             // 0. Purge any stale or previous LootForge injections to ensure a pristine baseline
+            var originalTextIds = new Dictionary<string, HashSet<int>>();
+            foreach (var (table, category) in new[] { ("EquipParamWeapon", "Weapon"), ("EquipParamProtector", "Protector"), ("EquipParamAccessory", "Accessory") })
+                originalTextIds[category] = GetOrLoadParam(table,table).Param.Rows.Where(row=>row.Name?.Contains("[LootForge]") != true).Select(row=>row.ID).ToHashSet();
             var previousTextIds = new Dictionary<string, HashSet<int>>();
             foreach (var (table, category) in new[] { ("EquipParamWeapon", "Weapon"), ("EquipParamProtector", "Protector"), ("EquipParamAccessory", "Accessory") })
                 previousTextIds[category] = GetOrLoadParam(table, table).Param.Rows
@@ -178,6 +181,7 @@ namespace LootForge.RegTool
             var diabloEffects = new DiabloEffectService(GetOrLoadParam);
             diabloEffects.InfusionState = new DiabloInfusionState(outputPath, GetOrLoadParam);
 
+            var economy = new EquipmentPricingService(GetOrLoadParam);
             foreach (var setSpec in specs)
             {
                 // 1. Equip Params (EquipParamProtector / EquipParamWeapon / EquipParamAccessory)
@@ -194,6 +198,7 @@ namespace LootForge.RegTool
                         ref injectedEquipCount
                     );
                     diabloEffects.Apply(equipParamsEl);
+                    economy.Apply(equipParamsEl);
                 }
 
                 // 2. Loot Distribution (NON-DESTRUCTIVE: Never clears vanilla loot)
@@ -244,6 +249,7 @@ namespace LootForge.RegTool
                         string ftName = ft.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
                         string ftCaption = ft.TryGetProperty("caption", out var c) ? c.GetString() ?? "" : "";
                         string ftInfo = ft.TryGetProperty("info", out var inf) ? inf.GetString() ?? "" : "";
+                        if(originalTextIds[ftIsAccessory?"Accessory":ftIsWeapon?"Weapon":"Protector"].Contains(ftItemId)) continue;
                         allFmgTexts.Add(new FmgInjector.FmgTextSpec(ftItemId, ftVanillaId, ftIsWeapon, ftName, ftCaption, ftInfo, ftIsAccessory));
                         if (diabloEffects.ExpandedItems.TryGetValue(ftItemId, out var family))
                             foreach (int member in family.Where(id => id != ftItemId))
@@ -315,7 +321,7 @@ namespace LootForge.RegTool
             if (options.TryGetValue("msg", out string? msgDir) && !string.IsNullOrEmpty(msgDir) && (allFmgTexts.Count > 0 || sweepEffects.Count > 0 || diabloTexts.HasHistory))
             {
                 injectedFmgCount = FmgInjector.InjectFmgTexts(msgDir, output.RegulationPath, allFmgTexts,
-                    sweepEffects.Count > 0 ? archive => SweepFmgService.Apply(archive, sweepEffects) : null,
+                    null,
                     archive => FmgCleanupService.Prune(archive, previousTextIds),
                     beforeArchive: diabloTexts.Prepare, afterArchive: diabloTexts.Observe);
             }

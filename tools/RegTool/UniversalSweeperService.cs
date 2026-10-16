@@ -60,7 +60,7 @@ namespace LootForge.RegTool
             using var output = new PatchOutputTransaction(outputPath);
             RegulationDecryptor.EncryptERRegulation(output.RegulationPath, bnd);
             if (!string.IsNullOrEmpty(msgDir))
-                FmgInjector.InjectFmgTexts(msgDir, output.RegulationPath, new List<FmgInjector.FmgTextSpec>(), archive => SweepFmgService.Apply(archive, effects));
+                FmgInjector.InjectFmgTexts(msgDir, output.RegulationPath, new List<FmgInjector.FmgTextSpec>());
             output.Commit();
             return 0;
         }
@@ -178,14 +178,10 @@ namespace LootForge.RegTool
                     float defMult = 1.0f + ((int)rarity * 0.08f); // +8%, +16%, +24%, +32%
                     short poiseAdd = (short)((int)rarity * 3);
 
-                    string[] defFields = { "defensePhysics", "defenseMagic", "defenseFire", "defenseThunder", "defenseSlash", "defenseBlow", "defenseThrust" };
-                    foreach (var f in defFields)
+                    foreach (var field in DiabloBalanceService.ArmorRateFields)
                     {
-                        int cur = ParamHelper.GetCellInt(r, f);
-                        if (cur > 0)
-                        {
-                            ParamHelper.SetCellIfExists(r, f, (ushort)Math.Clamp((int)Math.Round(cur * defMult), 1, 65535));
-                        }
+                        var cell = ParamHelper.FindCell(r,field);
+                        if (cell != null) DiabloEffectService.Set(r,field,Math.Max(0.75,Convert.ToDouble(cell.Value)-0.005*(int)rarity));
                     }
 
                     int poise = ParamHelper.GetCellInt(r, "saDurability");

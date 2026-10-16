@@ -3,6 +3,8 @@
 `Program.cs` checks generated Diablo rolls against real installed PARAM rows and
 round-trips the generated common event script in an isolated output directory.
 It checks all aura templates, argument byte layouts, initializer counts and disabled-output restoration.
+Existing profile infusion fields are restored in memory before cloning fixtures,
+so previous generated passives do not consume the fixture's native resident slots.
 It does not launch the game or prove combat/aura behavior.
 
 Optional modes after the five positional arguments: `inspect-auras`,

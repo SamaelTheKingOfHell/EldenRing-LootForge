@@ -16,6 +16,7 @@ public sealed class DiabloEffectService
     public Dictionary<int, int[]> ExpandedItems { get; } = new();
     public HashSet<int> InfusedItemIds { get; } = new();
     readonly DiabloAuraService auras;
+    readonly DiabloPassiveService passives;
 
     public DiabloEffectService(Func<string, string, (PARAM Param, BinderFile File)> load)
     {
@@ -23,6 +24,7 @@ public sealed class DiabloEffectService
         foreach (var (table, def) in new[] { ("Bullet", "BulletParam"), ("BehaviorParam", "BehaviorParam") })
             Table(table, def).Rows.RemoveAll(row => row.Name?.StartsWith("[LootForge] Diablo") == true);
         auras = new DiabloAuraService(Table);
+        passives = new DiabloPassiveService(()=>Index("SpEffectParam","SpEffect"), Effect);
     }
 
     PARAM Table(string table, string? def = null) => load(table, def ?? (table == "Bullet" ? "BulletParam" : table)).Param;
@@ -138,7 +140,12 @@ public sealed class DiabloEffectService
                             ParamHelper.FindCell(member, field.Name) != null)
                             Set(member, field.Name, field.Value);
             }
-            foreach (var member in rows) ApplyRow(member, table, updates);
+            foreach (var member in rows)
+            {
+                ApplyRow(member, table, updates);
+                if(table=="EquipParamProtector") DiabloBalanceService.Apply(member,table,
+                    updates.TryGetProperty("_lf_diablo_tier",out var tier)?tier.GetInt32():4,0);
+            }
         }
     }
     public void Prepare(JsonElement equipment)
@@ -193,6 +200,8 @@ public sealed class DiabloEffectService
     {
         if (!updates.EnumerateObject().Any(field => field.Name.StartsWith("_lf_diablo_"))) return;
         var effectIds = Index("SpEffectParam", "SpEffect");
+        double baseAttack = table == "EquipParamWeapon" ? DiabloBalanceService.TotalAttack(row) : 0;
+        var baseDamage = table == "EquipParamWeapon" ? DiabloBalanceService.AttackFields.ToDictionary(field=>field,field=>Convert.ToDouble(ParamHelper.FindCell(row,field)!.Value)) : null;
         foreach (string slot in ResidentSlots(table).Concat(new[] { "spEffectBehaviorId0", "spEffectBehaviorId1", "spEffectBehaviorId2" }))
         {
             var cell = ParamHelper.FindCell(row, slot);
@@ -203,6 +212,7 @@ public sealed class DiabloEffectService
             foreach (var delta in deltas.EnumerateObject())
             {
                 var cell = ParamHelper.FindCell(row, delta.Name);
+                if (table == "EquipParamProtector" && DiabloBalanceService.ArmorDelta(row,delta.Name,delta.Value.GetDouble())) continue;
                 if (cell != null) Set(row, delta.Name, Convert.ToDouble(cell.Value) + delta.Value.GetDouble());
             }
         if (updates.TryGetProperty("_lf_diablo_passive_scales", out var scales))
@@ -220,7 +230,7 @@ public sealed class DiabloEffectService
             double multiplier = 1 + 0.10 * Math.Clamp(power.GetDouble(), 0, 10);
             var fields = table == "EquipParamWeapon"
                 ? new[] { "attackBasePhysics", "attackBaseMagic", "attackBaseFire", "attackBaseThunder", "attackBaseDark" }
-                : table == "EquipParamProtector" ? new[] { "defensePhysics", "defenseMagic", "defenseFire", "defenseThunder", "defenseDark" } : Array.Empty<string>();
+                : Array.Empty<string>();
             foreach (string name in fields)
             {
                 var cell = ParamHelper.FindCell(row, name);
@@ -236,8 +246,21 @@ public sealed class DiabloEffectService
                     Set(row,slot,ScalePassive(effect,inheritedPower.GetDouble(),new()));
             }
             if (updates.TryGetProperty("_lf_diablo_tier",out var region))
-                DiabloBalanceService.Apply(row,table,region.GetInt32(),inheritedPower.GetDouble());
+                DiabloBalanceService.Apply(row,table,region.GetInt32(),inheritedPower.GetDouble(),baseAttack,baseDamage);
         }
+        if (updates.TryGetProperty("_lf_diablo_on_hit",out var onHit))
+            foreach(var hit in onHit.EnumerateArray())
+            {
+                double strength=hit.GetProperty("power").GetDouble();
+                if(strength<=0)continue;
+                string? slot=Enumerable.Range(0,3).Select(i=>"spEffectBehaviorId"+i).FirstOrDefault(name=>ParamHelper.GetCellInt(row,name)<=0);
+                if(slot==null)throw new InvalidDataException($"No free status slot on {row.ID}; preserving inherited buildup.");
+                Set(row,slot,ScalePassive(hit.GetProperty("id").GetInt32(),strength,new()));
+                int message=hit.TryGetProperty("msg_id",out var msg)?msg.GetInt32():0;
+                AddMessage(row,message);
+            }
+        if(updates.TryGetProperty("_lf_diablo_messages",out var messages))
+            foreach(var message in messages.EnumerateArray())AddMessage(row,message.GetInt32());
         if (updates.TryGetProperty("_lf_diablo_passives", out var passives))
         {
             var fields = passives.EnumerateObject().ToDictionary(p => p.Name, p => (object)p.Value.Clone());
@@ -254,40 +277,11 @@ public sealed class DiabloEffectService
             Combat.Register(kind, strength, marker, this, Table);
         }
     }
-    int ScalePassive(int sourceId, double power, HashSet<int> path)
+    static void AddMessage(PARAM.Row row,int message)
     {
-        string key = $"passive:{sourceId}:{power}";
-        if (generated.TryGetValue(key + "[]", out int prior)) return prior;
-        if (!path.Add(sourceId)) throw new InvalidDataException($"Cyclic Diablo passive chain at {sourceId}.");
-        var index = Index("SpEffectParam", "SpEffect");
-        if (!index.TryGetValue(sourceId, out var source)) throw new InvalidDataException($"Diablo passive {sourceId} is missing.");
-        var fields = new Dictionary<string, object>();
-        foreach (var cell in source.Cells)
-        {
-            string name = cell.Def.InternalName;
-            if (cell.Value is float number && Convert.ToDouble(cell.Def.Default) == 1 &&
-                (name.EndsWith("Rate") || name.EndsWith("PowerRate")))
-                fields[name] = Math.Max(0.1, 1 + (number - 1) * power);
-            else if (name is "changeHpRate" or "changeMpRate" or "changeHpPoint" or "changeMpPoint" or "staminaRecoverChangeSpeed" or
-                     "bloodAttackPower" or "poizonAttackPower" or "diseaseAttackPower" or "freezeAttackPower" or "itemDropRate" ||
-                     (name.StartsWith("add") && name.EndsWith("Status")) ||
-                     (name.StartsWith("change") && name.EndsWith("Point") && !name.Contains("Equip")))
-            {
-                double original = Convert.ToDouble(cell.Value);
-                double scaled = Math.Round(original * power);
-                if (power > 0 && original != 0 && scaled == 0 && (name == "changeHpPoint" || name == "changeMpPoint")) scaled = Math.Sign(original);
-                fields[name] = scaled;
-            }
-        }
-        foreach (string link in new[] { "replaceSpEffectId", "cycleOccurrenceSpEffectId", "atkOccurrenceSpEffectId" })
-        {
-            int next = ParamHelper.GetCellInt(source, link);
-            if (next > 0 && next != sourceId) fields[link] = ScalePassive(next, power, new(path));
-        }
-        int result = Effect(fields, key, source);
-        foreach (string link in new[] { "replaceSpEffectId", "cycleOccurrenceSpEffectId", "atkOccurrenceSpEffectId" })
-            if (ParamHelper.GetCellInt(source, link) == sourceId) Set(index[result], link, result);
-        generated[key + "[]"] = result;
-        return result;
+        if(message<=0||Enumerable.Range(0,3).Any(i=>ParamHelper.GetCellInt(row,"spEffectMsgId"+i)==message))return;
+        string? slot=Enumerable.Range(0,3).Select(i=>"spEffectMsgId"+i).FirstOrDefault(name=>ParamHelper.GetCellInt(row,name)<=0);
+        if(slot!=null)Set(row,slot,message);
     }
+    int ScalePassive(int source,double power,HashSet<int> path) => passives.Scale(source,power,path);
 }

@@ -63,6 +63,8 @@
   "diablo_extra_passives_description": "Sorteia passivas extras de PV, PF, vigor, regeneração e proteção. Raridades maiores recebem mais passivas.",
   "diablo_triggered_effects_label": "Magia de combate lendária rara",
   "diablo_triggered_effects_description": "Encantamentos raros em Lendários/Míticos: magia ao atacar ou defender, cura e retaliação. Exige scripts de eventos; intervalos limitam as ativações.",
-  "diablo_auras_enabled_label": "Auras opcionais dos itens Diablo",
-  "diablo_auras_enabled_description": "Chamas, brilhos de magia e outras auras cosmeticas que combinam com os efeitos sorteados. Nao alteram atributos nem permitem ou impedem buffs. Reforje para aplicar."
+  "diablo_weapon_auras_enabled_label": "Auras de armas",
+  "diablo_armor_auras_enabled_label": "Auras de armaduras",
+  "diablo_weapon_auras_enabled_description": "Auras visuais opcionais em armas e escudos Diablo.",
+  "diablo_armor_auras_enabled_description": "Auras visuais opcionais em armaduras Diablo, independentes das armas."
 }

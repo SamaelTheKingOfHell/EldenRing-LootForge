@@ -66,9 +66,12 @@ class DiabloTextFormatter:
         for aff in affixes:
             for field, delta in aff.field_modifiers.items():
                 value = round(delta * stats_multiplier, 2)
-                bonuses.append(f"{labels.get(field, field)} {value:+g}")
+                if field.startswith("defense"):
+                    bonuses.append(f"{labels.get(field, field)} negation {value / 10:+g}%")
+                else:
+                    bonuses.append(f"{labels.get(field, field)} {value:+g}")
             if aff.sp_effect_id:
-                power = max(0.0, round(aff.power_scale * stats_multiplier * 4) / 4)
+                power = max(0.5, round(aff.power_scale * stats_multiplier * 4) / 4) if stats_multiplier > 0 else 0
                 bonuses.append(f"{aff.name.removeprefix('of ')} x{power:g}")
             for field, value in aff.native_fields.items():
                 rate = field.endswith("Rate")

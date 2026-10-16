@@ -208,6 +208,13 @@ class VanillaStatInjector:
                 "loot_distribution": None
             })
 
+        # Vanilla infusion changes equipment mechanics only. Preserve all native
+        # names/descriptions and the original economy; native history restores old edits.
+        for spec in specs:
+            spec["fmg_texts"] = []
+            for ep in spec["equip_params"]:
+                for key in ("sellValue", "saleValue", "basicPrice"):
+                    ep["field_updates"].pop(key, None)
         return specs
 
     @staticmethod

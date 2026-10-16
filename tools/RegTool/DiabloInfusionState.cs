@@ -52,8 +52,9 @@ public sealed class DiabloInfusionState
             .Concat(new[] { "attackBasePhysics", "attackBaseMagic", "attackBaseFire", "attackBaseThunder", "attackBaseDark",
                 "defensePhysics", "defenseMagic", "defenseFire", "defenseThunder", "defenseDark", "refId",
                 "residentSpEffectId", "residentSpEffectId1", "residentSpEffectId2", "residentSpEffectId3", "residentSpEffectId4",
-                "spEffectBehaviorId0", "spEffectBehaviorId1", "spEffectBehaviorId2" });
-        foreach (string name in names.Distinct())
+                "spEffectBehaviorId0", "spEffectBehaviorId1", "spEffectBehaviorId2",
+                "spEffectMsgId0", "spEffectMsgId1", "spEffectMsgId2" });
+        foreach (string name in names.Concat(DiabloBalanceService.ArmorRateFields).Concat(new[]{"toughnessCorrectRate"}).Distinct())
         {
             var cell = ParamHelper.FindCell(row, name);
             if (cell != null && !fields.ContainsKey(name))

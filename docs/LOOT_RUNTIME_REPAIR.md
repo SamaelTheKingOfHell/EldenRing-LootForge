@@ -1,5 +1,9 @@
 # Loot routing and inventory repair, 2026-10-16
 
+The subsequent [equipment refinement](REFINEMENT_NOTES.md) replaces this document's
+starter damage ceiling, flat-defense handling, economy and combined aura control.
+The routing and inventory identity repairs remain applicable.
+
 The reported screenshots exposed independent identity, layout and placement faults.
 This repair uses the installed regulation, MSBs, event scripts and talk scripts as
 the source of destinations. File checks below do not establish game acceptance.

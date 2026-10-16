@@ -103,6 +103,9 @@ void Check(bool condition, string text)
     messages.Add("PASS " + text);
 }
 using var specs = JsonDocument.Parse(File.ReadAllText(specsPath));
+// A selected profile may already contain a previous infusion. Restore its tracked
+// native fields in memory before cloning coverage fixtures, as production forging does.
+_ = new DiabloInfusionState(source, Load);
 var service = new DiabloEffectService(Load);
 int equipmentCount = 0;
 var inspected = new List<object>();

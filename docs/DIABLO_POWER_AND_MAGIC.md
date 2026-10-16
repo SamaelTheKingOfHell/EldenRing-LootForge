@@ -11,17 +11,23 @@ and reforge to apply changed settings to game files.
 | Progression-scaled Diablo power | On | Region and rarity scale bonus stats, affix values and cloned passive potency. |
 | Additional Diablo passives | Off | Magic occasionally gains one extra passive; Rare gains one, Legendary two, Mythic three. |
 | Rare legendary combat magic | Off | Legendary items have a 6% enchantment chance; Mythic items have 14%. Lower rarities cannot roll one. |
-| Optional Diablo item auras | Off | Persistent cosmetic visuals matching rolled elemental, status, magic or healing effects. |
+| Weapon auras | Off | Persistent cosmetic visuals on weapons/shields matching their rolled effects. |
+| Armor auras | Off | Independent persistent cosmetic visuals on armor matching its rolled effects. |
 
 Early/Mid/Late/Endgame potency factors are `0.18/0.60/1.05/1.55`.
 Common/Magic/Rare/Legendary/Mythic factors are `0.50/0.70/0.90/1.15/1.40`.
 Ordinary affix values vary by another 90–110%; native passive/proc strength uses
 bounded quarter-step buckets to share effect rows across many items. Base attack
-and flat defense receive an additional `10% * regional rarity potency` bonus.
-Affix stat changes add to the original equipment values.
+receives an additional `10% * regional rarity potency` bonus; limits preserve each
+native damage channel and bound only the added bonuses relative to the template.
+Armor affixes change native damage negation; generated flat defense stays zero.
+Positive rolled passive scales have a 0.5 minimum, integer effects stay nonzero,
+and extra HP/FP/stamina passives have a 2% minimum to survive starting-stat rounding.
 Inherited native resident passives are scaled too, including discovery and additive
 attributes. Imported starter weapons and armor have additional base-power bounds.
 See [the runtime repair](LOOT_RUNTIME_REPAIR.md) for current routing and identity rules.
+See [refinement notes](REFINEMENT_NOTES.md) for the updated economy, separate aura
+settings and preservation/restoration of vanilla names, descriptions and prices.
 
 Early ordinary drops use weights `40/43/15/1.8/0.2`, retaining rare early
 Legendary/Mythic discoveries. Mid: `25/40/28/6/1`; Late: `15/35/35/12/3`;

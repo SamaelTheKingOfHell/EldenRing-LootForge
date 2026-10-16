@@ -215,9 +215,7 @@ class TestDiabloLoot(unittest.TestCase):
             self.assertIn("row_name", ep)
             self.assertIn("[Vanilla Infused]", ep["row_name"])
 
-            fmg = spec["fmg_texts"][0]
-            self.assertIn("RARITY:", fmg["caption"])
-            self.assertIn("Origin: Vanilla Elden Ring", fmg["info"])
+            self.assertEqual(spec["fmg_texts"], [])
 
     def test_vanilla_base_distribution(self):
         """Verifies using vanilla items as base items to create standalone distributed relics."""
@@ -479,14 +477,12 @@ class TestDiabloLoot(unittest.TestCase):
         for ws in weapon_specs:
             ep = ws["equip_params"][0]
             self.assertIn("swordArtsParamId", ep["field_updates"])
-            fmg = ws["fmg_texts"][0]
-            self.assertNotIn("SKILL:", fmg["caption"])
+            self.assertEqual(ws["fmg_texts"], [])
 
         for ps in protector_specs:
             ep = ps["equip_params"][0]
             self.assertNotIn("swordArtsParamId", ep["field_updates"])
-            fmg = ps["fmg_texts"][0]
-            self.assertNotIn("SKILL:", fmg["caption"])
+            self.assertEqual(ps["fmg_texts"], [])
 
     def test_starting_gear_modifications(self):
         """Verifies starting gear for all 10 classes is modified with authentic IDs."""
@@ -559,15 +555,18 @@ class TestDiabloLoot(unittest.TestCase):
         # Test application to weapon
         updates = {}
         DiabloLootGenerator.apply_affixes_to_equipment(updates, [glacial], is_weapon=True)
-        self.assertEqual(updates.get("spEffectBehaviorId0"), 6702)
-        self.assertEqual(updates.get("spEffectMsgId0"), 6601)
+        self.assertNotIn("spEffectBehaviorId0", updates)
+        self.assertEqual(updates["_lf_diablo_on_hit"][0]["id"], 6702)
+        self.assertNotIn("spEffectMsgId0", updates)
+        self.assertEqual(updates["_lf_diablo_on_hit"][0]["msg_id"], 6601)
 
         # Test resident passive buff (of the Mind)
         mind = next(a for a in AFFIX_POOL if a.name == "of the Mind")
         updates_res = {}
         DiabloLootGenerator.apply_affixes_to_equipment(updates_res, [mind], is_weapon=True)
         self.assertEqual(updates_res.get("residentSpEffectId"), mind.sp_effect_id)
-        self.assertEqual(updates_res.get("spEffectMsgId0"), 1002)
+        self.assertNotIn("spEffectMsgId0", updates_res)
+        self.assertIn(1002, updates_res["_lf_diablo_messages"])
 
     def test_accessory_affixes_and_equipment_updates(self):
         """Verifies accessory affixes roll correctly and map to residentSpEffectId1..4 and refId."""
@@ -605,9 +604,7 @@ class TestDiabloLoot(unittest.TestCase):
             ep = spec["equip_params"][0]
             self.assertTrue(ep["update_existing"])
             self.assertEqual(ep["param_table"], "EquipParamAccessory")
-            fmg = spec["fmg_texts"][0]
-            self.assertTrue(fmg.get("is_accessory"))
-            self.assertIn("RARITY:", fmg["caption"])
+            self.assertEqual(spec["fmg_texts"], [])
 
     def test_standalone_accessory_generation(self):
         """Verifies standalone accessory relics generated from vanilla base models."""

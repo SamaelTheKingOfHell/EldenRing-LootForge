@@ -44,7 +44,7 @@ Develop a cross-platform desktop application and mod engine for *Elden Ring* tha
 
 8. **Dynamic Power-Scaled Economy & Valuation**:
    - Items scale rune purchase costs in shops (`ShopLineupParam.value`, `saleValue`) and resale returns (`sellValue`) dynamically based on their combat potency.
-   - Valuation engine integrates slot impact (weapon > body > head/legs > arms), regional progression tier (Early to Endgame), Diablo rarity tier (Common to Mythic), rolled affix stat points and passive buffs, weapon skill tiers, and boss remembrance prestige.
+   - Finalized damage, scaling, native negation, buildup and passive strength determine price. Region, rarity labels and boss prestige add no premium. Keep sale returns small to avoid rune inflation and preserve vanilla item prices and text.
    - Granular piece pricing ensures multi-piece sets price high-stat armor appropriately relative to minor accessories or gauntlets.
 
 

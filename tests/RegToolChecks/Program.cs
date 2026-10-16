@@ -92,7 +92,7 @@ foreach (string filename in new[] { "WeaponName.fmg", "WeaponName_dlc01.fmg", "W
     archive.Files.Add(new BinderFile(Binder.FileFlags.Flag1, filename, fmg.Write()));
 }
 SweepFmgService.Apply(archive, effects);
-Check(archive.Files.All(f => FMG.Read(f.Bytes).Entries.First(e => e.ID == 2020000).Text!.StartsWith("[")), "infusion reaches all DLC FMG variants");
+Check(archive.Files.All(f => FMG.Read(f.Bytes).Entries.First(e => e.ID == 2020000).Text == "Sword"), "legacy infusion preserves vanilla names in all DLC variants");
 Check(archive.Files.All(f => FMG.Read(f.Bytes).Entries.Any(e => e.ID == 987654 && e.Text == "DLC-exclusive retained")), "DLC-exclusive text is retained");
 
 using var invalid = JsonDocument.Parse("[{\"equip_params\":[{\"param_table\":\"EquipParamWeapon\",\"new_param_id\":2020000}]}]");

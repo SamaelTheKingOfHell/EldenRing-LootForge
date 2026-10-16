@@ -4,6 +4,9 @@
 This folder contains system specifications, guides, and architectural design references for the LootForge engine.
 
 ## Documents
+* [`REFINEMENT_CHECKLIST.md`](REFINEMENT_CHECKLIST.md): Requested checklist for armor stats, nonzero buildup/effects, early legendaries, vanilla text, strength-based economy and separate aura controls.
+* [`REFINEMENT_NOTES.md`](REFINEMENT_NOTES.md): Final native balance rules, restored vanilla text/economy, pricing and aura migration.
+* `REFINEMENT_VALIDATION.json`: Deployed identities, focused checks and remaining game retest.
 * [`LOOT_RUNTIME_REPAIR.md`](LOOT_RUNTIME_REPAIR.md): Screenshot-driven repair of inventory identity, one-time chests, event-proven bosses, vendor stock, armor completeness and starter balance.
 * `LOOT_RUNTIME_VALIDATION.json`: Exact-profile acceptance counts, deployed identities and outstanding game QA.
 * [`DIABLO_POWER_AND_MAGIC.md`](DIABLO_POWER_AND_MAGIC.md): Progression scaling, optional passives, combat magic toggles, reversible infusion and local validation boundaries.

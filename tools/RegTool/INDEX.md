@@ -39,7 +39,9 @@ Adheres to `[CS-MODULAR]`, `[CS-GRANULARITY]`, and `[CS-DECOUPLE]` by decomposin
 
 - `WorldLootCatalog.cs`: Installed MSB chests, NPC gear drops and boss-event award provenance with contiguous free-row bounds.
 - `ShopRangeCatalog.cs`: ESD-opened regular and transposition shop intervals, finite capacity and source evidence.
-- `DiabloBalanceService.cs`: Regional imported weapon bounds and starter armor absorption caps.
+- `DiabloBalanceService.cs`: Template-relative weapon bonus bounds, zero flat armor defense and native slot/region negation and poise limits.
+- `DiabloPassiveService.cs`: Clone passive chains with useful nonzero numerical values while preserving inherited status buildup and shared native templates.
+- `EquipmentPricingService.cs`: Price finalized damage, scaling, native negation, status and passive strength; bounded sale returns and no region/rarity/prestige premium.
 
 - `CapacityService.cs`: Fast surviving equipment row counts from source metadata.
 - `SkillExtractionIndex.cs`: Single-pass skill, behavior variation and attack lookup indices for dependency extraction.

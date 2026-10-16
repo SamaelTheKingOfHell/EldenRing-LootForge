@@ -156,6 +156,7 @@ class ParamBuilder:
             # Field updates for EquipParam (equipModelGender = 0: unisex for both Type A and Type B)
             field_updates: Dict[str, Any] = {
                 "sortId": item_id,
+                "_lf_price_multiplier": self.pricing_engine.price_multiplier,
                 "isDeposit": 1,
                 "sellValue": pricing["sell_price"],
                 "saleValue": pricing["buy_price"],

@@ -63,6 +63,8 @@
   "diablo_extra_passives_description": "Roll extra HP, FP, stamina, regeneration and protection passives. Higher rarities roll more passives.",
   "diablo_triggered_effects_label": "Rare legendary combat magic",
   "diablo_triggered_effects_description": "Rare Legendary/Mythic enchantments: attack casts, guarding casts/heals, and armor retaliation/healing. Requires game event scripts; cooldowns limit repeats.",
-  "diablo_auras_enabled_label": "Optional Diablo item auras",
-  "diablo_auras_enabled_description": "Persistent cosmetic flames, glintstone glows and other auras matching rolled effects. Does not add stats or change buff eligibility. Reforge to apply."
+  "diablo_weapon_auras_enabled_label": "Weapon auras",
+  "diablo_armor_auras_enabled_label": "Armor auras",
+  "diablo_weapon_auras_enabled_description": "Optional cosmetic auras on Diablo weapons and shields.",
+  "diablo_armor_auras_enabled_description": "Optional cosmetic auras on Diablo armor, independent of weapon auras."
 }

@@ -42,7 +42,7 @@ def scale_affixes(rng, affixes, rarity, tier):
     power *= rng.uniform(0.90, 1.10)
     result = []
     for aff in affixes:
-        fields = {key: (int(round(value * power)) if isinstance(value, int)
+        fields = {key: (max(1, int(round(value * power))) if isinstance(value, int) and value > 0 else int(round(value * power)) if isinstance(value, int)
                         else round(value * power, 3))
                   for key, value in aff.field_modifiers.items()}
         description = aff.description
@@ -71,6 +71,10 @@ def extra_passives(rng, rarity, power):
         key, delta = next(iter(fields.items()))
         delta = round(delta * power, 4)
         rate = key.endswith("Rate")
+        if key in ("maxHpRate", "maxMpRate", "maxStaminaRate"):
+            delta = max(0.02, delta)
+        elif key == "physicsDiffenceRate":
+            delta = min(-0.01, delta)
         native = {key: round(1.0 + delta, 4) if rate else delta}
         if key == "changeHpPoint":
             native[key] = -max(1, int(round(abs(delta))))

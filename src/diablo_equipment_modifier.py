@@ -38,7 +38,7 @@ class DiabloEquipmentModifier:
                 if key.endswith("Rate"):
                     native[key] = round(1 + (value - 1) * mult, 5)
                 else:
-                    native[key] = int(round(value * mult))
+                    native[key] = (max(1, round(value * mult)) if value > 0 else min(-1, round(value * mult))) if mult > 0 and value != 0 else 0
             if aff.proc_kind and mult > 0:
                 field_updates["_lf_diablo_proc"] = {
                     "kind": aff.proc_kind, "power": round(aff.power_scale * mult, 3)}
@@ -53,8 +53,8 @@ class DiabloEquipmentModifier:
                 stat_deltas[field_name] = stat_deltas.get(field_name, 0) + scaled_delta
 
             if aff.sp_effect_id:
-                if aff.power_scale != 1.0:
-                    passive_scales[str(aff.sp_effect_id)] = max(0.0, round(aff.power_scale * mult * 4) / 4)
+                if not getattr(aff, "is_on_hit_effect", False):
+                    passive_scales[str(aff.sp_effect_id)] = max(0.0, max(0.5, round(aff.power_scale * mult * 4) / 4) if mult > 0 else 0)
                 if is_accessory:
                     if acc_resident_slot <= 4:
                         field_updates[f"residentSpEffectId{acc_resident_slot}"] = aff.sp_effect_id
@@ -63,9 +63,9 @@ class DiabloEquipmentModifier:
                         field_updates["refId"] = aff.sp_effect_id
                 elif is_weapon:
                     if getattr(aff, "is_on_hit_effect", False):
-                        if wep_behavior_slot < 3:
-                            field_updates[f"spEffectBehaviorId{wep_behavior_slot}"] = aff.sp_effect_id
-                            wep_behavior_slot += 1
+                        field_updates.setdefault("_lf_diablo_on_hit", []).append({
+                            "id": aff.sp_effect_id, "msg_id": aff.sp_effect_msg_id or 0,
+                            "power": max(0.5, aff.power_scale * mult) if mult > 0 else 0})
                     else:
                         if wep_resident_slot < 3:
                             key = "residentSpEffectId" if wep_resident_slot == 0 else f"residentSpEffectId{wep_resident_slot}"
@@ -77,8 +77,8 @@ class DiabloEquipmentModifier:
                         field_updates[key] = aff.sp_effect_id
                         armor_resident_slot += 1
 
-            if is_weapon and getattr(aff, "sp_effect_msg_id", None) and wep_msg_slot < 3:
-                field_updates[f"spEffectMsgId{wep_msg_slot}"] = aff.sp_effect_msg_id
+            if is_weapon and not getattr(aff, "is_on_hit_effect", False) and getattr(aff, "sp_effect_msg_id", None) and wep_msg_slot < 3:
+                field_updates.setdefault("_lf_diablo_messages", []).append(aff.sp_effect_msg_id)
                 wep_msg_slot += 1
         if native:
             field_updates["_lf_diablo_passives"] = native

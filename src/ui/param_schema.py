@@ -193,9 +193,12 @@ def get_generator_param_descriptors(locale: str = "en") -> List[ParamDescriptor]
                         param_type=ParamType.BOOL, purpose=ParamPurpose.DIABLO_ARPG,
                         description=strings["diablo_triggered_effects_description"], default=False),
 
-        ParamDescriptor(key="diablo_auras_enabled", label=strings["diablo_auras_enabled_label"],
+        ParamDescriptor(key="diablo_weapon_auras_enabled", label=strings["diablo_weapon_auras_enabled_label"],
                         param_type=ParamType.BOOL, purpose=ParamPurpose.DIABLO_ARPG,
-                        description=strings["diablo_auras_enabled_description"], default=False),
+                        description=strings["diablo_weapon_auras_enabled_description"], default=False),
+        ParamDescriptor(key="diablo_armor_auras_enabled", label=strings["diablo_armor_auras_enabled_label"],
+                        param_type=ParamType.BOOL, purpose=ParamPurpose.DIABLO_ARPG,
+                        description=strings["diablo_armor_auras_enabled_description"], default=False),
 
         # --- Group 3: Item Power & Price Multipliers ---
         ParamDescriptor(

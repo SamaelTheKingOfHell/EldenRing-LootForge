@@ -5,7 +5,7 @@
   "owner": "Game tester",
   "target": "Freshly forged Diablo equipment in the Ordo Perfectus Elden Ring profile",
   "environment": "Actual installed Elden Ring game, fully restarted after forging",
-  "build": "Runtime repair; use identities in docs/LOOT_RUNTIME_VALIDATION.json and the corresponding feature commit.",
+  "build": "codex/loot-refinement; use docs/REFINEMENT_VALIDATION.json identities and the corresponding repair commit.",
   "steps": [
     "Compare early and endgame rolls of the same base item, rarity and upgrade level.",
     "Verify HP, FP, stamina, regeneration and protection passives while equipping and unequipping.",
@@ -22,7 +22,14 @@
     "At First Step and ingredient gathering nodes, verify no added gear rewards; rest, quit/reload and revisit opened chests with world-reset hotkeys unused.",
     "Defeat a qualifying boss, collect its original reward plus generated gear; verify ordinary respawns do not repeat the award.",
     "Visit a verified vendor, purchase a custom item, rest and reload; original stock remains and purchased custom stock stays sold out.",
-    "Compare the new starter rolls with the same-rarity later regional gear; verify discovery and additive attributes do not retain full unscaled bonuses."
+    "Compare the new starter rolls with the same-rarity later regional gear; verify discovery and additive attributes do not retain full unscaled bonuses.",
+    "Inspect all four armor slots: damage negation must be ordinary per-piece values, never 100 across the board; compare against native armor of the same weight.",
+    "With identical character stats and reinforcement, compare an early legendary katana against Uchigatana: original physical damage and 45 bleed must remain, with useful added bonuses; measure real hits and procs.",
+    "Verify FP/stamina bonuses increase starting-character resource totals, and buildup/passive effects do not display or behave as zero.",
+    "Inspect vanilla names, full descriptions and item-info text in base/DLC menus; no LootForge rarity/lore replacement. Compare restored vanilla purchase/sale values.",
+    "Verify custom vendor prices reflect actual combat strength rather than the rarity/tier label; record observed buy/sell values against the deployed report.",
+    "Reforge once with weapon auras on and armor auras off, then swap the booleans; verify independent visuals with unchanged same-seed mechanics.",
+    "Reroll then disable infusion; verify inherited status buildup and original passive UI entries return without stale zero-value lines."
   ],
   "expected": "Regional power scales; magic is limited to rare Legendary/Mythic rolls and the right equipment category; disabling options removes previous effects on reforge.",
   "limits": "Armor retaliation is a magic burst, not attacker-specific percentage reflection. Native data and Qt checks do not prove combat behavior.",
@@ -65,6 +72,32 @@
     {
       "id": "missing-custom-armor",
       "status": "file-repair-passed-awaiting-game-retest"
+    }
+  ],
+  "refinement_bug_reports": [
+    {
+      "id": "armor-flat-defense",
+      "status": "file-fix-passed-awaiting-game-retest"
+    },
+    {
+      "id": "status-buildup-and-zero-effects",
+      "status": "file-fix-passed-awaiting-game-retest"
+    },
+    {
+      "id": "starter-legendary-strength",
+      "status": "file-fix-passed-awaiting-game-retest"
+    },
+    {
+      "id": "vanilla-description-replacement",
+      "status": "file-fix-passed-awaiting-game-retest"
+    },
+    {
+      "id": "strength-only-economy",
+      "status": "file-fix-passed-awaiting-game-retest"
+    },
+    {
+      "id": "separate-aura-booleans",
+      "status": "file-fix-passed-awaiting-game-retest"
     }
   ]
 }

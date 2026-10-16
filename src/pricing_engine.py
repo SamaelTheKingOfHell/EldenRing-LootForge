@@ -1,268 +1,74 @@
-"""
-Pricing Engine for LootForge.
-
-Calculates authentic Elden Ring rune buy prices and sell values (EquipParam sellValue,
-saleValue, and ShopLineupParam value) based on item power, equipment slot, progression tier,
-procedural Diablo rarity tiers, affixes, weapon skills, and boss prestige.
-
-Adheres strictly to [CS-MODULAR], [CS-DECOUPLE], and [CS-GRANULARITY].
-"""
-
-from typing import Dict, Any, List, Optional, Union
-from src.diablo_affixes import RarityTier, AffixDefinition, WeaponSkill, AffixType
+"""Conservative strength-based price previews; the native patcher values final PARAM fields."""
+from src.diablo_affixes import RarityTier
 from src.models import EquipmentSlot
-from src.logger import system_logger
 
 
 class PricingEngine:
-    """
-    Computes dynamic, balanced Rune buy and sell prices based on item power.
-    
-    Why:
-        In Elden Ring, items have intrinsic worth. High-tier procedural relics,
-        powerful affixes, boss remembrance armaments, and late-game gear should
-        command higher purchase costs at merchants and award greater Runes when sold.
-        
-    Example:
-    ```python
-    engine = PricingEngine()
-    pricing = engine.calculate_item_prices(
-        slot="weapon",
-        tier=3,
-        rarity=RarityTier.LEGENDARY,
-        affixes=rolled_affixes
-    )
-    print(pricing["buy_price"], pricing["sell_price"])
-    ```
-    """
+    """Price combat utility without premiums for tier, rarity labels or boss origin."""
+    SLOT_BASE_VALUE = {"weapon": 1500, "body": 1200, "head": 550, "legs": 700,
+                       "arms": 400, "accessory": 900}
+    DEFAULT_SELL_RATIO = 0.05
+    MIN_BUY_PRICE = 300
+    MIN_SELL_PRICE = 10
 
-    # Base item value by equipment slot / category
-    SLOT_BASE_VALUE: Dict[str, int] = {
-        "weapon": 3000,        # Primary instruments of combat and scaling
-        "body": 2400,          # Chest armor provides ~45% of total protection & poise
-        "head": 1600,          # Helm provides ~22% of total protection
-        "legs": 1600,          # Leggings provide ~23% of total protection
-        "arms": 1200,          # Gauntlets provide ~10% of total protection
-        "accessory": 2500,     # Talismans grant permanent passive buffs
-    }
-
-    # Progression Tier Multipliers (Lands Between regional scaling)
-    PROGRESSION_TIER_MULTIPLIERS: Dict[int, float] = {
-        1: 1.0,    # Limgrave / Weeping Peninsula (Early)
-        2: 1.75,   # Liurnia / Siofra River / Caelid (Mid)
-        3: 2.8,    # Altus Plateau / Leyndell / Mt. Gelmir (Late)
-        4: 4.2,    # Mountaintops / Haligtree / Farum Azula / Remembrances (Endgame)
-    }
-
-    # Rarity Multipliers for procedural Diablo relics
-    RARITY_MULTIPLIERS: Dict[RarityTier, float] = {
-        RarityTier.COMMON: 1.0,       # 0 affixes (mundane baseline)
-        RarityTier.MAGIC: 1.5,        # 1 affix
-        RarityTier.RARE: 2.4,         # 2 affixes
-        RarityTier.LEGENDARY: 4.5,    # 3 affixes (often SpEffect passive)
-        RarityTier.MYTHIC: 8.0,       # 4 affixes (double passive buffs)
-    }
-
-    # Ash of War / Weapon Skill Tier Values
-    WEAPON_SKILL_TIER_VALUES: Dict[int, int] = {
-        1: 1500,    # Early Ashes of War
-        2: 2500,    # Mid Ashes of War
-        3: 4500,    # Late Ashes of War
-        4: 7500,    # Endgame / Legendary Ashes of War
-    }
-
-    DEFAULT_SELL_RATIO = 0.30     # Player receives 30% of buy price when selling
-    BOSS_PRESTIGE_MULTIPLIER = 1.8  # Boss Remembrance / Trophy prestige multiplier
-    MIN_BUY_PRICE = 500
-    MIN_SELL_PRICE = 150
-
-    def __init__(
-        self,
-        price_multiplier: float = 1.0,
-        sell_ratio: float = DEFAULT_SELL_RATIO,
-        scaling_enabled: bool = True
-    ):
-        self.price_multiplier = max(0.05, float(price_multiplier))
-        self.sell_ratio = max(0.05, min(0.95, float(sell_ratio)))
+    def __init__(self, price_multiplier=1.0, sell_ratio=DEFAULT_SELL_RATIO, scaling_enabled=True):
+        self.price_multiplier = max(0.0, float(price_multiplier))
+        self.sell_ratio = max(0.0, min(0.05, float(sell_ratio)))
         self.scaling_enabled = scaling_enabled
 
     @staticmethod
-    def _normalize_tier(tier: Optional[Union[int, str, Any]]) -> int:
-        """Converts diverse tier representations into an integer between 1 and 4."""
-        if tier is None: return 1
-        if isinstance(tier, int): return max(1, min(4, tier))
-        if hasattr(tier, "value"):
-            try: return max(1, min(4, int(tier.value)))
-            except (ValueError, TypeError): pass
-        s = str(tier).strip().lower()
-        if "end" in s or "4" in s: return 4
-        if "late" in s or "3" in s: return 3
-        if "mid" in s or "2" in s: return 2
-        return 1
-
-    @staticmethod
-    def _normalize_slot(slot: Optional[Union[str, EquipmentSlot]]) -> str:
-        """Normalizes slot representation to lowercase canonical slot string."""
-        if slot is None: return "weapon"
-        if isinstance(slot, EquipmentSlot): return slot.value.lower()
-        s = str(slot).strip().lower()
-        for kw, out in [("head", "head"), ("helm", "head"), ("body", "body"), ("chest", "body"),
-                        ("armor", "body"), ("arm", "arms"), ("gauntlet", "arms"), ("hand", "arms"),
-                        ("leg", "legs"), ("boot", "legs"), ("pant", "legs"), ("acc", "accessory"), ("talisman", "accessory")]:
-            if kw in s: return out
+    def _normalize_slot(slot):
+        if isinstance(slot, EquipmentSlot):
+            slot = slot.value
+        text = str(slot or "weapon").lower()
+        for key, value in (("head", "head"), ("helm", "head"), ("body", "body"),
+                           ("chest", "body"), ("armor", "body"), ("arm", "arms"),
+                           ("gauntlet", "arms"), ("hand", "arms"), ("leg", "legs"),
+                           ("boot", "legs"), ("pant", "legs"), ("acc", "accessory"),
+                           ("talisman", "accessory")):
+            if key in text:
+                return value
         return "weapon"
 
-    def calculate_item_power(
-        self,
-        slot: Optional[Union[str, EquipmentSlot]] = None,
-        tier: Optional[Union[int, str, Any]] = None,
-        rarity: Optional[RarityTier] = None,
-        affixes: Optional[List[AffixDefinition]] = None,
-        weapon_skill: Optional[Union[WeaponSkill, Dict[str, Any], int]] = None,
-        is_weapon: bool = False,
-        is_accessory: bool = False,
-        is_boss: bool = False,
-        field_updates: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
-        """Calculates an item's raw power score along with an audit breakdown."""
-        norm_slot = "weapon" if is_weapon else ("accessory" if is_accessory else self._normalize_slot(slot))
-        norm_tier = self._normalize_tier(tier)
-        norm_rarity = rarity if isinstance(rarity, RarityTier) else RarityTier.COMMON
-
-        base_slot_value = self.SLOT_BASE_VALUE.get(norm_slot, 2000)
-        tier_mult = self.PROGRESSION_TIER_MULTIPLIERS.get(norm_tier, 1.0)
-        rarity_mult = self.RARITY_MULTIPLIERS.get(norm_rarity, 1.0)
-        boss_mult = self.BOSS_PRESTIGE_MULTIPLIER if is_boss else 1.0
-        scaled_base = base_slot_value * tier_mult * rarity_mult * boss_mult
-
-        affix_power = 0
-        affix_count = 0
-        if affixes:
-            for aff in affixes:
-                affix_count += 1
-                for k in ["attackBasePhysics", "attackBaseMagic", "attackBaseFire", "attackBaseThunder", "attackBaseDark"]:
-                    affix_power += aff.field_modifiers.get(k, 0) * 40
-                for k in ["defensePhysics", "defenseSlash", "defenseBlow", "defenseThrust", "defenseMagic", "defenseFire", "defenseThunder", "defenseDark"]:
-                    affix_power += aff.field_modifiers.get(k, 0) * 35
-                for k in ["correctStrength", "correctAgility", "correctMagic", "correctFaith"]:
-                    affix_power += aff.field_modifiers.get(k, 0) * 30
-                if aff.field_modifiers.get("toughnessCorrectRate", 0) > 0:
-                    affix_power += aff.field_modifiers["toughnessCorrectRate"] * 50
-                if aff.native_fields:
-                    affix_power += 2500
-                if aff.proc_kind:
-                    affix_power += 7500 * aff.power_scale
-                if getattr(aff, "sp_effect_id", None):
-                    affix_power += 2500
-                if getattr(aff, "sp_effect_msg_id", None):
-                    affix_power += 500
-
-        # Also account for raw field_updates if passed directly without affixes
+    def calculate_item_power(self, slot=None, tier=None, rarity=None, affixes=None,
+                             weapon_skill=None, is_weapon=False, is_accessory=False,
+                             is_boss=False, field_updates=None):
+        category = "weapon" if is_weapon else "accessory" if is_accessory else self._normalize_slot(slot)
+        base = self.SLOT_BASE_VALUE[category]
+        extra = 0.0
+        for aff in affixes or []:
+            for key, value in aff.field_modifiers.items():
+                if key.startswith("attackBase"):
+                    extra += max(0, value) * 12
+                elif key.startswith("defense"):
+                    extra += max(0, value) * 4
+                elif key.startswith("correct"):
+                    extra += max(0, value) * 2
+            for key, value in aff.native_fields.items():
+                extra += abs(value - 1) * 3000 if key.endswith("Rate") else abs(value) * 40
+            if aff.sp_effect_id:
+                extra += 250 * max(0, aff.power_scale)
+            if aff.proc_kind:
+                extra += 400 * max(0, aff.power_scale)
         if field_updates and not affixes:
-            for k, v in field_updates.items():
-                if isinstance(v, (int, float)):
-                    if k.startswith("attackBase") and v > 0:
-                        affix_power += int(v * 40)
-                    elif k.startswith("defense") and v > 0:
-                        affix_power += int(v * 35)
-                    elif k.startswith("residentSpEffectId") and v > 0:
-                        affix_power += 2500
+            for key, value in field_updates.items():
+                if not isinstance(value, (int, float)):
+                    continue
+                if key.startswith("attackBase"):
+                    extra += max(0, value) * 12
+                elif key.startswith("defense"):
+                    extra += max(0, value) * 4
+        skill = 200 if is_weapon and weapon_skill else 0
+        return {"total_power": base + extra + skill, "base_slot_value": base,
+                "tier_multiplier": 1.0, "rarity_multiplier": 1.0, "boss_multiplier": 1.0,
+                "affix_count": len(affixes or []), "affix_power": extra, "skill_power": skill}
 
-        # 6. Weapon skill / Ash of War power
-        skill_power = 0
-        if is_weapon and weapon_skill:
-            skill_tier = 2
-            if isinstance(weapon_skill, WeaponSkill):
-                skill_tier = weapon_skill.tier.value if hasattr(weapon_skill.tier, "value") else int(weapon_skill.tier)
-            elif isinstance(weapon_skill, dict):
-                skill_tier = int(weapon_skill.get("tier", 2))
-            skill_power = self.WEAPON_SKILL_TIER_VALUES.get(skill_tier, 2500)
-
-        total_power = scaled_base + affix_power + skill_power
-
-        return {
-            "total_power": total_power,
-            "base_slot_value": base_slot_value,
-            "tier": norm_tier,
-            "tier_multiplier": tier_mult,
-            "rarity": norm_rarity.name,
-            "rarity_multiplier": rarity_mult,
-            "boss_multiplier": boss_mult,
-            "affix_count": affix_count,
-            "affix_power": affix_power,
-            "skill_power": skill_power
-        }
-
-    def calculate_item_prices(
-        self,
-        slot: Optional[Union[str, EquipmentSlot]] = None,
-        tier: Optional[Union[int, str, Any]] = None,
-        rarity: Optional[RarityTier] = None,
-        affixes: Optional[List[AffixDefinition]] = None,
-        weapon_skill: Optional[Union[WeaponSkill, Dict[str, Any], int]] = None,
-        is_weapon: bool = False,
-        is_accessory: bool = False,
-        is_boss: bool = False,
-        field_updates: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
-        """
-        Calculates the buy price (ShopLineupParam / saleValue) and sell price (sellValue)
-        for an item based on its power.
-        
-        Returns:
-            Dict containing 'buy_price', 'sell_price', 'power_score', and 'breakdown'.
-        """
-        if not self.scaling_enabled:
-            # Flat default baseline when scaling is disabled
-            default_buy = 3000 if is_weapon else (2500 if is_accessory else 1500)
-            default_sell = int(default_buy * self.sell_ratio)
-            return {
-                "buy_price": default_buy,
-                "sell_price": default_sell,
-                "power_score": default_buy,
-                "breakdown": {}
-            }
-
-        power_info = self.calculate_item_power(
-            slot=slot,
-            tier=tier,
-            rarity=rarity,
-            affixes=affixes,
-            weapon_skill=weapon_skill,
-            is_weapon=is_weapon,
-            is_accessory=is_accessory,
-            is_boss=is_boss,
-            field_updates=field_updates
-        )
-
-        raw_buy = power_info["total_power"] * self.price_multiplier
-
-        # Round buy price to authentic Elden Ring amounts
-        if raw_buy < 5000:
-            buy_price = int(round(raw_buy / 50.0) * 50)
-        elif raw_buy < 20000:
-            buy_price = int(round(raw_buy / 100.0) * 100)
-        elif raw_buy < 100000:
-            buy_price = int(round(raw_buy / 500.0) * 500)
-        else:
-            buy_price = int(round(raw_buy / 1000.0) * 1000)
-
-        buy_price = max(self.MIN_BUY_PRICE, buy_price)
-
-        # Calculate sell price
-        raw_sell = buy_price * self.sell_ratio
-        if raw_sell < 2000:
-            sell_price = int(round(raw_sell / 10.0) * 10)
-        elif raw_sell < 10000:
-            sell_price = int(round(raw_sell / 50.0) * 50)
-        else:
-            sell_price = int(round(raw_sell / 100.0) * 100)
-
-        sell_price = max(self.MIN_SELL_PRICE, sell_price)
-
-        return {
-            "buy_price": buy_price,
-            "sell_price": sell_price,
-            "power_score": power_info["total_power"],
-            "breakdown": power_info
-        }
+    def calculate_item_prices(self, slot=None, tier=None, rarity=None, affixes=None,
+                              weapon_skill=None, is_weapon=False, is_accessory=False,
+                              is_boss=False, field_updates=None):
+        info = self.calculate_item_power(slot, tier, rarity, affixes, weapon_skill,
+                                         is_weapon, is_accessory, is_boss, field_updates)
+        score = info["total_power"] if self.scaling_enabled else info["base_slot_value"]
+        buy = min(12000, max(self.MIN_BUY_PRICE, int(round(score * self.price_multiplier / 50) * 50)))
+        sell = min(500, max(self.MIN_SELL_PRICE, int(round(buy * self.sell_ratio / 5) * 5)))
+        return {"buy_price": buy, "sell_price": sell, "power_score": score, "breakdown": info}

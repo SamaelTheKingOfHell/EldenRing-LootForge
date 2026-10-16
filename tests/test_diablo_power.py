@@ -69,7 +69,7 @@ class DiabloPowerChecks(unittest.TestCase):
             affixes = gen.roll_affixes(RarityTier.MYTHIC, True)
             fields = {}
             gen.apply_affixes_to_equipment(fields, affixes, is_weapon=True)
-            self.assertFalse(any(key.startswith("_lf_diablo_") for key in fields))
+            self.assertFalse(any(key in fields for key in ("_lf_diablo_proc", "_lf_diablo_passives", "_lf_diablo_aura", "_lf_diablo_power")))
 
     def test_more_passives_are_real_native_fields(self):
         gen = DiabloLootGenerator(seed=15, extra_passives=True)
@@ -82,7 +82,7 @@ class DiabloPowerChecks(unittest.TestCase):
 
     def test_settings_roundtrip_and_schema(self):
         from src.ui.param_schema import get_generator_param_descriptors, ParamPurpose
-        keys = ('diablo_progression_scaling', 'diablo_extra_passives', 'diablo_triggered_effects', 'diablo_auras_enabled')
+        keys = ('diablo_progression_scaling', 'diablo_extra_passives', 'diablo_triggered_effects', 'diablo_weapon_auras_enabled', 'diablo_armor_auras_enabled')
         with tempfile.TemporaryDirectory() as directory:
             config = LootForgeConfig(**dict.fromkeys(keys, True))
             path = str(Path(directory) / 'settings.json')

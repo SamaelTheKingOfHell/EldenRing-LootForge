@@ -67,13 +67,15 @@ class LootForgeConfig:
         chest_max_items: int = 4,
         price_power_scaling_enabled: bool = True,
         price_multiplier: float = 1.0, stats_multiplier: float = 1.0,
-        master_multiplier: float = 1.0, sell_price_ratio: float = 0.30,
+        master_multiplier: float = 1.0, sell_price_ratio: float = 0.05,
         item_custom_art_toggles: Optional[Dict[str, bool]] = None,
         import_custom_skills_movesets: bool = True,
         diablo_progression_scaling: bool = True,
         diablo_extra_passives: bool = False,
         diablo_triggered_effects: bool = False,
         diablo_auras_enabled: bool = False,
+        diablo_weapon_auras_enabled: Optional[bool] = None,
+        diablo_armor_auras_enabled: Optional[bool] = None,
     ):
         self.game_directory = game_directory
         self.input_directory = input_directory
@@ -102,7 +104,9 @@ class LootForgeConfig:
         self.diablo_progression_scaling = diablo_progression_scaling
         self.diablo_extra_passives = diablo_extra_passives
         self.diablo_triggered_effects = diablo_triggered_effects
-        self.diablo_auras_enabled = diablo_auras_enabled
+        self.diablo_weapon_auras_enabled = diablo_auras_enabled if diablo_weapon_auras_enabled is None else diablo_weapon_auras_enabled
+        self.diablo_armor_auras_enabled = diablo_auras_enabled if diablo_armor_auras_enabled is None else diablo_armor_auras_enabled
+        self.diablo_auras_enabled = self.diablo_weapon_auras_enabled or self.diablo_armor_auras_enabled
         self.diablo_loot_enabled = diablo_loot_enabled
         self.diablo_variants_per_item = diablo_variants_per_item
         self.diablo_seed = diablo_seed
@@ -119,7 +123,7 @@ class LootForgeConfig:
         self.price_multiplier = price_multiplier
         self.stats_multiplier = stats_multiplier
         self.master_multiplier = master_multiplier
-        self.sell_price_ratio = sell_price_ratio
+        self.sell_price_ratio = max(0.0, min(0.05, float(sell_price_ratio)))
 
         # Auto-discover game directory if not specified
         if not self.game_directory:
@@ -227,7 +231,8 @@ class LootForgeConfig:
             "diablo_progression_scaling": self.diablo_progression_scaling,
             "diablo_extra_passives": self.diablo_extra_passives,
             "diablo_triggered_effects": self.diablo_triggered_effects,
-            "diablo_auras_enabled": self.diablo_auras_enabled,
+            "diablo_weapon_auras_enabled": self.diablo_weapon_auras_enabled,
+            "diablo_armor_auras_enabled": self.diablo_armor_auras_enabled,
             "diablo_loot_enabled": self.diablo_loot_enabled,
             "diablo_variants_per_item": self.diablo_variants_per_item,
             "diablo_seed": self.diablo_seed,
@@ -289,6 +294,8 @@ class LootForgeConfig:
                 diablo_extra_passives=bool(data.get("diablo_extra_passives", False)),
                 diablo_triggered_effects=bool(data.get("diablo_triggered_effects", False)),
                 diablo_auras_enabled=bool(data.get("diablo_auras_enabled", False)),
+                diablo_weapon_auras_enabled=bool(data.get("diablo_weapon_auras_enabled", data.get("diablo_auras_enabled", False))),
+                diablo_armor_auras_enabled=bool(data.get("diablo_armor_auras_enabled", data.get("diablo_auras_enabled", False))),
                 diablo_loot_enabled=bool(data.get("diablo_loot_enabled", False)),
                 diablo_variants_per_item=int(data.get("diablo_variants_per_item", 3)),
                 diablo_seed=data.get("diablo_seed", None),
@@ -305,7 +312,7 @@ class LootForgeConfig:
                 price_multiplier=float(data.get("price_multiplier", 1.0)),
                 stats_multiplier=float(data.get("stats_multiplier", 1.0)),
                 master_multiplier=float(data.get("master_multiplier", 1.0)),
-                sell_price_ratio=float(data.get("sell_price_ratio", 0.30))
+                sell_price_ratio=float(data.get("sell_price_ratio", 0.05))
             )
         except Exception as e:
             system_logger.warning(f"Error reading {file_path}; using defaults: {e}", source="Config")

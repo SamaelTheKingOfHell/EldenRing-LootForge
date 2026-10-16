@@ -21,143 +21,40 @@ from src.knowledge_base import VanillaKnowledgeBase
 
 
 class TestPricingEngine(unittest.TestCase):
-    """Verifies core valuation logic and scaling in PricingEngine."""
+    def test_strength_prices_ignore_tier_rarity_and_boss_labels(self):
+        engine = PricingEngine()
+        standard = engine.calculate_item_prices(is_weapon=True, field_updates={"attackBasePhysics": 115})
+        for tier in range(1, 5):
+            for rarity in RarityTier:
+                self.assertEqual(standard, engine.calculate_item_prices(is_weapon=True, tier=tier, rarity=rarity,
+                    is_boss=True, field_updates={"attackBasePhysics": 115}))
 
-    def setUp(self):
-        self.engine = PricingEngine()
+    def test_stronger_numeric_fields_cost_more(self):
+        engine = PricingEngine()
+        weak = engine.calculate_item_prices(is_weapon=True, field_updates={"attackBasePhysics": 115})
+        strong = engine.calculate_item_prices(is_weapon=True, field_updates={"attackBasePhysics": 200})
+        self.assertGreater(strong["buy_price"], weak["buy_price"])
+        self.assertGreater(strong["sell_price"], weak["sell_price"])
 
-    def test_pricing_engine_initialization_and_config(self):
-        """Verifies engine initialization with default and custom parameters."""
-        default_engine = PricingEngine()
-        self.assertEqual(default_engine.price_multiplier, 1.0)
-        self.assertEqual(default_engine.sell_ratio, 0.30)
-        self.assertTrue(default_engine.scaling_enabled)
+    def test_item_ids_are_not_strength(self):
+        engine = PricingEngine()
+        a = engine.calculate_item_prices(is_weapon=True, field_updates={"sortId": 9000000, "residentSpEffectId": 10})
+        b = engine.calculate_item_prices(is_weapon=True, field_updates={"sortId": 100000000, "residentSpEffectId": 8600000})
+        self.assertEqual(a, b)
 
-        custom_engine = PricingEngine(price_multiplier=1.5, sell_ratio=0.40, scaling_enabled=False)
-        self.assertEqual(custom_engine.price_multiplier, 1.5)
-        self.assertEqual(custom_engine.sell_ratio, 0.40)
-        self.assertFalse(custom_engine.scaling_enabled)
+    def test_prices_are_bounded_and_sale_returns_are_small(self):
+        engine = PricingEngine(sell_ratio=0.9)
+        for attack in (1, 115, 200, 100000):
+            price = engine.calculate_item_prices(is_weapon=True, field_updates={"attackBasePhysics": attack})
+            self.assertLessEqual(price["buy_price"], 12000)
+            self.assertLessEqual(price["sell_price"], 500)
+            self.assertLessEqual(price["sell_price"], price["buy_price"] * 0.06)
 
-        # Disabled scaling returns fixed defaults
-        fixed_pricing = custom_engine.calculate_item_prices(slot="weapon", is_weapon=True)
-        self.assertEqual(fixed_pricing["buy_price"], 3000)
-        self.assertEqual(fixed_pricing["sell_price"], int(3000 * 0.40))
-
-    def test_slot_base_value_hierarchy(self):
-        """Verifies that combat impact determines slot base valuations."""
-        weapon_price = self.engine.calculate_item_prices(slot="weapon", is_weapon=True)["buy_price"]
-        chest_price = self.engine.calculate_item_prices(slot="body", is_weapon=False)["buy_price"]
-        helm_price = self.engine.calculate_item_prices(slot="head", is_weapon=False)["buy_price"]
-        arms_price = self.engine.calculate_item_prices(slot="arms", is_weapon=False)["buy_price"]
-        accessory_price = self.engine.calculate_item_prices(slot="accessory", is_accessory=True)["buy_price"]
-
-        # Weapon > Chest > Accessory/Head > Arms
-        self.assertGreater(weapon_price, chest_price)
-        self.assertGreater(chest_price, helm_price)
-        self.assertGreater(helm_price, arms_price)
-        self.assertGreater(accessory_price, arms_price)
-
-    def test_progression_tier_scaling(self):
-        """Verifies that regional progression tiers scale buy and sell prices strictly upward."""
-        t1 = self.engine.calculate_item_prices(slot="weapon", tier=1, is_weapon=True)
-        t2 = self.engine.calculate_item_prices(slot="weapon", tier=2, is_weapon=True)
-        t3 = self.engine.calculate_item_prices(slot="weapon", tier=3, is_weapon=True)
-        t4 = self.engine.calculate_item_prices(slot="weapon", tier=4, is_weapon=True)
-
-        self.assertLess(t1["buy_price"], t2["buy_price"])
-        self.assertLess(t2["buy_price"], t3["buy_price"])
-        self.assertLess(t3["buy_price"], t4["buy_price"])
-
-        self.assertLess(t1["sell_price"], t2["sell_price"])
-        self.assertLess(t2["sell_price"], t3["sell_price"])
-        self.assertLess(t3["sell_price"], t4["sell_price"])
-
-        # Check normalization handles strings and ProgressionTier Enums
-        enum_t4 = self.engine.calculate_item_prices(slot="weapon", tier=ProgressionTier.ENDGAME, is_weapon=True)
-        str_t4 = self.engine.calculate_item_prices(slot="weapon", tier="tier 4 endgame", is_weapon=True)
-        self.assertEqual(enum_t4["buy_price"], t4["buy_price"])
-        self.assertEqual(str_t4["buy_price"], t4["buy_price"])
-
-    def test_rarity_multiplier_scaling(self):
-        """Verifies Diablo rarity tiers scale prices non-linearly."""
-        common = self.engine.calculate_item_prices(slot="weapon", rarity=RarityTier.COMMON, is_weapon=True)
-        magic = self.engine.calculate_item_prices(slot="weapon", rarity=RarityTier.MAGIC, is_weapon=True)
-        rare = self.engine.calculate_item_prices(slot="weapon", rarity=RarityTier.RARE, is_weapon=True)
-        legendary = self.engine.calculate_item_prices(slot="weapon", rarity=RarityTier.LEGENDARY, is_weapon=True)
-        mythic = self.engine.calculate_item_prices(slot="weapon", rarity=RarityTier.MYTHIC, is_weapon=True)
-
-        self.assertLess(common["buy_price"], magic["buy_price"])
-        self.assertLess(magic["buy_price"], rare["buy_price"])
-        self.assertLess(rare["buy_price"], legendary["buy_price"])
-        self.assertLess(legendary["buy_price"], mythic["buy_price"])
-
-        # Mythic items should be highly lucrative
-        self.assertGreaterEqual(mythic["buy_price"], 20000)
-        self.assertGreaterEqual(mythic["sell_price"], 6000)
-
-    def test_affix_stat_multipliers_and_passives(self):
-        """Verifies that affixes grant incremental rune value for stats and passive SpEffects."""
-        base_pricing = self.engine.calculate_item_prices(slot="weapon", is_weapon=True, affixes=[])
-
-        stat_affix = AffixDefinition(
-            name="Sharpened",
-            affix_type=AffixType.PREFIX,
-            tier_min=RarityTier.MAGIC,
-            applies_to_weapon=True,
-            applies_to_armor=False,
-            field_modifiers={"attackBasePhysics": 25},
-            description="+25 Physical Attack"
-        )
-        stat_pricing = self.engine.calculate_item_prices(slot="weapon", is_weapon=True, affixes=[stat_affix])
-        # +25 attack * 40 = +1,000 power
-        self.assertGreater(stat_pricing["buy_price"], base_pricing["buy_price"])
-
-        sp_affix = AffixDefinition(
-            name="of Bloodlust",
-            affix_type=AffixType.SUFFIX,
-            tier_min=RarityTier.LEGENDARY,
-            applies_to_weapon=True,
-            applies_to_armor=False,
-            field_modifiers={},
-            sp_effect_id=105000,
-            description="Grants Bloodlust passive perk"
-        )
-        sp_pricing = self.engine.calculate_item_prices(slot="weapon", is_weapon=True, affixes=[sp_affix])
-        # SpEffect grants +2,500 power
-        self.assertGreater(sp_pricing["buy_price"], base_pricing["buy_price"])
-        self.assertGreater(sp_pricing["buy_price"] - base_pricing["buy_price"], 2000)
-
-    def test_weapon_skill_scaling(self):
-        """Verifies Ash of War skill tiers contribute to weapon valuation."""
-        skill_t1 = WeaponSkill(id=101, name="Kick", description="A swift kick", tier=ProgressionTier.EARLY)
-        skill_t4 = WeaponSkill(id=401, name="Waterfowl Dance", description="Lethal flurry", tier=ProgressionTier.ENDGAME)
-
-        pricing_t1 = self.engine.calculate_item_prices(slot="weapon", is_weapon=True, weapon_skill=skill_t1)
-        pricing_t4 = self.engine.calculate_item_prices(slot="weapon", is_weapon=True, weapon_skill=skill_t4)
-
-        self.assertGreater(pricing_t4["buy_price"], pricing_t1["buy_price"])
-        self.assertGreater(pricing_t4["sell_price"], pricing_t1["sell_price"])
-
-    def test_boss_prestige_multiplier(self):
-        """Verifies that boss remembrances command a 1.8x prestige multiplier."""
-        standard = self.engine.calculate_item_prices(slot="weapon", tier=4, rarity=RarityTier.LEGENDARY, is_boss=False)
-        boss = self.engine.calculate_item_prices(slot="weapon", tier=4, rarity=RarityTier.LEGENDARY, is_boss=True)
-
-        self.assertGreater(boss["buy_price"], standard["buy_price"])
-        self.assertGreaterEqual(boss["buy_price"], int(standard["buy_price"] * 1.5))
-        self.assertGreater(boss["sell_price"], standard["sell_price"])
-
-    def test_sell_ratio_and_clean_rounding(self):
-        """Verifies buy and sell prices round cleanly and respect minimum boundaries."""
-        pricing = self.engine.calculate_item_prices(slot="arms", tier=1, rarity=RarityTier.COMMON)
-        # Ratio check: sell_price should be ~30% of buy_price
-        ratio = pricing["sell_price"] / pricing["buy_price"]
-        self.assertAlmostEqual(ratio, 0.30, delta=0.05)
-
-        # Minimum price checks
-        cheap_pricing = self.engine.calculate_item_prices(slot="arms", tier=1, rarity=RarityTier.COMMON)
-        self.assertGreaterEqual(cheap_pricing["buy_price"], PricingEngine.MIN_BUY_PRICE)
-        self.assertGreaterEqual(cheap_pricing["sell_price"], PricingEngine.MIN_SELL_PRICE)
+    def test_price_multiplier_changes_cost_without_changing_strength(self):
+        a = PricingEngine().calculate_item_prices(is_weapon=True)
+        b = PricingEngine(price_multiplier=2).calculate_item_prices(is_weapon=True)
+        self.assertEqual(a["power_score"], b["power_score"])
+        self.assertEqual(b["buy_price"], 2*a["buy_price"])
 
 
 class TestPricingIntegration(unittest.TestCase):
@@ -286,14 +183,10 @@ class TestPricingIntegration(unittest.TestCase):
 
         for inj in injections:
             ep = inj["equip_params"][0]
-            self.assertIn("sellValue", ep["field_updates"])
-            self.assertIn("saleValue", ep["field_updates"])
-            self.assertGreater(ep["field_updates"]["saleValue"], 0)
-            self.assertGreater(ep["field_updates"]["sellValue"], 0)
-
-            fmg = inj["fmg_texts"][0]
-            self.assertNotIn("VALUE:", fmg["caption"])
-            self.assertLessEqual(len(fmg["caption"].splitlines()), 6)
+            self.assertTrue(ep["update_existing"])
+            self.assertEqual(inj["fmg_texts"], [])
+            for key in ("sellValue", "saleValue", "basicPrice"):
+                self.assertNotIn(key, ep["field_updates"])
 
 
 if __name__ == "__main__":

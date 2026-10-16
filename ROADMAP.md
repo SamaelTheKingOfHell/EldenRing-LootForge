@@ -101,7 +101,7 @@ This roadmap defines the implementation phases for the cross-platform Standalone
 ## Phase 9: Vanilla Item Infusion & Base Item Distribution
 - [x] **Vanilla Item Stat Infusions (`diablo_inject_vanilla_stats`)**:
   - Direct procedural Diablo stat/affix injection into base vanilla `EquipParamWeapon` and `EquipParamProtector` rows with `update_existing` support in RegTool.
-  - Dynamically titles and appends Diablo rarity and affix breakdowns to vanilla item lore descriptions in FMGs.
+  - Preserves vanilla names, descriptions and info; restores earlier generated text from per-language history (refinement correction).
 - [x] **Vanilla Items as Base Distribution Items (`diablo_use_vanilla_base_items`)**:
   - Uses cataloged vanilla weapons and armor sets as base items to create standalone procedural relics without requiring replacement mods.
   - Distributes variants organically across bosses, merchants, chests, and enemies.
@@ -142,12 +142,12 @@ This roadmap defines the implementation phases for the cross-platform Standalone
 ## Phase 14: Dynamic Power-Scaled Economy & Pricing Engine
 - [x] **Modular Pricing Engine (`src/pricing_engine.py`)**:
   - Calculates dynamic, authentic Rune valuations for buying (`ShopLineupParam.value`, `saleValue`, `basicPrice`) and selling (`EquipParamWeapon.sellValue`, `EquipParamProtector.sellValue`, `EquipParamAccessory.sellValue`).
-  - Multi-tier power evaluation scaling across equipment slot category (weapon > body > head/legs > arms), regional progression tier (Early 1.0x to Endgame 4.2x), Diablo procedural rarity (Common 1.0x to Mythic 8.0x), affix stat point bonuses (+40 runes per attack point, +35 per defense point, +2,500 for SpEffect passives), weapon skill tiers (+1,500 to +7,500 runes), and boss remembrance prestige (1.8x).
+  - Finalized native damage, scaling, negation, poise, buildup and passive strength determine prices; no tier/rarity/prestige premium. Sale returns are small and bounded (refinement correction).
 - [x] **Granular Multi-Piece Set Valuation (`tools/RegTool/LootInjector.cs`)**:
   - Implemented per-item pricing support via `item_prices` dictionary in `loot_distribution`. Chest armor commands higher value than gauntlets within the same set, with seamless fallback for standard standalone sets.
 - [x] **In-Game Economy Integration & FMG Lore Presentation**:
-  - Both standalone Diablo variants (`generate_variants_for_spec`) and vanilla Diablo infusions (`generate_vanilla_stat_injections`) update vendor buy and sell parameter values.
-  - Automatically formats rune appraisal at the bottom of in-game lore descriptions: `VALUE: {buy_price:,} Runes (Sell: {sell_price:,})`.
+  - Native final valuation updates generated equipment/vendor prices; vanilla infusion preserves original prices.
+  - Original vanilla lore is preserved. Generated captions omit the redundant economy panel to fit the game layout.
 - [x] **Full Config & Regression Suite**:
   - Configurable scaling parameters (`price_power_scaling_enabled`, `price_multiplier`, `sell_price_ratio`) in `src/config.py`.
   - Comprehensive unit and integration test suite in `tests/test_pricing_engine.py` verifying mathematical bounds, rounding, and patch spec integrations (`[CS-NO-MOCK]`).
@@ -229,3 +229,12 @@ This roadmap defines the implementation phases for the cross-platform Standalone
 - [x] Reforge and deploy all 469 selected input groups into Ordo Perfectus: 1,203 weapons, 324 armor pieces and 32 bonus talismans; three variants per input group.
 - [x] Pass 148 Python tests, 53 native regressions, 11,078 magic checks and 64,730 exact deployed-file checks. Retain identities and coverage in `docs/LOOT_RUNTIME_VALIDATION.json`.
 - [ ] Actual game retest of descriptions, pickups, boss awards, ordinary rest/reload, vendor stock, armor visuals and combat effects. No save identities were migrated.
+
+## Equipment refinement (2026-10-16)
+- [x] Normalize generated armor to native negation with zero obsolete flat defense, slot/region caps and bounded poise.
+- [x] Preserve native weapon damage channels and buildup; bound only added bonuses and keep positive effects useful.
+- [x] Restore vanilla names/info/descriptions and prices, prevent future replacements and preserve passive UI slot originals across rerolls.
+- [x] Price finalized combat strength without region, rarity or boss premiums; bound rune sell returns.
+- [x] Split armor and weapon auras into independently persisted booleans with legacy migration and actual Qt checks.
+- [x] Reforge the active profile through the normal backup/manifest pipeline and retain exact output/source verification in `docs/REFINEMENT_VALIDATION.json`.
+- [ ] In-game retest of reported balance, descriptions, actual buildup/damage, economy and both aura controls. See `docs/REFINEMENT_CHECKLIST.md`.

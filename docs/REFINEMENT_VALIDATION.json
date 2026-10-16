@@ -1,0 +1,127 @@
+{
+  "recorded_utc": "2026-10-16T15:24:01.745706+00:00",
+  "branch": "codex/loot-refinement",
+  "git_base": "d359f151f052523077e3f09ee5db757fbce03f1f",
+  "scope": "Armor/weapon balance, nonzero passives, vanilla text/economy preservation, strength-only prices and independent aura booleans",
+  "deployment": {
+    "status": "PASS",
+    "profile": "Ordo Perfectus",
+    "pipeline": "PatchOrchestrator with normal backups, assets and manifest",
+    "source_before_sha256": "2b6fac716aca4b92b5065fceea1634195f285b1b6a8b29fed6ea0f0988c8ddf5",
+    "native_release_sha256": "1f5232526ef4e564b5332246f4bce00a73ba00ca03559c27f85f7696e87defda",
+    "identities": {
+      "regulation.bin": {
+        "bytes": 2633584,
+        "sha256": "c8c02bbe2c6d839fdcb45cf0d30fde8a4d6d46d5038eb58f6b69048691d21cf1"
+      },
+      "lootforge_diablo_fields.json": {
+        "bytes": 3996966,
+        "sha256": "cbc1a862f58ed92dd93c76815f46c0e69f4d975ab5d236897f1738b58d4d1de2"
+      },
+      "lootforge_diablo_texts.json": {
+        "bytes": 15604244,
+        "sha256": "e0eb72ce17bfaccdd2dedc4470deff66a0975896a0b6fc575f1bfc67db0dcc9d"
+      },
+      "event\\common.emevd.dcx": {
+        "bytes": 35360,
+        "sha256": "8adb92f6eb9d473fcd6de800d0395663ae05cbd6fa08ea6670029e3df23e940b"
+      },
+      "msg\\engus\\item.msgbnd.dcx": {
+        "bytes": 278560,
+        "sha256": "f1f33a442fb5101c0c7d86c48efcf5b9351a723805cebbb08ed0c274445676da"
+      },
+      "msg\\engus\\item_dlc02.msgbnd.dcx": {
+        "bytes": 422576,
+        "sha256": "b592c49acb602ee3e1459e57f0187d9f8c99fde66af900b1fe8f5c93a6e784d6"
+      },
+      "msg\\zhocn\\item_dlc02.msgbnd.dcx": {
+        "bytes": 344336,
+        "sha256": "ccfc3d27b10d2af83cca7ded0bc3cb13e9f3571a72acdc96ecbbb4e81f1510ef"
+      }
+    },
+    "manifest_files": 715,
+    "missing_manifest_files": [],
+    "generated_equipment": {
+      "EquipParamWeapon": 1203,
+      "EquipParamAccessory": 32,
+      "EquipParamProtector": 324
+    },
+    "actual_published_spec_sha256": "d9400865fe21b7f0890296145ea4901ab36dc42c5ef0615523ea4e11e1f1d618",
+    "actual_published_spec_artifact": "scratch/refinement/deployed-specs.json"
+  },
+  "checks": {
+    "python": {
+      "passed": 152,
+      "failed": 0,
+      "log": "scratch/refinement/python-final.log"
+    },
+    "native_regressions": {
+      "passed": 60,
+      "failed": 0,
+      "log": "scratch/refinement/native-final.log"
+    },
+    "native_magic": {
+      "passed": 11084,
+      "failed": 0,
+      "coverage_items": 2355,
+      "log": "scratch/refinement/magic-final.log"
+    },
+    "deployed_routing": {
+      "passed": 64730,
+      "failed": 0,
+      "armor_variant_routes": 204,
+      "routes": {
+        "boss": 283,
+        "chest": 416,
+        "enemy": 640,
+        "merchant": 68
+      },
+      "log": "scratch/refinement/deployed-routing.log"
+    },
+    "deployed_refinement": {
+      "checks": 105667,
+      "restoredOrPreservedVanillaTexts": 93597,
+      "restoredVanillaPriceFields": 9863,
+      "armor": 324,
+      "generatedBuy": {
+        "min": 300,
+        "max": 5850,
+        "average": 2057.4085952533674
+      },
+      "generatedSell": {
+        "min": 15,
+        "max": 290,
+        "average": 102.8094932649134
+      },
+      "log": "scratch/refinement/deployed-refinement.log"
+    },
+    "qt": "PASS: actual independent checkbox controls and signals; configuration migration and persistence",
+    "native_uchigatana": "PASS: original 115 physical and 45 bleed preserved; bounded extra damage and at least 22 additional buildup in controlled half-strength roll",
+    "passive_ui_history_migration": "9827 previously missing message-slot originals recovered from retained pre-refinement PARAM/state before final reforge"
+  },
+  "settings": {
+    "diablo_weapon_auras_enabled": true,
+    "diablo_armor_auras_enabled": true,
+    "diablo_progression_scaling": true,
+    "diablo_extra_passives": true,
+    "diablo_triggered_effects": true,
+    "diablo_variants_per_item": 3,
+    "diablo_seed": 0,
+    "sell_price_ratio": 0.05
+  },
+  "game_retest": {
+    "executed": false,
+    "status": "awaiting_retest",
+    "tracker": "Unavailable; portable assignment retained",
+    "assignment": "docs/DIABLO_MAGIC_QA.json",
+    "required": [
+      "Armor menu values and actual damage negation",
+      "Early legendary versus same-class unupgraded native weapon, with identical character stats",
+      "Actual buildup, proc damage and cooldowns",
+      "Original vanilla names/info/lore, purchases and sales",
+      "Armor-only and weapon-only auras, temporary buff interaction",
+      "Reforge/reroll/disable must preserve original passive UI slots and avoid stacking"
+    ],
+    "save_files_modified": false
+  }
+}

@@ -235,7 +235,8 @@ class PatchOrchestrator:
                 progression_scaling=config.diablo_progression_scaling,
                 extra_passives=config.diablo_extra_passives,
                 triggered_effects=config.diablo_triggered_effects,
-                auras_enabled=config.diablo_auras_enabled
+                weapon_auras_enabled=config.diablo_weapon_auras_enabled,
+                armor_auras_enabled=config.diablo_armor_auras_enabled
             )
 
         # Generate and validate the patch before staging any assets.

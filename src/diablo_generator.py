@@ -63,14 +63,18 @@ class DiabloLootGenerator:
         progression_scaling: bool = True,
         extra_passives: bool = False,
         triggered_effects: bool = False,
-        auras_enabled: bool = False
+        auras_enabled: bool = False,
+        weapon_auras_enabled: Optional[bool] = None,
+        armor_auras_enabled: Optional[bool] = None
     ):
         self.seed = seed or 0
         self._rng = random.Random(seed)
         self.progression_scaling = progression_scaling
         self.extra_passives = extra_passives
         self.triggered_effects = triggered_effects
-        self.auras_enabled = auras_enabled
+        self.weapon_auras_enabled = auras_enabled if weapon_auras_enabled is None else weapon_auras_enabled
+        self.armor_auras_enabled = auras_enabled if armor_auras_enabled is None else armor_auras_enabled
+        self.auras_enabled = self.weapon_auras_enabled or self.armor_auras_enabled
         self._knowledge_base = knowledge_base
         self.max_shop_per_merchant = max_shop_per_merchant
         self.max_enia_rows = max_enia_rows
@@ -142,7 +146,7 @@ class DiabloLootGenerator:
             acc = args[3] if len(args) > 3 else kwargs.get("is_accessory", is_accessory)
             mult = 1.0 if stats_multiplier is None else stats_multiplier
 
-        if len(args) and isinstance(args[0], DiabloLootGenerator) and gen.auras_enabled:
+        if len(args) and isinstance(args[0], DiabloLootGenerator) and (gen.weapon_auras_enabled if wep else gen.armor_auras_enabled):
             from src.diablo_auras import aura_theme
             theme = aura_theme(affixes)
             if theme and not acc:
@@ -154,7 +158,7 @@ class DiabloLootGenerator:
             is_weapon=bool(wep),
             is_accessory=bool(acc),
             stats_multiplier=mult,
-            native_stat_deltas=gen.progression_scaling if len(args) and isinstance(args[0], DiabloLootGenerator) else False
+            native_stat_deltas=bool(len(args) and isinstance(args[0], DiabloLootGenerator))
         )
 
     def is_shop_capacity_exceeded(self, shop_id: str, is_enia: bool = False) -> bool:

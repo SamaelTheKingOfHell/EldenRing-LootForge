@@ -94,6 +94,7 @@ class DiabloVariantBuilder:
 
                 field_updates = ep.setdefault("field_updates", {})
                 field_updates["sortId"] = new_id
+                field_updates["_lf_price_multiplier"] = generator.price_multiplier
                 if generator.progression_scaling:
                     from src.diablo_power import REGION_POWER, RARITY_POWER, RARITIES, tier_value
                     field_updates["_lf_diablo_tier"] = tier_value(effective_tier)
@@ -157,6 +158,7 @@ class DiabloVariantBuilder:
                             comp_affixes = generator.roll_affixes(comp_rarity, is_weapon=False, is_accessory=True, is_boss=is_boss or is_chest_drop, tier=effective_tier)
                             comp_field_updates = {
                                 "sortId": comp_param_id,
+                                "_lf_price_multiplier": generator.price_multiplier,
                                 "isDeposit": 1,
                                 "iconId": comp_info.get("iconId", 18000)
                             }

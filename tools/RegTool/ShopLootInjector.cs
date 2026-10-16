@@ -108,6 +108,10 @@ namespace LootForge.RegTool
                     }
                 }
                 ParamHelper.SetCellIfExists(targetShopRow, "value", itemCost);
+                string equipmentTable = isAccessory ? "EquipParamAccessory" : isArmor ? "EquipParamProtector" : "EquipParamWeapon";
+                var finalized = getOrLoadParam(equipmentTable,equipmentTable).Param.Rows.FirstOrDefault(row=>row.ID==itemId);
+                if(finalized?.Name?.Contains("[LootForge]")==true)
+                    ParamHelper.SetCellIfExists(targetShopRow,"value",ParamHelper.GetCellInt(finalized,"saleValue"));
                 ParamHelper.SetCellIfExists(targetShopRow, "mtrlId", -1);
                 ParamHelper.SetCellIfExists(targetShopRow, "eventFlag_forRelease", 0u);
                 ParamHelper.SetCellIfExists(targetShopRow, "eventFlag_forStock", (uint)(1900870000 + shopRowId));
