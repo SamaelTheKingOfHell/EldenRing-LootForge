@@ -240,7 +240,7 @@ namespace LootForge.RegTool
                     string search = options.TryGetValue("search", out string? sVal) ? sVal : "";
                     var interesting = !string.IsNullOrEmpty(search)
                         ? param.Rows.Where(r => r.Name != null && r.Name.Contains(search, StringComparison.OrdinalIgnoreCase)).ToList()
-                        : param.Rows.Where(r => r.ID >= 9000000 || (r.Name != null && (r.Name.Contains("Godrick") || r.Name.Contains("Noble") || r.Name.Contains("Soldier") || r.Name.Contains("Wolf")))).ToList();
+                        : param.Rows.Where(r => r.ID >= 9000000 || (r.Name != null && r.Name.Contains("[LootForge]"))).ToList();
                     Console.WriteLine($"Found {interesting.Count} matching rows in ItemLotParam_enemy:");
                     foreach (var r in interesting.Take(40))
                     {

@@ -23,6 +23,8 @@ public static class AdditiveLootService
         }
     }
     private static readonly ConditionalWeakTable<PARAM, Index> Indices = new();
+    /// <summary>Invalidate cached row index when rows are injected dynamically.</summary>
+    public static void Invalidate(PARAM param) => Indices.Remove(param);
 
     /// <summary>Maximum independent awards in a contiguous chain, including its original rewards.
     /// A lottery selects one slot; a native stack is one reward, not one reward per unit.</summary>

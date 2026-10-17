@@ -116,46 +116,8 @@ namespace LootForge.RegTool
                 Console.WriteLine($"   Sample Custom Armor ID {sample}: InEnemy={enemyLotPlaced.ContainsKey(sample)}, InMap={mapLotPlaced.ContainsKey(sample)}, InShop={shopPlaced.ContainsKey(sample)}");
             }
 
-            // 6. Check Tutorial Boss Lots
-            Console.WriteLine($"\n[LootAudit] Tutorial & First Boss Examination:");
-            void InspectLot(string name, PARAM param, int lotId)
-            {
-                var row = param.Rows.FirstOrDefault(r => r.ID == lotId);
-                if (row == null)
-                {
-                    Console.WriteLine($"   {name} (Lot {lotId}): NOT FOUND in table!");
-                    return;
-                }
-                Console.WriteLine($"   {name} (Lot {lotId}) '{row.Name}':");
-                for (int s = 1; s <= 8; s++)
-                {
-                    int itm = ParamHelper.GetCellInt(row, $"lotItemId0{s}");
-                    if (itm > 0)
-                    {
-                        int cat = ParamHelper.GetCellInt(row, $"lotItemCategory0{s}");
-                        int pts = ParamHelper.GetCellInt(row, $"lotItemBasePoint0{s}");
-                        int num = ParamHelper.GetCellInt(row, $"lotItemNum0{s}");
-                        Console.WriteLine($"      Slot {s}: item={itm} category={cat} basePoint={pts} num={num}");
-                    }
-                }
-            }
 
-            InspectLot("Chapel of Anticipation - Grafted Scion (Sword)", mapLotParam, 10030);
-            InspectLot("Chapel of Anticipation - Grafted Scion (Shield)", mapLotParam, 10031);
-            InspectLot("Cave of Knowledge - Soldier of Godrick (Enemy 100100)", enemyLotParam, 100100);
-            InspectLot("Cave of Knowledge - Soldier of Godrick (Enemy 431100000)", enemyLotParam, 431100000);
-            InspectLot("Cave of Knowledge - Stranded Graveyard Reward", mapLotParam, 18000050);
 
-            var npcParam = LoadParam("NpcParam");
-            foreach (var r in npcParam.Rows)
-            {
-                if (r.Name != null && (r.Name.Contains("Godrick") || r.Name.Contains("Tutorial") || r.ID == 43110000 || r.ID == 904311000 || r.ID == 431100000))
-                {
-                    int elot = ParamHelper.GetCellInt(r, "itemLotId_enemy");
-                    int mlot = ParamHelper.GetCellInt(r, "itemLotId_map");
-                    Console.WriteLine($"   [NPC] ID={r.ID} Name='{r.Name}' enemyLot={elot} mapLot={mlot}");
-                }
-            }
 
             // 7. Check Chest Multi-Drops (ItemLotParam_map rows with multiple slots)
             int mapRowsWithMultiSlots = mapLotParam.Rows.Count(r => ParamHelper.GetCellInt(r, "lotItemId01") > 0 && ParamHelper.GetCellInt(r, "lotItemId02") > 0);

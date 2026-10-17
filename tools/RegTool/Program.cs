@@ -73,9 +73,6 @@ namespace LootForge.RegTool
                         return LootAuditService.ExecuteAuditLoot(options);
                     case "port-souls-set":
                         return SoulsPort.SoulsPortService.ExecutePortSoulsSet(options);
-                    case "find-tutorial":
-                        TutorialFinder.Find();
-                        return 0;
                     default:
                         Console.Error.WriteLine($"Unknown command: '{command}'");
                         PrintUsage();

@@ -156,14 +156,14 @@ class LootDistributor:
                     return LootTarget(LootDistributionType.MERCHANT_SHOP, chosen["id"], f"[Test: Shop] {chosen['name']}", float(chosen.get("defaultRuneCost", 100.0)))
 
         # Fallback to enemy drop pool when shop rows are full or pool_type == 1
-        test_mobs = [
-            {"id": "431100000", "name": "Godrick Soldier (Gatefront / Limgrave)"},
-            {"id": "430000000", "name": "Wandering Noble (Church of Elleh Road)"},
-            {"id": "435100000", "name": "Godrick Knight (Gatefront Ruins)"},
-        ]
-        chosen = test_mobs[idx % len(test_mobs)]
-        system_logger.info(f"Test Mode: Routed to Enemy Drop -> '{chosen['name']}' (100% drop)", source="LootDistributor")
-        return LootTarget(LootDistributionType.ENEMY_DROP, chosen["id"], f"[Test: Mob 100%] {chosen['name']}", 100.0)
+        test_mobs = self._kb.list_elite_enemies() or self._kb.list_enemies()
+        if test_mobs:
+            chosen = test_mobs[idx % len(test_mobs)]
+            chosen_id = str(chosen.get("id", "generic_mob"))
+            chosen_name = str(chosen.get("name", "Roaming Foe"))
+            system_logger.info(f"Test Mode: Routed to Enemy Drop -> '{chosen_name}' (100% drop)", source="LootDistributor")
+            return LootTarget(LootDistributionType.ENEMY_DROP, chosen_id, f"[Test: Mob 100%] {chosen_name}", 100.0)
+        return LootTarget(LootDistributionType.ENEMY_DROP, "roaming_mob", "[Test: Mob 100%] Roaming Enemy", 100.0)
 
     def _rotate_boss_drop(self, original_boss_id: str, original_boss_name: str, tier: Optional[ProgressionTier] = None) -> LootTarget:
         """

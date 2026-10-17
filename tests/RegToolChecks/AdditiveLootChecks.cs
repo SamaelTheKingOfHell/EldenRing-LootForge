@@ -24,22 +24,22 @@ public static class AdditiveLootChecks
         }
         string Snapshot(PARAM.Row row) => JsonSerializer.Serialize(row.Cells.Select(c => c.Value));
         var enemy = Table("ItemLotParam");
-        var original = Row(enemy, 431100000);
+        var original = Row(enemy, 50000);
         ParamHelper.SetCellIfExists(original, "lotItemId01", 500);
         ParamHelper.SetCellIfExists(original, "lotItemBasePoint01", (ushort)1000);
         ParamHelper.SetCellIfExists(original, "lotItemBasePoint02", (ushort)500);
         ParamHelper.SetCellIfExists(original, "getItemFlagId", 123u);
         ParamHelper.SetCellIfExists(original, "cumulateNumFlagId", 456u);
         ParamHelper.SetCellIfExists(original, "enableLuck01", (byte)1);
-        var existingChain = Row(enemy, 431100001);
+        var existingChain = Row(enemy, 50001);
         ParamHelper.SetCellIfExists(existingChain, "lotItemId01", 600);
-        var unrelated = Row(enemy, 431100004);
+        var unrelated = Row(enemy, 50004);
         ParamHelper.SetCellIfExists(unrelated, "lotItemId01", 700);
         string before = Snapshot(original), chainBefore = Snapshot(existingChain), unrelatedBefore = Snapshot(unrelated);
         int independentCapacity = AdditiveLootService.Capacity(enemy);
         check(independentCapacity > 0, "independent capacity accounts for existing chains and separation gaps");
         check(AdditiveLootService.TryAppend(enemy, original.ID, 100000001, 4, 250, "Fixture accessory"), "custom roll is appended after existing chain");
-        var extra = enemy.Rows.Single(r => r.ID == 431100002);
+        var extra = enemy.Rows.Single(r => r.ID == 50002);
         check(AdditiveLootService.Capacity(enemy) == independentCapacity, "capacity excludes earlier generated chains that a reforge purges");
         check(Snapshot(original) == before && Snapshot(existingChain) == chainBefore, "all original reward weights, quantities and flags remain identical");
         check(ParamHelper.GetCellInt(extra, "lotItemBasePoint01") == 250 && ParamHelper.GetCellInt(extra, "lotItemBasePoint02") == 750,

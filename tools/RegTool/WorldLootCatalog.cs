@@ -59,8 +59,41 @@ public sealed class WorldLootCatalog
         return ProgressionTierClassifier.ClassifyTier(0, name);
     }
 
+    static void EnsureOodle(string? game)
+    {
+        if (SoulsFormats.Oodle.Oodle6Ptr != IntPtr.Zero || SoulsFormats.Oodle.Oodle8Ptr != IntPtr.Zero || SoulsFormats.Oodle.Oodle9Ptr != IntPtr.Zero)
+            return;
+        var searchDirs = new List<string> { AppContext.BaseDirectory, Directory.GetCurrentDirectory() };
+        if (!string.IsNullOrEmpty(game)) searchDirs.Insert(0, game);
+        string[] oodleDlls = ["oo2core_9_win64.dll", "oo2core_8_win64.dll", "oo2core_6_win64.dll"];
+        foreach (var dir in searchDirs)
+        {
+            if (!Directory.Exists(dir)) continue;
+            foreach (var dll in oodleDlls)
+            {
+                string fullPath = Path.Combine(dir, dll);
+                if (File.Exists(fullPath))
+                {
+                    try
+                    {
+                        var ptr = System.Runtime.InteropServices.NativeLibrary.Load(fullPath);
+                        if (ptr != IntPtr.Zero)
+                        {
+                            if (dll.Contains("_9_")) SoulsFormats.Oodle.Oodle9Ptr = ptr;
+                            else if (dll.Contains("_8_")) SoulsFormats.Oodle.Oodle8Ptr = ptr;
+                            else SoulsFormats.Oodle.Oodle6Ptr = ptr;
+                            return;
+                        }
+                    }
+                    catch { }
+                }
+            }
+        }
+    }
+
     public static WorldLootCatalog Load(string source, string? game, string defs, PARAM map, PARAM? enemy = null, PARAM? npc = null, PARAM? shops = null)
     {
+        EnsureOodle(game);
         var catalog = new WorldLootCatalog();
         string profile = Path.GetDirectoryName(Path.GetFullPath(source))!;
         var rows = map.ToRowDictionary();
@@ -100,6 +133,34 @@ public sealed class WorldLootCatalog
         var scripts = Files(profile, game, "event", "*.emevd.dcx").ToArray();
         string? commonPath = scripts.FirstOrDefault(path => Path.GetFileName(path) == "common_func.emevd.dcx");
         var common = commonPath == null ? new Dictionary<long, EMEVD.Event>() : EMEVD.Read(commonPath).Events.ToDictionary(ev => ev.ID);
+        string? commonEventsPath = scripts.FirstOrDefault(path => Path.GetFileName(path).Equals("common.emevd.dcx", StringComparison.OrdinalIgnoreCase));
+        var flagToLot = new Dictionary<int, int>();
+        if (commonEventsPath != null)
+        {
+            var commonEvents = EMEVD.Read(commonEventsPath);
+            var ev0 = commonEvents.Events.FirstOrDefault(e => e.ID == 0);
+            if (ev0 != null)
+            {
+                foreach (var ins in ev0.Instructions)
+                {
+                    if (ins.Bank == 2000 && (ins.ID is 0 or 6) && ins.ArgData.Length >= 16)
+                    {
+                        long calledId = BitConverter.ToUInt32(ins.ArgData, 4);
+                        if (calledId is 1100 or 1200)
+                        {
+                            int flag = BitConverter.ToInt32(ins.ArgData, 8);
+                            int lot1 = BitConverter.ToInt32(ins.ArgData, 12);
+                            if (flag > 0 && lot1 > 0) flagToLot[flag] = lot1;
+                            if (ins.ArgData.Length >= 20)
+                            {
+                                int lot2 = BitConverter.ToInt32(ins.ArgData, 16);
+                                if (flag > 0 && lot2 > 0) flagToLot[flag] = lot2;
+                            }
+                        }
+                    }
+                }
+            }
+        }
         static bool Boss(EMEVD.Event ev) => ev.Instructions.Any(ins => ins.Bank == 2003 && ins.ID == 12);
         void Rewards(EMEVD.Event ev, byte[]? arguments, string file)
         {
@@ -112,24 +173,88 @@ public sealed class WorldLootCatalog
                 Add(catalog.Bosses, id, file, "EMEVD boss-defeat event " + ev.ID);
             }
         }
+        void FlagRewards(EMEVD.Event ev, string file)
+        {
+            foreach (var ins in ev.Instructions)
+            {
+                if (ins.Bank == 2003 && ins.ID == 66 && ins.ArgData.Length >= 8)
+                {
+                    int flag = BitConverter.ToInt32(ins.ArgData, 4);
+                    if (flagToLot.TryGetValue(flag, out int lotId))
+                        Add(catalog.Bosses, lotId, file, $"EMEVD boss-defeat event {ev.ID} flag {flag}");
+                }
+            }
+        }
         foreach (string path in scripts.Where(path => Path.GetFileName(path).StartsWith('m')))
         {
             var script = EMEVD.Read(path);
             var local = script.Events.ToDictionary(ev => ev.ID);
+            bool scriptModified = false;
             foreach (var ev in script.Events)
             {
-                if (Boss(ev)) Rewards(ev, null, Path.GetFileName(path));
+                int priorCount = catalog.Bosses.Count;
+                if (Boss(ev))
+                {
+                    Rewards(ev, null, Path.GetFileName(path));
+                    FlagRewards(ev, Path.GetFileName(path));
+                }
                 foreach (var call in ev.Instructions.Where(ins => ins.Bank == 2000 && ins.ID is 0 or 6 && ins.ArgData.Length >= 8))
                 {
                     long id = BitConverter.ToUInt32(call.ArgData, 4);
                     var definitions = call.ID == 6 ? common : local;
                     if (definitions.TryGetValue(id, out var definition) && Boss(definition))
+                    {
                         Rewards(definition, call.ArgData[8..], Path.GetFileName(path));
+                        FlagRewards(definition, Path.GetFileName(path));
+                    }
+                }
+                if (Boss(ev) && catalog.Bosses.Count == priorCount)
+                {
+                    var existingAward = ev.Instructions.FirstOrDefault(i => i.Bank == 2003 && i.ID is 4 or 36 && i.ArgData.Length >= 4);
+                    int targetLotId = existingAward != null ? BitConverter.ToInt32(existingAward.ArgData, 0) : 0;
+                    if (targetLotId <= 0)
+                    {
+                        var bannerIns = ev.Instructions.FirstOrDefault(i => i.Bank == 2003 && i.ID == 12 && i.ArgData.Length >= 4);
+                        int entityOrFlag = bannerIns != null ? BitConverter.ToInt32(bannerIns.ArgData, 0) : 0;
+                        if (entityOrFlag > 0)
+                        {
+                            targetLotId = entityOrFlag;
+                            int bannerIdx = ev.Instructions.IndexOf(bannerIns!);
+                            var awardIns = new EMEVD.Instruction(2003, 4, BitConverter.GetBytes(targetLotId));
+                            ev.Instructions.Insert(bannerIdx + 1, awardIns);
+                            foreach (var p in ev.Parameters)
+                                if (p.InstructionIndex > bannerIdx) p.InstructionIndex++;
+                            scriptModified = true;
+                        }
+                    }
+                    if (targetLotId > 0)
+                    {
+                        if (!rows.ContainsKey(targetLotId))
+                        {
+                            string bossName = names.GetValueOrDefault(targetLotId, Path.GetFileNameWithoutExtension(path) + " boss " + targetLotId);
+                            var newRow = new PARAM.Row(targetLotId, bossName, map.AppliedParamdef);
+                            map.Rows.Add(newRow);
+                            rows[targetLotId] = newRow;
+                            AdditiveLootService.Invalidate(map);
+                        }
+                        Add(catalog.Bosses, targetLotId, Path.GetFileName(path), $"Injected EMEVD boss-defeat award {ev.ID}");
+                    }
+                }
+            }
+            if (scriptModified && !string.IsNullOrEmpty(profile) && Directory.Exists(profile))
+            {
+                try
+                {
+                    string staged = Path.Combine(profile, "event", Path.GetFileName(path));
+                    Directory.CreateDirectory(Path.GetDirectoryName(staged)!);
+                    script.Write(staged, script.Compression);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[WorldLootCatalog WARN] Could not write modified script {Path.GetFileName(path)}: {ex.Message}");
                 }
             }
         }
-        if (names.TryGetValue(10000,out var margit) && margit.Contains("Margit"))
-            Add(catalog.Bosses,10000,"", "Named Margit talisman-pouch boss reward");
         // Remembrance goods identify major-boss rewards even when their death and
         // award instructions live in separate events.
         var remembranceIds = Names(defs,"EquipParamGoods").Where(pair=>pair.Value.StartsWith("Remembrance of ") || pair.Value=="Elden Remembrance").Select(pair=>pair.Key).ToHashSet();

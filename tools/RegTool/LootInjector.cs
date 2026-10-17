@@ -16,10 +16,14 @@ namespace LootForge.RegTool
     public static class LootInjector
     {
         private static HashSet<int>? allowedMap, allowedEnemy;
+        private static Dictionary<string, int>? _nameToLotId;
         public static void Configure(WorldLootCatalog catalog)
         {
             allowedMap = catalog.Chests.Concat(catalog.Bosses).Select(item=>item.LotId).ToHashSet();
             allowedEnemy = catalog.Enemies.Select(item=>item.LotId).ToHashSet();
+            _nameToLotId = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            foreach (var d in catalog.Bosses.Concat(catalog.Chests).Concat(catalog.Enemies))
+                _nameToLotId.TryAdd(d.Name, d.LotId);
             ShopLootInjector.Configure(catalog.Merchants);
         }
         private static Dictionary<int, PARAM.Row>? _enemyLotRowMap;
@@ -28,6 +32,7 @@ namespace LootForge.RegTool
         public static void ResetCache()
         {
             allowedMap = allowedEnemy = null;
+            _nameToLotId = null;
             _enemyLotRowMap = null;
             _mapLotRowMap = null;
             ShopLootInjector.ResetCache();
@@ -117,27 +122,15 @@ namespace LootForge.RegTool
 
         private static int ResolveEnemyLotId(string? name)
         {
-            string lower = name?.ToLowerInvariant() ?? "";
-            if (lower.Contains("scion") || lower.Contains("anticipation")) return 10030;
-            if (lower.Contains("soldier of godrick") || lower.Contains("tutorial")) return 18000050;
-            if (lower.Contains("moongrum")) return 340000000;
-            if (lower.Contains("crucible")) return 250000000;
-            if (lower.Contains("black knife") || lower.Contains("assassin")) return 210000000;
-            if (lower.Contains("cleanrot")) return 380000000;
-            if (lower.Contains("banished")) return 301000000;
-            if (lower.Contains("bloodhound") || lower.Contains("darriwil")) return 20600;
-            if (lower.Contains("sentinel")) return 420000000;
-            if (lower.Contains("cavalry")) return 450000000;
-            if (lower.Contains("vyke")) return 440000000;
-            if (lower.Contains("makar") || lower.Contains("wyrm")) return 350000000;
-            if (lower.Contains("okina") || lower.Contains("bloody finger")) return 460000000;
-            if (lower.Contains("omen")) return 214000000;
-            if (lower.Contains("crab")) return 227000000;
-            if (lower.Contains("exile") || lower.Contains("vargram")) return 300000000;
-            if (lower.Contains("godrick knight")) return 435100000;
-            if (lower.Contains("noble")) return 430000000;
-            if (lower.Contains("soldier")) return 431100000;
-            return 102100;
+            if (string.IsNullOrWhiteSpace(name))
+                throw new InvalidDataException("Missing loot destination identifier.");
+            if (_nameToLotId != null)
+            {
+                if (_nameToLotId.TryGetValue(name, out int exact)) return exact;
+                var partial = _nameToLotId.FirstOrDefault(kv => kv.Key.Contains(name, StringComparison.OrdinalIgnoreCase) || name.Contains(kv.Key, StringComparison.OrdinalIgnoreCase));
+                if (partial.Value > 0) return partial.Value;
+            }
+            throw new InvalidDataException($"Unrecognized loot destination '{name}'. No destination was hardcoded.");
         }
     }
 }
