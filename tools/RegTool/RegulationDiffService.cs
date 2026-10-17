@@ -86,8 +86,8 @@ namespace LootForge.RegTool
                     catch { }
                 }
 
-                var dict1 = param1.Rows.ToDictionary(r => r.ID);
-                var dict2 = param2.Rows.ToDictionary(r => r.ID);
+                var dict1 = param1.ToRowDictionary();
+                var dict2 = param2.ToRowDictionary();
 
                 var addedIds = dict2.Keys.Except(dict1.Keys).ToList();
                 var removedIds = dict1.Keys.Except(dict2.Keys).ToList();

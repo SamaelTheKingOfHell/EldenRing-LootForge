@@ -63,7 +63,7 @@ public sealed class WorldLootCatalog
     {
         var catalog = new WorldLootCatalog();
         string profile = Path.GetDirectoryName(Path.GetFullPath(source))!;
-        var rows = map.Rows.ToDictionary(row => row.ID);
+        var rows = map.ToRowDictionary();
         var names = Names(defs, "ItemLotParam_map");
         void Add(List<Destination> target, int id, string file, string proof)
         {
@@ -73,8 +73,8 @@ public sealed class WorldLootCatalog
             target.Add(new(id, name, Tier(file, name), FreeRows(map, id), proof,
                 AdditiveLootService.RewardCount(map, id, originalsOnly: true)));
         }
-        var npcRows = npc?.Rows.ToDictionary(row => row.ID) ?? new();
-        var enemyRows = enemy?.Rows.ToDictionary(row => row.ID) ?? new();
+        var npcRows = npc?.ToRowDictionary() ?? new();
+        var enemyRows = enemy?.ToRowDictionary() ?? new();
         var enemyNames = Names(defs, "ItemLotParam_enemy");
         foreach (string file in Files(profile, game, "map/MapStudio", "*.msb.dcx"))
         {

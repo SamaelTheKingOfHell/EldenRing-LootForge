@@ -254,7 +254,7 @@ public sealed class DiabloEffectService
                 double strength=hit.GetProperty("power").GetDouble();
                 if(strength<=0)continue;
                 string? slot=Enumerable.Range(0,3).Select(i=>"spEffectBehaviorId"+i).FirstOrDefault(name=>ParamHelper.GetCellInt(row,name)<=0);
-                if(slot==null)throw new InvalidDataException($"No free status slot on {row.ID}; preserving inherited buildup.");
+                if(slot==null)continue;
                 Set(row,slot,ScalePassive(hit.GetProperty("id").GetInt32(),strength,new()));
                 int message=hit.TryGetProperty("msg_id",out var msg)?msg.GetInt32():0;
                 AddMessage(row,message);

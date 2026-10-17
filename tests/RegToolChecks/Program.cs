@@ -38,6 +38,13 @@ var layout = ItemLotLayout.Extract(lots);
 Check(ParamHelper.GetCellInt(lot, "LOTITEMID01") == 700, "case-insensitive indexed fields");
 Check(ParamHelper.FindCell(lot, "absent") == null, "missing fields remain optional");
 Check(ReferenceEquals(layout, ItemLotLayout.Extract(lots)), "loot layouts are reused");
+
+var dupTable = Table("ItemLotParam");
+var r1 = Row(dupTable, 16000500, "First Instance");
+var r2 = Row(dupTable, 16000500, "Duplicate Instance");
+var dupDict = dupTable.ToRowDictionary();
+Check(dupDict.Count == 1 && dupDict[16000500].Name == "First Instance", "ToRowDictionary retains first entry dynamically on duplicate row IDs");
+
 AdditiveLootChecks.Run(defs, Check);
 DropBudgetChecks.Run(defs, Check);
 BalanceChecks.Run(defs, Check);

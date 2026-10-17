@@ -59,7 +59,7 @@ public static class LegacyLootRecovery
                 var file = backup.Files.First(f => f.Name.EndsWith(table + ".param", StringComparison.OrdinalIgnoreCase));
                 var original = PARAM.Read(file.Bytes);
                 original.ApplyParamdefSomewhatCarefully(PARAMDEF.XmlDeserialize(Path.Combine(defs, "ItemLotParam.xml"), false, false));
-                var originals = original.Rows.ToDictionary(r => r.ID);
+                var originals = original.ToRowDictionary();
                 foreach (var (row, fields) in rows)
                 {
                     if (!originals.TryGetValue(row.ID, out var before)) { matches = false; break; }

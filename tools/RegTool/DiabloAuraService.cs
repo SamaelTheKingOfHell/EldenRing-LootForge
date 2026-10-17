@@ -14,7 +14,7 @@ public sealed class DiabloAuraService
     {
         visuals = table("SpEffectVfxParam", "SpEffectVfx");
         visuals.Rows.RemoveAll(row => row.Name?.StartsWith("[LootForge] Diablo Aura") == true);
-        sources = visuals.Rows.ToDictionary(row => row.ID);
+        sources = visuals.ToRowDictionary();
     }
 
     public int Visual(string theme, bool weapon)

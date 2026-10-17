@@ -18,7 +18,7 @@ public static class AdditiveLootService
         public int Cursor;
         public Index(PARAM param)
         {
-            Rows = param.Rows.ToDictionary(r => r.ID);
+            Rows = param.ToRowDictionary();
             Roots = param.Rows.Where(IsOriginalRoot).ToArray();
         }
     }

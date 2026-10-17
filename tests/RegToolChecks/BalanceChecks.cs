@@ -62,6 +62,19 @@ public static class BalanceChecks
         service.Apply(passiveMessage.RootElement);
         check(ParamHelper.GetCellInt(katana,"spEffectMsgId0")==6501&&ParamHelper.GetCellInt(katana,"spEffectMsgId1")==1002,
             "non-status passive UI appends after original bleed instead of overwriting it");
+
+        Add(effects, 100); Add(effects, 200); Add(effects, 300);
+        var saturated = Add(weapon, 100003400);
+        DiabloEffectService.Set(saturated, "spEffectBehaviorId0", 100);
+        DiabloEffectService.Set(saturated, "spEffectBehaviorId1", 200);
+        DiabloEffectService.Set(saturated, "spEffectBehaviorId2", 300);
+        using var saturatedSpec = JsonDocument.Parse("[{\"param_table\":\"EquipParamWeapon\",\"new_param_id\":100003400,\"field_updates\":{\"_lf_diablo_on_hit\":[{\"id\":6400,\"power\":0.5}]}}]");
+        service.Apply(saturatedSpec.RootElement);
+        check(ParamHelper.GetCellInt(saturated, "spEffectBehaviorId0") == 100 &&
+              ParamHelper.GetCellInt(saturated, "spEffectBehaviorId1") == 200 &&
+              ParamHelper.GetCellInt(saturated, "spEffectBehaviorId2") == 300,
+            "saturated weapon preserves all 3 inherited status behaviors when no free slots exist");
+
         tables["EquipParamProtector"]=armor;
         var brokenArmor=Add(armor,100000300);DiabloEffectService.Set(brokenArmor,"protectorCategory",1);
         using var armorSpec=JsonDocument.Parse("[{\"param_table\":\"EquipParamProtector\",\"new_param_id\":100000300,\"field_updates\":{\"_lf_diablo_power\":0.207,\"_lf_diablo_tier\":1,\"_lf_diablo_stat_deltas\":{\"defensePhysics\":15}}}]");

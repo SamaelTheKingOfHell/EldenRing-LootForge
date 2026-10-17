@@ -206,7 +206,7 @@ namespace LootForge.RegTool
 
             // Proven acquisition sources only; a guaranteed item is not evidence of a boss/chest.
             var world = WorldLootCatalog.Load(inputPath, options.GetValueOrDefault("game-dir"), defsDir, mapLotParam, enemyLotParam, LoadParam("NpcParam"), LoadParam("ShopLineupParam"));
-            var mapRows = mapLotParam.Rows.ToDictionary(row => row.ID);
+            var mapRows = mapLotParam.ToRowDictionary();
             var discoveredBossLots = world.Bosses.Select(item => new DiscoveredBossLot(item.LotId, item.Name,
                 ParamHelper.GetCellInt(mapRows[item.LotId], "lotItemId01"), ParamHelper.GetCellInt(mapRows[item.LotId], "lotItemCategory01"),
                 item.Tier, true, item.FreeRows, item.Evidence, item.OriginalRewards)).ToList();

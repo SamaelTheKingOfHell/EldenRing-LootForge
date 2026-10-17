@@ -25,7 +25,7 @@ Adheres to `[CS-MODULAR]`, `[CS-GRANULARITY]`, and `[CS-DECOUPLE]` by decomposin
 | `SmartDiscoveryModels.cs` | `DiscoveredWorldSnapshot` | Data contracts for world introspection records including `DiscoveredAccessory` with `IconId`. |
 | `UniversalSweeperService.cs` | `UniversalSweeperService` | 100% full-regulation vanilla item infusion across EquipParamWeapon, EquipParamProtector, and FMGs. |
 | `SkillMovesetService.cs` | `SkillMovesetService` | Mod regulation introspection, extracting custom weapon skills (`SwordArtsParam`), moveset behaviors (`BehaviorParam_PC`, `AtkParam_Pc`), and injection. |
-| `ParamHelper.cs` | `ParamHelper` | Utility methods for safely reading, writing, and type-converting PARAM cell values. |
+| `ParamHelper.cs` | `ParamHelper` | Utility methods for safely reading, writing, and type-converting PARAM cell values, with duplicate-resilient dynamic row indexing (`ToRowDictionary`). |
 | `DiabloEffectService.cs` | Diablo native effects | Additive stats, scaled passive chains, bundled extra passives, shield/weapon/armor enchantments and weapon-family infusion. |
 | `DiabloAuraService.cs` | Cosmetic item visuals | Copy native persistent VFX with lower visual priority, preserving buff mechanics and shared templates. |
 | `DiabloCombatEvents.cs` | Diablo combat scripts | Merge owned EMEVD triggers, generated projectiles and cooldowns into the existing common script; remove them on a disabled reforge. |

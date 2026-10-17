@@ -24,7 +24,7 @@ public sealed class DiabloInfusionState
         {
             if (table is not ("EquipParamWeapon" or "EquipParamProtector" or "EquipParamAccessory"))
                 throw new InvalidDataException("Unexpected table in Diablo infusion state.");
-            var index = load(table, table).Param.Rows.ToDictionary(row => row.ID);
+            var index = load(table, table).Param.ToRowDictionary();
             foreach (var (id, fields) in rows)
             {
                 if (!index.TryGetValue(id, out var row)) continue;

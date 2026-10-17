@@ -161,6 +161,26 @@ namespace LootForge.RegTool
 
             return null;
         }
+
+        /// <summary>
+        /// Converts PARAM rows to a dictionary keyed by row ID, retaining the first occurrence
+        /// dynamically when duplicate row IDs are encountered in modded regulation files.
+        /// Adheres to [CS-DECOUPLE] by handling non-unique keys dynamically without hardcoded assumptions.
+        /// </summary>
+        public static Dictionary<int, PARAM.Row> ToRowDictionary(this IEnumerable<PARAM.Row> rows)
+        {
+            var dict = new Dictionary<int, PARAM.Row>();
+            foreach (var row in rows)
+            {
+                dict.TryAdd(row.ID, row);
+            }
+            return dict;
+        }
+
+        /// <summary>
+        /// Converts a PARAM's rows to a dictionary keyed by row ID with dynamic first-entry retention.
+        /// </summary>
+        public static Dictionary<int, PARAM.Row> ToRowDictionary(this PARAM param) => ToRowDictionary(param.Rows);
     }
 
     /// <summary>
